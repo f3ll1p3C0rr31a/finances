@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  incomeTemplates  IncomeTemplate[]
+  incomeEntries    IncomeEntry[]
+  expenseTemplates ExpenseTemplate[]
+  expenseEntries   ExpenseEntry[]
+  monthlyBalances  MonthlyBalance[]
+}
+
+enum PaidBy {
+  SELF
+  THIRD_PARTY
+}
+
+enum ExpenseCategory {
+  FIXED
+  VARIABLE
+  ONE_OFF
+}
+
+/// A recurring income rule (e.g. monthly salary). One-time income is
+/// created directly as an IncomeEntry with no template.
+model IncomeTemplate {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  defaultAmount Decimal   @db.Decimal(12, 2)
+  dayOfMonth    Int?
+  startMonth    DateTime  @db.Date
+  endMonth      DateTime? @db.Date
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+
+  entries IncomeEntry[]
+
+  @@index([userId])
+}
+
+/// One concrete month's income row, either generated from a template
+/// or created directly as a one-off.
+model IncomeEntry {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId     String?
+  template       IncomeTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  name           String
+  month          DateTime  @db.Date
+  dueDate        DateTime? @db.Date
+  amount         Decimal   @db.Decimal(12, 2)
+  received       Boolean   @default(false)
+  receivedAt     DateTime?
+  receivedAmount Decimal?  @db.Decimal(12, 2)
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([templateId, month])
+  @@index([userId, month])
+}
+
+/// A recurring expense rule (e.g. Pensão, Aluguel). One-time expenses
+/// (e.g. "Atrasada") are created directly as an ExpenseEntry with no template.
+model ExpenseTemplate {
+  id            String          @id @default(cuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  category      ExpenseCategory
+  defaultAmount Decimal?        @db.Decimal(12, 2)
+  dayOfMonth    Int?
+  startMonth    DateTime        @db.Date
+  endMonth      DateTime?       @db.Date
+  active        Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+
+  entries ExpenseEntry[]
+
+  @@index([userId])
+}
+
+/// One concrete month's expense row, either generated from a template
+/// or created directly as a one-off.
+model ExpenseEntry {
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId String?
+  template   ExpenseTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  name       String
+  category   ExpenseCategory
+  month      DateTime        @db.Date
+  dueDate    DateTime?       @db.Date
+  amount     Decimal         @db.Decimal(12, 2)
+  paid       Boolean         @default(false)
+  paidAt     DateTime?
+  paidAmount Decimal?        @db.Decimal(12, 2)
+  paidBy     PaidBy          @default(SELF)
+  paidByName String?
+  notes      String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@unique([templateId, month])
+  @@index([userId, month])
+}
+
+/// One row per month per user. openingBalance is derived from the prior
+/// month's actualBalance (or computed planned balance) and denormalized
+/// here for fast reads. actualBalance is the manually-updated real
+/// bank balance ("Saldo") and, once set, becomes the source of truth
+/// carried forward to the next month's openingBalance.
+model MonthlyBalance {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month           DateTime  @db.Date
+  openingBalance  Decimal   @db.Decimal(12, 2)
+  actualBalance   Decimal?  @db.Decimal(12, 2)
+  actualBalanceAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([userId, month])
+}
