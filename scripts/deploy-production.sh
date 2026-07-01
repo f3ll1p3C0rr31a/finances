@@ -39,7 +39,7 @@ docker compose -p "$PROJECT" -f "$COMPOSE_FILE" up -d --build
 
 echo "==> Health check"
 for _ in $(seq 1 30); do
-  if curl -sf http://127.0.0.1:8090/login >/dev/null; then
+  if curl -sf http://127.0.0.1:8092/login >/dev/null; then
     echo "Health check passed"
     exit 0
   fi
