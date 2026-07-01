@@ -1,8 +1,7 @@
-export default function CashflowPage() {
-  return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-2xl font-semibold tracking-tight">Fluxo de Caixa</h1>
-      <p className="text-muted-foreground">Em construção (Milestone 1).</p>
-    </div>
-  )
+import { redirect } from "next/navigation"
+
+import { currentMonth, monthKeyFromDate } from "@/lib/calculations/month"
+
+export default function CashflowIndexPage() {
+  redirect(`/cashflow/${monthKeyFromDate(currentMonth())}`)
 }
