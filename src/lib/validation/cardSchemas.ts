@@ -9,9 +9,11 @@ export type CardInput = z.output<typeof cardSchema>
 
 export const cardPurchaseSchema = z.object({
   description: z.string().trim().min(1, "Informe uma descrição"),
-  totalAmount: z.coerce.number().positive("Informe um valor maior que zero"),
+  amount: z.coerce.number().positive("Informe um valor maior que zero"),
+  amountMode: z.enum(["TOTAL", "INSTALLMENT"]),
   purchaseDate: z.string().min(1, "Informe a data"),
   installmentCount: z.coerce.number().int().min(1).max(48),
+  hasInterest: z.boolean(),
 })
 export type CardPurchaseFormValues = z.input<typeof cardPurchaseSchema>
 export type CardPurchaseInput = z.output<typeof cardPurchaseSchema>

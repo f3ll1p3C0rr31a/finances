@@ -47,6 +47,32 @@ export async function deleteCard(id: string) {
   revalidateCards()
 }
 
+/**
+ * Resolves the (totalAmount, perInstallmentSlices) pair for a purchase
+ * depending on whether the user typed the purchase's total or a single
+ * installment's value. In INSTALLMENT mode every slice is exactly the
+ * typed amount (no rounding split needed); in TOTAL mode the total is
+ * divided across installments with the remainder cent on the last one.
+ */
+function resolvePurchaseAmounts(
+  amount: number,
+  amountMode: "TOTAL" | "INSTALLMENT",
+  installmentCount: number
+): { totalAmount: Prisma.Decimal; slices: Prisma.Decimal[] } {
+  if (amountMode === "INSTALLMENT") {
+    const perInstallment = new Prisma.Decimal(amount)
+    return {
+      totalAmount: perInstallment.mul(installmentCount),
+      slices: Array.from({ length: installmentCount }, () => perInstallment),
+    }
+  }
+  const totalAmount = new Prisma.Decimal(amount)
+  return {
+    totalAmount,
+    slices: installmentCount > 1 ? splitIntoInstallments(totalAmount, installmentCount) : [totalAmount],
+  }
+}
+
 export async function createCardPurchase(cardId: string, input: CardPurchaseInput) {
   const userId = await requireUserId()
   const data = cardPurchaseSchema.parse(input)
@@ -57,22 +83,25 @@ export async function createCardPurchase(cardId: string, input: CardPurchaseInpu
   const purchaseDate = new Date(Date.UTC(year, month - 1, day))
   const purchaseMonth = new Date(Date.UTC(year, month - 1, 1))
 
+  const { totalAmount, slices } = resolvePurchaseAmounts(
+    data.amount,
+    data.amountMode,
+    data.installmentCount
+  )
+
   const purchaseId = await prisma.$transaction(async (tx) => {
     const purchase = await tx.cardPurchase.create({
       data: {
         cardId,
         description: data.description,
-        totalAmount: data.totalAmount,
+        totalAmount,
         purchaseDate,
         installmentCount: data.installmentCount,
+        hasInterest: data.hasInterest,
       },
     })
 
     if (data.installmentCount > 1) {
-      const slices = splitIntoInstallments(
-        new Prisma.Decimal(data.totalAmount),
-        data.installmentCount
-      )
       await tx.cardInstallment.createMany({
         data: slices.map((amount, index) => ({
           purchaseId: purchase.id,
@@ -89,6 +118,56 @@ export async function createCardPurchase(cardId: string, input: CardPurchaseInpu
   revalidateCards()
   revalidatePath(`/cards/${cardId}`)
   return { id: purchaseId }
+}
+
+export async function updateCardPurchase(purchaseId: string, input: CardPurchaseInput) {
+  const userId = await requireUserId()
+  const data = cardPurchaseSchema.parse(input)
+
+  const existing = await prisma.cardPurchase.findUniqueOrThrow({
+    where: { id: purchaseId },
+    include: { card: true },
+  })
+  if (existing.card.userId !== userId) throw new Error("Unauthorized")
+
+  const [year, month, day] = data.purchaseDate.split("-").map(Number)
+  const purchaseDate = new Date(Date.UTC(year, month - 1, day))
+  const purchaseMonth = new Date(Date.UTC(year, month - 1, 1))
+
+  const { totalAmount, slices } = resolvePurchaseAmounts(
+    data.amount,
+    data.amountMode,
+    data.installmentCount
+  )
+
+  await prisma.$transaction(async (tx) => {
+    await tx.cardPurchase.update({
+      where: { id: purchaseId },
+      data: {
+        description: data.description,
+        totalAmount,
+        purchaseDate,
+        installmentCount: data.installmentCount,
+        hasInterest: data.hasInterest,
+      },
+    })
+
+    await tx.cardInstallment.deleteMany({ where: { purchaseId } })
+
+    if (data.installmentCount > 1) {
+      await tx.cardInstallment.createMany({
+        data: slices.map((amount, index) => ({
+          purchaseId,
+          installmentNo: index + 1,
+          month: addMonths(purchaseMonth, index),
+          amount,
+        })),
+      })
+    }
+  })
+
+  revalidateCards()
+  revalidatePath(`/cards/${existing.cardId}`)
 }
 
 export async function deleteCardPurchase(purchaseId: string) {

@@ -27,21 +27,41 @@ export default async function CardDetailPage({
     prisma.cardPurchase.findMany({
       where: { cardId },
       orderBy: { purchaseDate: "desc" },
-      include: { tags: { include: { tag: true } } },
+      include: { tags: { include: { tag: true } }, installments: { orderBy: { installmentNo: "asc" } } },
     }),
     listTags(userId),
   ])
 
   const tagRefs = allTags.map((t) => ({ id: t.id, name: t.name }))
+  const nowMonth = currentMonth()
 
-  const serialized: SerializedCardPurchase[] = purchases.map((p) => ({
-    id: p.id,
-    description: p.description,
-    totalAmount: p.totalAmount.toNumber(),
-    purchaseDate: p.purchaseDate.toISOString(),
-    installmentCount: p.installmentCount,
-    tags: p.tags.map((t) => ({ id: t.tag.id, name: t.tag.name })),
-  }))
+  const serialized: SerializedCardPurchase[] = purchases.map((p) => {
+    const purchaseMonth = new Date(Date.UTC(p.purchaseDate.getUTCFullYear(), p.purchaseDate.getUTCMonth(), 1))
+
+    let paidInstallments: number
+    let installmentAmount: number
+
+    if (p.installmentCount > 1) {
+      paidInstallments = p.installments.filter((i) => i.month < nowMonth).length
+      installmentAmount = (p.installments[0]?.amount ?? p.totalAmount.div(p.installmentCount)).toNumber()
+    } else {
+      paidInstallments = purchaseMonth < nowMonth ? 1 : 0
+      installmentAmount = p.totalAmount.toNumber()
+    }
+
+    return {
+      id: p.id,
+      description: p.description,
+      totalAmount: p.totalAmount.toNumber(),
+      installmentAmount,
+      purchaseDate: p.purchaseDate.toISOString(),
+      installmentCount: p.installmentCount,
+      hasInterest: p.hasInterest,
+      paidInstallments,
+      remainingInstallments: p.installmentCount - paidInstallments,
+      tags: p.tags.map((t) => ({ id: t.tag.id, name: t.tag.name })),
+    }
+  })
 
   const bestDay = card.closingDay ? bestPurchaseDate(card.closingDay, currentMonth()).getUTCDate() : null
 
@@ -61,7 +81,7 @@ export default async function CardDetailPage({
           <NewPurchaseDialog cardId={card.id} allTags={tagRefs} />
         </div>
       </div>
-      <PurchaseList purchases={serialized} allTags={tagRefs} />
+      <PurchaseList purchases={serialized} allTags={tagRefs} cardId={card.id} />
     </div>
   )
 }

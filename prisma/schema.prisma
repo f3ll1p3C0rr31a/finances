@@ -203,6 +203,7 @@ model CardPurchase {
   totalAmount      Decimal  @db.Decimal(12, 2)
   purchaseDate     DateTime @db.Date
   installmentCount Int      @default(1)
+  hasInterest      Boolean  @default(false)
   createdAt        DateTime @default(now())
 
   installments CardInstallment[]

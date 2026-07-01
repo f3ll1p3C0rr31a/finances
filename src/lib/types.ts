@@ -44,7 +44,11 @@ export type SerializedCardPurchase = {
   id: string
   description: string
   totalAmount: number
+  installmentAmount: number
   purchaseDate: string
   installmentCount: number
+  hasInterest: boolean
+  paidInstallments: number
+  remainingInstallments: number
   tags: TagRef[]
 }
