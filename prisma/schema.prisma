@@ -13,11 +13,13 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 
-  incomeTemplates  IncomeTemplate[]
-  incomeEntries    IncomeEntry[]
-  expenseTemplates ExpenseTemplate[]
-  expenseEntries   ExpenseEntry[]
-  monthlyBalances  MonthlyBalance[]
+  incomeTemplates   IncomeTemplate[]
+  incomeEntries     IncomeEntry[]
+  expenseTemplates  ExpenseTemplate[]
+  expenseEntries    ExpenseEntry[]
+  monthlyBalances   MonthlyBalance[]
+  cards             Card[]
+  cardSpendingGoals CardSpendingGoal[]
 }
 
 enum PaidBy {
@@ -134,6 +136,66 @@ model MonthlyBalance {
   actualBalanceAt DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  @@unique([userId, month])
+}
+
+/// A credit card. Each card's purchases and totals are tracked
+/// independently of the other cards; only the monthly spending goal
+/// compares their combined total.
+model Card {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  closingDay Int?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  purchases CardPurchase[]
+
+  @@index([userId])
+}
+
+/// A single-payment purchase (installmentCount = 1, no CardInstallment
+/// rows, counted in the month of purchaseDate) or the head of an
+/// installment plan (installmentCount > 1, split across CardInstallment
+/// rows generated up front since the plan is fixed at purchase time).
+model CardPurchase {
+  id               String   @id @default(cuid())
+  cardId           String
+  card             Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  description      String
+  totalAmount      Decimal  @db.Decimal(12, 2)
+  purchaseDate     DateTime @db.Date
+  installmentCount Int      @default(1)
+  createdAt        DateTime @default(now())
+
+  installments CardInstallment[]
+
+  @@index([cardId, purchaseDate])
+}
+
+/// One future month's slice of an installment purchase.
+model CardInstallment {
+  id            String       @id @default(cuid())
+  purchaseId    String
+  purchase      CardPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  installmentNo Int
+  month         DateTime     @db.Date
+  amount        Decimal      @db.Decimal(12, 2)
+
+  @@unique([purchaseId, installmentNo])
+  @@index([month])
+}
+
+/// Combined monthly spending goal across all cards.
+model CardSpendingGoal {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month  DateTime @db.Date
+  amount Decimal  @db.Decimal(12, 2)
 
   @@unique([userId, month])
 }

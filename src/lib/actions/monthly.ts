@@ -3,6 +3,7 @@ import { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { addMonths, dateWithDay } from "@/lib/calculations/month"
 import { computeMonthTotals, computePlannedBalance } from "@/lib/calculations/balanceChain"
+import { getCardsMonthSummary } from "@/lib/actions/cardSummary"
 
 async function ensureTemplateEntries(userId: string, month: Date) {
   const incomeTemplates = await prisma.incomeTemplate.findMany({
@@ -59,11 +60,13 @@ async function plannedClosingBalance(
   userId: string,
   balanceRow: { month: Date; openingBalance: Prisma.Decimal }
 ): Promise<Prisma.Decimal> {
-  const [incomes, expenses] = await Promise.all([
+  const [incomes, expenses, cards] = await Promise.all([
     prisma.incomeEntry.findMany({ where: { userId, month: balanceRow.month } }),
     prisma.expenseEntry.findMany({ where: { userId, month: balanceRow.month } }),
+    getCardsMonthSummary(userId, balanceRow.month),
   ])
-  const { totalIncome, totalExpense } = computeMonthTotals(incomes, expenses)
+  const { totalIncome, totalExpense: entriesExpense } = computeMonthTotals(incomes, expenses)
+  const totalExpense = entriesExpense.add(cards.combinedTotal)
   return computePlannedBalance(balanceRow.openingBalance, totalIncome, totalExpense)
 }
 
@@ -144,19 +147,24 @@ export async function recalcOpeningBalanceChain(userId: string, fromMonth: Date)
 export async function getMonthData(userId: string, month: Date) {
   await ensureMonthGenerated(userId, month)
 
-  const [incomeEntries, expenseEntries, balance] = await Promise.all([
+  const [incomeEntries, expenseEntries, balance, cards] = await Promise.all([
     prisma.incomeEntry.findMany({ where: { userId, month }, orderBy: { name: "asc" } }),
     prisma.expenseEntry.findMany({ where: { userId, month }, orderBy: { name: "asc" } }),
     prisma.monthlyBalance.findUniqueOrThrow({ where: { userId_month: { userId, month } } }),
+    getCardsMonthSummary(userId, month),
   ])
 
-  const { totalIncome, totalExpense, difference } = computeMonthTotals(incomeEntries, expenseEntries)
+  const { totalIncome, totalExpense: entriesExpense } = computeMonthTotals(incomeEntries, expenseEntries)
+  const totalExpense = entriesExpense.add(cards.combinedTotal)
+  const difference = totalIncome.sub(totalExpense)
   const plannedBalance = computePlannedBalance(balance.openingBalance, totalIncome, totalExpense)
   const closingBalance = balance.actualBalance ?? plannedBalance
 
   return {
     incomeEntries,
     expenseEntries,
+    cardSummaries: cards.summaries,
+    cardsTotal: cards.combinedTotal,
     balance,
     totalIncome,
     totalExpense,

@@ -18,3 +18,17 @@ export type SerializedExpenseEntry = {
   paidByName: string | null
   isRecurring: boolean
 }
+
+export type SerializedCardSummary = {
+  id: string
+  name: string
+  total: number
+}
+
+export type SerializedCardPurchase = {
+  id: string
+  description: string
+  totalAmount: number
+  purchaseDate: string
+  installmentCount: number
+}
