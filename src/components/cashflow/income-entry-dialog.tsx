@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 
@@ -24,6 +24,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Form,
   FormControl,
@@ -57,9 +64,12 @@ export function IncomeEntryDialog({
       name: entry?.name ?? "",
       amount: entry?.amount ?? 0,
       dueDay: entry?.dueDay ?? undefined,
+      dueDayType: entry?.dueDayType ?? "CALENDAR_DAY",
       recurring: entry?.isRecurring ?? false,
     },
   })
+
+  const dueDayType = useWatch({ control: form.control, name: "dueDayType" })
 
   function onSubmit(values: IncomeEntryInput) {
     startTransition(async () => {
@@ -125,25 +135,54 @@ export function IncomeEntryDialog({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="dueDay"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Dia de recebimento (opcional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={31}
-                      {...field}
-                      value={String(field.value ?? "")}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="dueDayType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de dia</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue>
+                            {(value: string) =>
+                              value === "BUSINESS_DAY" ? "Dia útil" : "Dia do mês"
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="CALENDAR_DAY">Dia do mês</SelectItem>
+                        <SelectItem value="BUSINESS_DAY">Dia útil</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="dueDay"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {dueDayType === "BUSINESS_DAY" ? "Nº do dia útil" : "Dia de recebimento"}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={31}
+                        {...field}
+                        value={String(field.value ?? "")}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             {!entry ? (
               <FormField
                 control={form.control}

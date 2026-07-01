@@ -5,7 +5,7 @@ import { toast } from "sonner"
 
 import type { SerializedExpenseEntry } from "@/lib/types"
 import { setExpensePaid, deleteExpenseEntry } from "@/lib/actions/expense"
-import { formatCurrency } from "@/lib/calculations/format"
+import { formatCurrency, formatDueDay } from "@/lib/calculations/format"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -87,7 +87,7 @@ export function ExpenseTable({
                 <TableCell>
                   <Badge variant="secondary">{CATEGORY_LABELS[entry.category]}</Badge>
                 </TableCell>
-                <TableCell>{entry.dueDay ?? "—"}</TableCell>
+                <TableCell>{formatDueDay(entry.dueDay, entry.dueDayType)}</TableCell>
                 <TableCell>
                   {entry.paidBy === "THIRD_PARTY" ? (
                     <Badge variant="outline">{entry.paidByName || "Terceiro"}</Badge>

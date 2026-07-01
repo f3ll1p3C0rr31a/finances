@@ -18,7 +18,7 @@ import {
 
 function revalidateCards() {
   revalidatePath("/cards")
-  revalidatePath("/cashflow", "layout")
+  revalidatePath("/dashboard", "layout")
 }
 
 export async function createCard(input: CardInput) {

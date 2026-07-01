@@ -4,17 +4,18 @@ import { revalidatePath } from "next/cache"
 
 import { prisma } from "@/lib/prisma"
 import { requireUserId } from "@/lib/session"
-import { monthKeyFromDate, dateWithDay } from "@/lib/calculations/month"
+import { monthKeyFromDate } from "@/lib/calculations/month"
+import { resolveDueDate } from "@/lib/calculations/businessDay"
 import { incomeEntrySchema, type IncomeEntryInput } from "@/lib/validation/schemas"
 
 function revalidateMonth(month: Date) {
-  revalidatePath(`/cashflow/${monthKeyFromDate(month)}`)
+  revalidatePath(`/dashboard/${monthKeyFromDate(month)}`)
 }
 
 export async function createIncomeEntry(month: Date, input: IncomeEntryInput) {
   const userId = await requireUserId()
   const data = incomeEntrySchema.parse(input)
-  const dueDate = data.dueDay ? dateWithDay(month, data.dueDay) : null
+  const dueDate = data.dueDay ? resolveDueDate(month, data.dueDayType, data.dueDay) : null
 
   if (data.recurring) {
     const template = await prisma.incomeTemplate.create({
@@ -23,6 +24,7 @@ export async function createIncomeEntry(month: Date, input: IncomeEntryInput) {
         name: data.name,
         defaultAmount: data.amount,
         dayOfMonth: data.dueDay ?? null,
+        dueDayType: data.dueDayType,
         startMonth: month,
       },
     })
@@ -33,12 +35,22 @@ export async function createIncomeEntry(month: Date, input: IncomeEntryInput) {
         name: data.name,
         month,
         dueDate,
+        dueDayType: data.dueDayType,
+        dueDayValue: data.dueDay ?? null,
         amount: data.amount,
       },
     })
   } else {
     await prisma.incomeEntry.create({
-      data: { userId, name: data.name, month, dueDate, amount: data.amount },
+      data: {
+        userId,
+        name: data.name,
+        month,
+        dueDate,
+        dueDayType: data.dueDayType,
+        dueDayValue: data.dueDay ?? null,
+        amount: data.amount,
+      },
     })
   }
 
@@ -56,7 +68,9 @@ export async function updateIncomeEntry(id: string, input: IncomeEntryInput) {
     data: {
       name: data.name,
       amount: data.amount,
-      dueDate: data.dueDay ? dateWithDay(existing.month, data.dueDay) : null,
+      dueDayType: data.dueDayType,
+      dueDayValue: data.dueDay ?? null,
+      dueDate: data.dueDay ? resolveDueDate(existing.month, data.dueDayType, data.dueDay) : null,
     },
   })
 

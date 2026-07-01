@@ -27,6 +27,11 @@ enum PaidBy {
   THIRD_PARTY
 }
 
+enum DueDayType {
+  CALENDAR_DAY
+  BUSINESS_DAY
+}
+
 enum ExpenseCategory {
   FIXED
   VARIABLE
@@ -42,6 +47,7 @@ model IncomeTemplate {
   name          String
   defaultAmount Decimal   @db.Decimal(12, 2)
   dayOfMonth    Int?
+  dueDayType    DueDayType @default(CALENDAR_DAY)
   startMonth    DateTime  @db.Date
   endMonth      DateTime? @db.Date
   active        Boolean   @default(true)
@@ -63,6 +69,8 @@ model IncomeEntry {
   name           String
   month          DateTime  @db.Date
   dueDate        DateTime? @db.Date
+  dueDayType     DueDayType @default(CALENDAR_DAY)
+  dueDayValue    Int?
   amount         Decimal   @db.Decimal(12, 2)
   received       Boolean   @default(false)
   receivedAt     DateTime?
@@ -85,6 +93,7 @@ model ExpenseTemplate {
   category      ExpenseCategory
   defaultAmount Decimal?        @db.Decimal(12, 2)
   dayOfMonth    Int?
+  dueDayType    DueDayType      @default(CALENDAR_DAY)
   startMonth    DateTime        @db.Date
   endMonth      DateTime?       @db.Date
   active        Boolean         @default(true)
@@ -107,6 +116,8 @@ model ExpenseEntry {
   category   ExpenseCategory
   month      DateTime        @db.Date
   dueDate    DateTime?       @db.Date
+  dueDayType DueDayType      @default(CALENDAR_DAY)
+  dueDayValue Int?
   amount     Decimal         @db.Decimal(12, 2)
   paid       Boolean         @default(false)
   paidAt     DateTime?

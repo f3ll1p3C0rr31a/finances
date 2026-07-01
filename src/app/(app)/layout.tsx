@@ -8,9 +8,7 @@ import { cn } from "@/lib/utils"
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/cashflow", label: "Fluxo de Caixa" },
   { href: "/cards", label: "Cartões" },
-  { href: "/chart", label: "Gráfico" },
 ]
 
 export default async function AppLayout({

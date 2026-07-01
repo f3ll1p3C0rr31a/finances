@@ -3,6 +3,8 @@ export type SerializedIncomeEntry = {
   name: string
   amount: number
   dueDay: number | null
+  dueDayType: "CALENDAR_DAY" | "BUSINESS_DAY"
+  dueDate: string | null
   received: boolean
   isRecurring: boolean
 }
@@ -13,6 +15,8 @@ export type SerializedExpenseEntry = {
   amount: number
   category: "FIXED" | "VARIABLE" | "ONE_OFF"
   dueDay: number | null
+  dueDayType: "CALENDAR_DAY" | "BUSINESS_DAY"
+  dueDate: string | null
   paid: boolean
   paidBy: "SELF" | "THIRD_PARTY"
   paidByName: string | null

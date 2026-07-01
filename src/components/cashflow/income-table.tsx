@@ -5,7 +5,7 @@ import { toast } from "sonner"
 
 import type { SerializedIncomeEntry } from "@/lib/types"
 import { setIncomeReceived, deleteIncomeEntry } from "@/lib/actions/income"
-import { formatCurrency } from "@/lib/calculations/format"
+import { formatCurrency, formatDueDay } from "@/lib/calculations/format"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import {
@@ -75,7 +75,7 @@ export function IncomeTable({
             entries.map((entry) => (
               <TableRow key={entry.id}>
                 <TableCell className="font-medium">{entry.name}</TableCell>
-                <TableCell>{entry.dueDay ?? "—"}</TableCell>
+                <TableCell>{formatDueDay(entry.dueDay, entry.dueDayType)}</TableCell>
                 <TableCell className="text-right">{formatCurrency(entry.amount)}</TableCell>
                 <TableCell className="text-center">
                   <Switch

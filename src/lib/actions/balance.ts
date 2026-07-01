@@ -22,5 +22,5 @@ export async function setActualBalance(month: Date, amount: number | null) {
 
   await recalcOpeningBalanceChain(userId, month)
 
-  revalidatePath(`/cashflow/${monthKeyFromDate(month)}`)
+  revalidatePath(`/dashboard/${monthKeyFromDate(month)}`)
 }

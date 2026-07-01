@@ -3,17 +3,18 @@
 import { prisma } from "@/lib/prisma"
 import { requireUserId } from "@/lib/session"
 import { revalidatePath } from "next/cache"
-import { monthKeyFromDate, dateWithDay } from "@/lib/calculations/month"
+import { monthKeyFromDate } from "@/lib/calculations/month"
+import { resolveDueDate } from "@/lib/calculations/businessDay"
 import { expenseEntrySchema, type ExpenseEntryInput } from "@/lib/validation/schemas"
 
 function revalidateMonth(month: Date) {
-  revalidatePath(`/cashflow/${monthKeyFromDate(month)}`)
+  revalidatePath(`/dashboard/${monthKeyFromDate(month)}`)
 }
 
 export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) {
   const userId = await requireUserId()
   const data = expenseEntrySchema.parse(input)
-  const dueDate = data.dueDay ? dateWithDay(month, data.dueDay) : null
+  const dueDate = data.dueDay ? resolveDueDate(month, data.dueDayType, data.dueDay) : null
   const paidByName = data.paidBy === "THIRD_PARTY" ? data.paidByName ?? null : null
 
   if (data.recurring && data.category !== "ONE_OFF") {
@@ -24,6 +25,7 @@ export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) 
         category: data.category,
         defaultAmount: data.amount,
         dayOfMonth: data.dueDay ?? null,
+        dueDayType: data.dueDayType,
         startMonth: month,
       },
     })
@@ -35,6 +37,8 @@ export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) 
         category: data.category,
         month,
         dueDate,
+        dueDayType: data.dueDayType,
+        dueDayValue: data.dueDay ?? null,
         amount: data.amount,
         paidBy: data.paidBy,
         paidByName,
@@ -48,6 +52,8 @@ export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) 
         category: data.category,
         month,
         dueDate,
+        dueDayType: data.dueDayType,
+        dueDayValue: data.dueDay ?? null,
         amount: data.amount,
         paidBy: data.paidBy,
         paidByName,
@@ -71,7 +77,9 @@ export async function updateExpenseEntry(id: string, input: ExpenseEntryInput) {
       name: data.name,
       amount: data.amount,
       category: data.category,
-      dueDate: data.dueDay ? dateWithDay(existing.month, data.dueDay) : null,
+      dueDayType: data.dueDayType,
+      dueDayValue: data.dueDay ?? null,
+      dueDate: data.dueDay ? resolveDueDate(existing.month, data.dueDayType, data.dueDay) : null,
       paidBy: data.paidBy,
       paidByName,
     },

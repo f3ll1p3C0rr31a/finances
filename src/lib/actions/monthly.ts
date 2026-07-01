@@ -1,7 +1,8 @@
 import { Prisma } from "@/generated/prisma/client"
 
 import { prisma } from "@/lib/prisma"
-import { addMonths, dateWithDay } from "@/lib/calculations/month"
+import { addMonths } from "@/lib/calculations/month"
+import { resolveDueDate } from "@/lib/calculations/businessDay"
 import { computeMonthTotals, computePlannedBalance } from "@/lib/calculations/balanceChain"
 import { getCardsMonthSummary } from "@/lib/actions/cardSummary"
 
@@ -24,7 +25,11 @@ async function ensureTemplateEntries(userId: string, month: Date) {
         templateId: template.id,
         name: template.name,
         month,
-        dueDate: template.dayOfMonth ? dateWithDay(month, template.dayOfMonth) : null,
+        dueDate: template.dayOfMonth
+          ? resolveDueDate(month, template.dueDayType, template.dayOfMonth)
+          : null,
+        dueDayType: template.dueDayType,
+        dueDayValue: template.dayOfMonth,
         amount: template.defaultAmount,
       },
     })
@@ -49,7 +54,11 @@ async function ensureTemplateEntries(userId: string, month: Date) {
         name: template.name,
         category: template.category,
         month,
-        dueDate: template.dayOfMonth ? dateWithDay(month, template.dayOfMonth) : null,
+        dueDate: template.dayOfMonth
+          ? resolveDueDate(month, template.dueDayType, template.dayOfMonth)
+          : null,
+        dueDayType: template.dueDayType,
+        dueDayValue: template.dayOfMonth,
         amount: template.defaultAmount ?? new Prisma.Decimal(0),
       },
     })
