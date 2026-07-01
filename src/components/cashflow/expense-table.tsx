@@ -4,8 +4,10 @@ import { useTransition } from "react"
 import { toast } from "sonner"
 
 import type { SerializedExpenseEntry } from "@/lib/types"
+import type { TagOption } from "@/components/tags/tag-multi-select"
 import { setExpensePaid, deleteExpenseEntry } from "@/lib/actions/expense"
-import { formatCurrency, formatDueDay } from "@/lib/calculations/format"
+import { formatDueDay } from "@/lib/calculations/format"
+import { MoneyText } from "@/components/ui/money-text"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,12 +27,24 @@ const CATEGORY_LABELS = {
   ONE_OFF: "Avulsa",
 }
 
+const PAYMENT_METHOD_LABELS = {
+  CASH: "Dinheiro",
+  PIX: "Pix",
+  TRANSFER: "Transferência",
+  CARD: "Cartão",
+  OTHER: "Outro",
+}
+
 export function ExpenseTable({
   month,
   entries,
+  allTags,
+  pixPayees,
 }: {
   month: string
   entries: SerializedExpenseEntry[]
+  allTags: TagOption[]
+  pixPayees: { id: string; label: string }[]
 }) {
   const [pending, startTransition] = useTransition()
 
@@ -59,7 +73,13 @@ export function ExpenseTable({
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Despesas</h2>
-        <ExpenseEntryDialog month={month} triggerLabel="Nova despesa" triggerSize="sm" />
+        <ExpenseEntryDialog
+          month={month}
+          triggerLabel="Nova despesa"
+          triggerSize="sm"
+          allTags={allTags}
+          pixPayees={pixPayees}
+        />
       </div>
       <Table>
         <TableHeader>
@@ -68,6 +88,8 @@ export function ExpenseTable({
             <TableHead>Categoria</TableHead>
             <TableHead>Dia</TableHead>
             <TableHead>Pago por</TableHead>
+            <TableHead>Forma</TableHead>
+            <TableHead>Etiquetas</TableHead>
             <TableHead className="text-right">Valor</TableHead>
             <TableHead className="text-center">Pago</TableHead>
             <TableHead className="w-0" />
@@ -76,7 +98,7 @@ export function ExpenseTable({
         <TableBody>
           {entries.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
+              <TableCell colSpan={9} className="text-center text-muted-foreground">
                 Nenhuma despesa neste mês.
               </TableCell>
             </TableRow>
@@ -95,7 +117,24 @@ export function ExpenseTable({
                     "Eu"
                   )}
                 </TableCell>
-                <TableCell className="text-right">{formatCurrency(entry.amount)}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {PAYMENT_METHOD_LABELS[entry.paymentMethod]}
+                  {entry.pixKeyLabel ? (
+                    <span className="block text-xs">→ {entry.pixKeyLabel}</span>
+                  ) : null}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {entry.tags.map((tag) => (
+                      <Badge key={tag.id} variant="secondary">
+                        {tag.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <MoneyText value={-entry.amount} />
+                </TableCell>
                 <TableCell className="text-center">
                   <Switch
                     checked={entry.paid}
@@ -110,6 +149,8 @@ export function ExpenseTable({
                     triggerLabel="Editar"
                     triggerVariant="ghost"
                     triggerSize="xs"
+                    allTags={allTags}
+                    pixPayees={pixPayees}
                   />
                   <Button
                     variant="ghost"

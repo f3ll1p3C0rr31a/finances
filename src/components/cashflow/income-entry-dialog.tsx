@@ -11,9 +11,13 @@ import {
   type IncomeEntryInput,
 } from "@/lib/validation/schemas"
 import { createIncomeEntry, updateIncomeEntry } from "@/lib/actions/income"
+import { setIncomeEntryTags } from "@/lib/actions/tags"
 import type { SerializedIncomeEntry } from "@/lib/types"
+import type { TagOption } from "@/components/tags/tag-multi-select"
+import { TagMultiSelect } from "@/components/tags/tag-multi-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
@@ -46,6 +50,7 @@ type Props = {
   triggerLabel: string
   triggerVariant?: "default" | "outline" | "ghost" | "secondary"
   triggerSize?: "default" | "sm" | "xs" | "icon-sm"
+  allTags: TagOption[]
 }
 
 export function IncomeEntryDialog({
@@ -54,9 +59,11 @@ export function IncomeEntryDialog({
   triggerLabel,
   triggerVariant = "default",
   triggerSize = "default",
+  allTags,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
+  const [tagIds, setTagIds] = useState<string[]>(entry?.tags.map((t) => t.id) ?? [])
 
   const form = useForm<IncomeEntryFormValues, unknown, IncomeEntryInput>({
     resolver: zodResolver(incomeEntrySchema),
@@ -76,11 +83,14 @@ export function IncomeEntryDialog({
       try {
         const [year, monthIndex] = month.split("-").map(Number)
         const monthDate = new Date(Date.UTC(year, monthIndex - 1, 1))
+        let entryId: string
         if (entry) {
           await updateIncomeEntry(entry.id, values)
+          entryId = entry.id
         } else {
-          await createIncomeEntry(monthDate, values)
+          entryId = (await createIncomeEntry(monthDate, values)).id
         }
+        await setIncomeEntryTags(entryId, tagIds)
         toast.success("Entrada salva.")
         setOpen(false)
         form.reset()
@@ -124,12 +134,7 @@ export function IncomeEntryDialog({
                 <FormItem>
                   <FormLabel>Valor</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      {...field}
-                      value={String(field.value ?? "")}
-                    />
+                    <CurrencyInput value={Number(field.value) || 0} onChange={field.onChange} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -197,6 +202,10 @@ export function IncomeEntryDialog({
                 )}
               />
             ) : null}
+            <div className="grid gap-2">
+              <FormLabel>Etiquetas</FormLabel>
+              <TagMultiSelect allTags={allTags} selectedIds={tagIds} onChange={setTagIds} />
+            </div>
             <DialogFooter>
               <Button type="submit" disabled={pending}>
                 {pending ? "Salvando..." : "Salvar"}

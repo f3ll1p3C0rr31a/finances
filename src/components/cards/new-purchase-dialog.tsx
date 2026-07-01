@@ -11,8 +11,12 @@ import {
   type CardPurchaseInput,
 } from "@/lib/validation/cardSchemas"
 import { createCardPurchase } from "@/lib/actions/cards"
+import { setCardPurchaseTags } from "@/lib/actions/tags"
+import type { TagOption } from "@/components/tags/tag-multi-select"
+import { TagMultiSelect } from "@/components/tags/tag-multi-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import {
   Dialog,
   DialogContent,
@@ -34,9 +38,16 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-export function NewPurchaseDialog({ cardId }: { cardId: string }) {
+export function NewPurchaseDialog({
+  cardId,
+  allTags,
+}: {
+  cardId: string
+  allTags: TagOption[]
+}) {
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
+  const [tagIds, setTagIds] = useState<string[]>([])
 
   const form = useForm<CardPurchaseFormValues, unknown, CardPurchaseInput>({
     resolver: zodResolver(cardPurchaseSchema),
@@ -51,9 +62,11 @@ export function NewPurchaseDialog({ cardId }: { cardId: string }) {
   function onSubmit(values: CardPurchaseInput) {
     startTransition(async () => {
       try {
-        await createCardPurchase(cardId, values)
+        const { id } = await createCardPurchase(cardId, values)
+        await setCardPurchaseTags(id, tagIds)
         toast.success("Compra registrada.")
         setOpen(false)
+        setTagIds([])
         form.reset({
           description: "",
           totalAmount: 0,
@@ -95,12 +108,7 @@ export function NewPurchaseDialog({ cardId }: { cardId: string }) {
                 <FormItem>
                   <FormLabel>Valor total</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      {...field}
-                      value={String(field.value ?? "")}
-                    />
+                    <CurrencyInput value={Number(field.value) || 0} onChange={field.onChange} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -138,6 +146,10 @@ export function NewPurchaseDialog({ cardId }: { cardId: string }) {
                 </FormItem>
               )}
             />
+            <div className="grid gap-2">
+              <FormLabel>Etiquetas</FormLabel>
+              <TagMultiSelect allTags={allTags} selectedIds={tagIds} onChange={setTagIds} />
+            </div>
             <DialogFooter>
               <Button type="submit" disabled={pending}>
                 {pending ? "Salvando..." : "Salvar"}

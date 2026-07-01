@@ -1,7 +1,7 @@
 import Link from "next/link"
 
 import type { SerializedCardSummary } from "@/lib/types"
-import { formatCurrency } from "@/lib/calculations/format"
+import { MoneyText } from "@/components/ui/money-text"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export function CardList({ cards }: { cards: SerializedCardSummary[] }) {
@@ -17,9 +17,18 @@ export function CardList({ cards }: { cards: SerializedCardSummary[] }) {
             <CardHeader>
               <CardTitle>{card.name}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">Total do mês</p>
-              <p className="text-xl font-semibold">{formatCurrency(card.total)}</p>
+            <CardContent className="flex flex-col gap-2">
+              <div>
+                <p className="text-sm text-muted-foreground">Total do mês</p>
+                <p className="text-xl font-semibold">
+                  <MoneyText value={-card.total} />
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {card.bestPurchaseDay
+                  ? `Melhor dia para comprar: dia ${card.bestPurchaseDay}`
+                  : "Defina o dia de fechamento para ver o melhor dia de compra"}
+              </p>
             </CardContent>
           </Card>
         </Link>

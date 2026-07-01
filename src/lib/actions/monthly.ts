@@ -153,12 +153,47 @@ export async function recalcOpeningBalanceChain(userId: string, fromMonth: Date)
   }
 }
 
+/**
+ * Nudges a month's manually-set actual balance by `delta` — used so
+ * that checking an entry as paid/received keeps the real balance in
+ * sync without requiring a manual re-entry. A no-op when the actual
+ * balance hasn't been set yet (the planned balance already reflects
+ * every entry regardless of its paid/received state).
+ */
+export async function adjustActualBalance(
+  userId: string,
+  month: Date,
+  delta: Prisma.Decimal
+): Promise<void> {
+  const balance = await prisma.monthlyBalance.findUnique({
+    where: { userId_month: { userId, month } },
+  })
+  if (!balance || balance.actualBalance == null) return
+
+  await prisma.monthlyBalance.update({
+    where: { id: balance.id },
+    data: {
+      actualBalance: balance.actualBalance.add(delta),
+      actualBalanceAt: new Date(),
+    },
+  })
+  await recalcOpeningBalanceChain(userId, month)
+}
+
 export async function getMonthData(userId: string, month: Date) {
   await ensureMonthGenerated(userId, month)
 
   const [incomeEntries, expenseEntries, balance, cards] = await Promise.all([
-    prisma.incomeEntry.findMany({ where: { userId, month }, orderBy: { name: "asc" } }),
-    prisma.expenseEntry.findMany({ where: { userId, month }, orderBy: { name: "asc" } }),
+    prisma.incomeEntry.findMany({
+      where: { userId, month },
+      orderBy: { name: "asc" },
+      include: { tags: { include: { tag: true } } },
+    }),
+    prisma.expenseEntry.findMany({
+      where: { userId, month },
+      orderBy: { name: "asc" },
+      include: { tags: { include: { tag: true } }, pixKey: true },
+    }),
     prisma.monthlyBalance.findUniqueOrThrow({ where: { userId_month: { userId, month } } }),
     getCardsMonthSummary(userId, month),
   ])

@@ -4,10 +4,13 @@ import { useTransition } from "react"
 import { toast } from "sonner"
 
 import type { SerializedIncomeEntry } from "@/lib/types"
+import type { TagOption } from "@/components/tags/tag-multi-select"
 import { setIncomeReceived, deleteIncomeEntry } from "@/lib/actions/income"
-import { formatCurrency, formatDueDay } from "@/lib/calculations/format"
+import { formatDueDay } from "@/lib/calculations/format"
+import { MoneyText } from "@/components/ui/money-text"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -21,9 +24,11 @@ import { IncomeEntryDialog } from "@/components/cashflow/income-entry-dialog"
 export function IncomeTable({
   month,
   entries,
+  allTags,
 }: {
   month: string
   entries: SerializedIncomeEntry[]
+  allTags: TagOption[]
 }) {
   const [pending, startTransition] = useTransition()
 
@@ -52,13 +57,14 @@ export function IncomeTable({
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Entradas</h2>
-        <IncomeEntryDialog month={month} triggerLabel="Nova entrada" triggerSize="sm" />
+        <IncomeEntryDialog month={month} triggerLabel="Nova entrada" triggerSize="sm" allTags={allTags} />
       </div>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Nome</TableHead>
             <TableHead>Dia</TableHead>
+            <TableHead>Etiquetas</TableHead>
             <TableHead className="text-right">Valor</TableHead>
             <TableHead className="text-center">Recebido</TableHead>
             <TableHead className="w-0" />
@@ -67,7 +73,7 @@ export function IncomeTable({
         <TableBody>
           {entries.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground">
+              <TableCell colSpan={6} className="text-center text-muted-foreground">
                 Nenhuma entrada neste mês.
               </TableCell>
             </TableRow>
@@ -76,7 +82,18 @@ export function IncomeTable({
               <TableRow key={entry.id}>
                 <TableCell className="font-medium">{entry.name}</TableCell>
                 <TableCell>{formatDueDay(entry.dueDay, entry.dueDayType)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(entry.amount)}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {entry.tags.map((tag) => (
+                      <Badge key={tag.id} variant="secondary">
+                        {tag.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <MoneyText value={entry.amount} />
+                </TableCell>
                 <TableCell className="text-center">
                   <Switch
                     checked={entry.received}
@@ -91,6 +108,7 @@ export function IncomeTable({
                     triggerLabel="Editar"
                     triggerVariant="ghost"
                     triggerSize="xs"
+                    allTags={allTags}
                   />
                   <Button
                     variant="ghost"

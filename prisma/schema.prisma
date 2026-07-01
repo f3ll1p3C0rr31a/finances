@@ -20,6 +20,9 @@ model User {
   monthlyBalances   MonthlyBalance[]
   cards             Card[]
   cardSpendingGoals CardSpendingGoal[]
+  tags              Tag[]
+  accounts          Account[]
+  pixKeys           PixKey[]
 }
 
 enum PaidBy {
@@ -36,6 +39,19 @@ enum ExpenseCategory {
   FIXED
   VARIABLE
   ONE_OFF
+}
+
+enum PaymentMethod {
+  CASH
+  PIX
+  TRANSFER
+  CARD
+  OTHER
+}
+
+enum PixKeyKind {
+  OWN
+  PAYEE
 }
 
 /// A recurring income rule (e.g. monthly salary). One-time income is
@@ -78,6 +94,8 @@ model IncomeEntry {
   notes          String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  tags IncomeEntryTag[]
 
   @@unique([templateId, month])
   @@index([userId, month])
@@ -124,9 +142,14 @@ model ExpenseEntry {
   paidAmount Decimal?        @db.Decimal(12, 2)
   paidBy     PaidBy          @default(SELF)
   paidByName String?
+  paymentMethod PaymentMethod @default(PIX)
+  pixKeyId   String?
+  pixKey     PixKey?         @relation(fields: [pixKeyId], references: [id], onDelete: SetNull)
   notes      String?
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
+
+  tags ExpenseEntryTag[]
 
   @@unique([templateId, month])
   @@index([userId, month])
@@ -183,6 +206,7 @@ model CardPurchase {
   createdAt        DateTime @default(now())
 
   installments CardInstallment[]
+  tags         CardPurchaseTag[]
 
   @@index([cardId, purchaseDate])
 }
@@ -209,4 +233,79 @@ model CardSpendingGoal {
   amount Decimal  @db.Decimal(12, 2)
 
   @@unique([userId, month])
+}
+
+/// A free-form spending category (e.g. "Entretenimento", "Gasolina").
+/// Applies to card purchases and income/expense entries alike.
+model Tag {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String
+
+  cardPurchases  CardPurchaseTag[]
+  incomeEntries  IncomeEntryTag[]
+  expenseEntries ExpenseEntryTag[]
+
+  @@unique([userId, name])
+}
+
+model CardPurchaseTag {
+  purchaseId String
+  purchase   CardPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  tagId      String
+  tag        Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([purchaseId, tagId])
+}
+
+model IncomeEntryTag {
+  entryId String
+  entry   IncomeEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  tagId   String
+  tag     Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([entryId, tagId])
+}
+
+model ExpenseEntryTag {
+  entryId String
+  entry   ExpenseEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  tagId   String
+  tag     Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([entryId, tagId])
+}
+
+/// A bank account the user tracks for reference (not a source of
+/// automated data — just a note of which accounts exist and whether
+/// they're still in use).
+model Account {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  active    Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// A Pix key — either one of the user's own (to receive) or a
+/// frequent payee's (to pay), kept for quick reference. Expense
+/// entries can link to a PAYEE key to record who a bill is paid to.
+model PixKey {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      PixKeyKind
+  label     String
+  keyValue  String
+  notes     String?
+  createdAt DateTime   @default(now())
+
+  expenseEntries ExpenseEntry[]
+
+  @@index([userId])
 }

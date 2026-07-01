@@ -4,9 +4,9 @@ import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
 import { setActualBalance } from "@/lib/actions/balance"
-import { formatCurrency } from "@/lib/calculations/format"
+import { MoneyText } from "@/components/ui/money-text"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -31,7 +31,7 @@ export function BalancePanel({
   actualBalance,
   actualBalanceAt,
 }: Props) {
-  const [value, setValue] = useState(actualBalance?.toString() ?? "")
+  const [value, setValue] = useState(actualBalance ?? plannedBalance)
   const [pending, startTransition] = useTransition()
 
   function save() {
@@ -39,8 +39,7 @@ export function BalancePanel({
       try {
         const [year, monthIndex] = month.split("-").map(Number)
         const monthDate = new Date(Date.UTC(year, monthIndex - 1, 1))
-        const amount = value.trim() === "" ? null : Number(value)
-        await setActualBalance(monthDate, amount)
+        await setActualBalance(monthDate, value)
         toast.success("Saldo atualizado.")
       } catch {
         toast.error("Não foi possível atualizar o saldo.")
@@ -53,31 +52,34 @@ export function BalancePanel({
       <CardHeader>
         <CardTitle>Resumo do mês</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-4 sm:grid-cols-2">
+      <CardContent className="flex flex-col gap-4">
         <dl className="grid grid-cols-2 gap-2 text-sm">
           <dt className="text-muted-foreground">Saldo inicial</dt>
-          <dd className="text-right">{formatCurrency(openingBalance)}</dd>
+          <dd className="text-right">
+            <MoneyText value={openingBalance} />
+          </dd>
           <dt className="text-muted-foreground">Total entrada</dt>
-          <dd className="text-right">{formatCurrency(totalIncome)}</dd>
+          <dd className="text-right">
+            <MoneyText value={totalIncome} />
+          </dd>
           <dt className="text-muted-foreground">Total saída</dt>
-          <dd className="text-right">{formatCurrency(totalExpense)}</dd>
+          <dd className="text-right">
+            <MoneyText value={-totalExpense} />
+          </dd>
           <dt className="text-muted-foreground">Diferença</dt>
-          <dd className="text-right">{formatCurrency(difference)}</dd>
+          <dd className="text-right">
+            <MoneyText value={difference} />
+          </dd>
           <dt className="font-medium">Saldo planejado</dt>
-          <dd className="text-right font-medium">{formatCurrency(plannedBalance)}</dd>
+          <dd className="text-right font-medium">
+            <MoneyText value={plannedBalance} />
+          </dd>
         </dl>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 border-t pt-3">
           <Label htmlFor="actual-balance">Saldo real (atualize quando conferir a conta)</Label>
-          <div className="flex gap-2">
-            <Input
-              id="actual-balance"
-              type="number"
-              step="0.01"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder={plannedBalance.toString()}
-            />
-            <Button onClick={save} disabled={pending}>
+          <div className="flex max-w-56 gap-2">
+            <CurrencyInput id="actual-balance" value={value} onChange={setValue} />
+            <Button onClick={save} disabled={pending} size="sm">
               {pending ? "Salvando..." : "Salvar"}
             </Button>
           </div>

@@ -6,12 +6,13 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 
 import { cardSchema, type CardFormValues, type CardInput } from "@/lib/validation/cardSchemas"
-import { createCard } from "@/lib/actions/cards"
+import { createCard, updateCard } from "@/lib/actions/cards"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -26,34 +27,55 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 
-export function NewCardDialog() {
+type Props = {
+  card?: { id: string; name: string; closingDay: number | null }
+  triggerLabel?: string
+  triggerVariant?: "default" | "outline" | "ghost" | "secondary"
+  triggerSize?: "default" | "sm" | "xs" | "icon-sm"
+}
+
+export function NewCardDialog({
+  card,
+  triggerLabel,
+  triggerVariant = "default",
+  triggerSize = "default",
+}: Props) {
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
 
   const form = useForm<CardFormValues, unknown, CardInput>({
     resolver: zodResolver(cardSchema),
-    defaultValues: { name: "" },
+    defaultValues: { name: card?.name ?? "", closingDay: card?.closingDay ?? undefined },
   })
 
   function onSubmit(values: CardInput) {
     startTransition(async () => {
       try {
-        await createCard(values)
-        toast.success("Cartão criado.")
+        if (card) {
+          await updateCard(card.id, values)
+        } else {
+          await createCard(values)
+        }
+        toast.success("Cartão salvo.")
         setOpen(false)
         form.reset()
       } catch {
-        toast.error("Não foi possível criar o cartão.")
+        toast.error("Não foi possível salvar o cartão.")
       }
     })
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>Novo cartão</DialogTrigger>
+      <DialogTrigger render={<Button variant={triggerVariant} size={triggerSize} />}>
+        {triggerLabel ?? (card ? "Editar cartão" : "Novo cartão")}
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Novo cartão</DialogTitle>
+          <DialogTitle>{card ? "Editar cartão" : "Novo cartão"}</DialogTitle>
+          <DialogDescription>
+            O dia de fechamento define o &quot;melhor dia de compra&quot; (dia seguinte ao fechamento).
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
@@ -65,6 +87,25 @@ export function NewCardDialog() {
                   <FormLabel>Nome</FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="ex: Nubank" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="closingDay"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dia de fechamento (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={31}
+                      {...field}
+                      value={String(field.value ?? "")}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

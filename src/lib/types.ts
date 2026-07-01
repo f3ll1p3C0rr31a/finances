@@ -1,3 +1,7 @@
+export type TagRef = { id: string; name: string }
+
+export type PaymentMethod = "CASH" | "PIX" | "TRANSFER" | "CARD" | "OTHER"
+
 export type SerializedIncomeEntry = {
   id: string
   name: string
@@ -7,6 +11,7 @@ export type SerializedIncomeEntry = {
   dueDate: string | null
   received: boolean
   isRecurring: boolean
+  tags: TagRef[]
 }
 
 export type SerializedExpenseEntry = {
@@ -21,12 +26,18 @@ export type SerializedExpenseEntry = {
   paidBy: "SELF" | "THIRD_PARTY"
   paidByName: string | null
   isRecurring: boolean
+  tags: TagRef[]
+  paymentMethod: PaymentMethod
+  pixKeyId: string | null
+  pixKeyLabel: string | null
 }
 
 export type SerializedCardSummary = {
   id: string
   name: string
   total: number
+  closingDay: number | null
+  bestPurchaseDay: number | null
 }
 
 export type SerializedCardPurchase = {
@@ -35,4 +46,5 @@ export type SerializedCardPurchase = {
   totalAmount: number
   purchaseDate: string
   installmentCount: number
+  tags: TagRef[]
 }

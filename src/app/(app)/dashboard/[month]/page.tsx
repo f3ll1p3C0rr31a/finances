@@ -3,7 +3,12 @@ import { notFound } from "next/navigation"
 import { requireUserId } from "@/lib/session"
 import { getMonthData } from "@/lib/actions/monthly"
 import { getBalanceHistory } from "@/lib/actions/chart"
+import { getCardGoalData } from "@/lib/actions/cardSummary"
+import { listTags } from "@/lib/actions/tags"
+import { listPixKeys } from "@/lib/actions/pixKeys"
+import { getSpendingByTagRows } from "@/lib/actions/spendingByTag"
 import { monthFromKey } from "@/lib/calculations/month"
+import { bestPurchaseDate } from "@/lib/calculations/cardTiming"
 import type {
   SerializedIncomeEntry,
   SerializedExpenseEntry,
@@ -16,6 +21,8 @@ import { BalancePanel } from "@/components/cashflow/balance-panel"
 import { CardsSummary } from "@/components/cashflow/cards-summary"
 import { MonthCalendar } from "@/components/cashflow/month-calendar"
 import { BalanceChart, IncomeExpenseChart } from "@/components/chart/balance-chart"
+import { CardGoalPanel } from "@/components/cards/card-goal-panel"
+import { SpendingByTagChart } from "@/components/chart/spending-by-tag-chart"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 const MONTH_KEY_PATTERN = /^\d{4}-\d{2}$/
@@ -32,10 +39,17 @@ export default async function DashboardMonthPage({
 
   const userId = await requireUserId()
   const month = monthFromKey(monthKey)
-  const [data, history] = await Promise.all([
+  const [data, history, goalData, allTags, pixPayeeKeys, spendingRows] = await Promise.all([
     getMonthData(userId, month),
     getBalanceHistory(userId),
+    getCardGoalData(userId, month),
+    listTags(userId),
+    listPixKeys(userId, "PAYEE"),
+    getSpendingByTagRows(userId, month),
   ])
+
+  const tagRefs = allTags.map((t) => ({ id: t.id, name: t.name }))
+  const pixPayees = pixPayeeKeys.map((k) => ({ id: k.id, label: k.label }))
 
   const incomeEntries: SerializedIncomeEntry[] = data.incomeEntries.map((entry) => ({
     id: entry.id,
@@ -46,6 +60,7 @@ export default async function DashboardMonthPage({
     dueDate: entry.dueDate ? entry.dueDate.toISOString() : null,
     received: entry.received,
     isRecurring: entry.templateId != null,
+    tags: entry.tags.map((t) => ({ id: t.tag.id, name: t.tag.name })),
   }))
 
   const expenseEntries: SerializedExpenseEntry[] = data.expenseEntries.map((entry) => ({
@@ -60,31 +75,69 @@ export default async function DashboardMonthPage({
     paidBy: entry.paidBy,
     paidByName: entry.paidByName,
     isRecurring: entry.templateId != null,
+    tags: entry.tags.map((t) => ({ id: t.tag.id, name: t.tag.name })),
+    paymentMethod: entry.paymentMethod,
+    pixKeyId: entry.pixKeyId,
+    pixKeyLabel: entry.pixKey?.label ?? null,
   }))
 
   const cardSummaries: SerializedCardSummary[] = data.cardSummaries.map((s) => ({
     id: s.card.id,
     name: s.card.name,
     total: s.total.toNumber(),
+    closingDay: s.card.closingDay,
+    bestPurchaseDay: s.card.closingDay
+      ? bestPurchaseDate(s.card.closingDay, month).getUTCDate()
+      : null,
   }))
 
   return (
     <div className="flex flex-col gap-6">
       <MonthNav month={month} />
-      <BalancePanel
+      <CardGoalPanel
         month={monthKey}
-        openingBalance={data.balance.openingBalance.toNumber()}
-        totalIncome={data.totalIncome.toNumber()}
-        totalExpense={data.totalExpense.toNumber()}
-        difference={data.difference.toNumber()}
-        plannedBalance={data.plannedBalance.toNumber()}
-        actualBalance={data.balance.actualBalance?.toNumber() ?? null}
-        actualBalanceAt={data.balance.actualBalanceAt?.toISOString() ?? null}
+        goal={goalData.goal?.toNumber() ?? null}
+        spent={goalData.combinedTotal.toNumber()}
+        remaining={goalData.progress.remaining.toNumber()}
+        perDay={goalData.progress.perDay.toNumber()}
+        daysLeft={goalData.progress.daysLeft}
       />
-      <MonthCalendar month={month} incomeEntries={incomeEntries} expenseEntries={expenseEntries} />
-      <IncomeTable month={monthKey} entries={incomeEntries} />
-      <ExpenseTable month={monthKey} entries={expenseEntries} />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <BalancePanel
+          month={monthKey}
+          openingBalance={data.balance.openingBalance.toNumber()}
+          totalIncome={data.totalIncome.toNumber()}
+          totalExpense={data.totalExpense.toNumber()}
+          difference={data.difference.toNumber()}
+          plannedBalance={data.plannedBalance.toNumber()}
+          actualBalance={data.balance.actualBalance?.toNumber() ?? null}
+          actualBalanceAt={data.balance.actualBalanceAt?.toISOString() ?? null}
+        />
+        <MonthCalendar
+          month={month}
+          incomeEntries={incomeEntries}
+          expenseEntries={expenseEntries}
+          cardBestDays={cardSummaries
+            .filter((c) => c.bestPurchaseDay != null)
+            .map((c) => ({ cardName: c.name, day: c.bestPurchaseDay as number }))}
+        />
+      </div>
+      <IncomeTable month={monthKey} entries={incomeEntries} allTags={tagRefs} />
+      <ExpenseTable
+        month={monthKey}
+        entries={expenseEntries}
+        allTags={tagRefs}
+        pixPayees={pixPayees}
+      />
       <CardsSummary cards={cardSummaries} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Gastos por etiqueta</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SpendingByTagChart rows={spendingRows} />
+        </CardContent>
+      </Card>
       {history.length > 0 ? (
         <>
           <Card>

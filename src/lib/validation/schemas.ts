@@ -22,6 +22,8 @@ export const expenseEntrySchema = z.object({
   recurring: z.boolean(),
   paidBy: z.enum(["SELF", "THIRD_PARTY"]),
   paidByName: z.string().trim().optional().nullable(),
+  paymentMethod: z.enum(["CASH", "PIX", "TRANSFER", "CARD", "OTHER"]),
+  pixKeyId: z.string().trim().optional().nullable(),
 })
 export type ExpenseEntryFormValues = z.input<typeof expenseEntrySchema>
 export type ExpenseEntryInput = z.output<typeof expenseEntrySchema>

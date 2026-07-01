@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/cards", label: "Cartões" },
+  { href: "/informacoes", label: "Informações" },
 ]
 
 export default async function AppLayout({

@@ -1,6 +1,7 @@
 import { requireUserId } from "@/lib/session"
 import { getCardGoalData } from "@/lib/actions/cardSummary"
 import { currentMonth, monthKeyFromDate } from "@/lib/calculations/month"
+import { bestPurchaseDate } from "@/lib/calculations/cardTiming"
 import type { SerializedCardSummary } from "@/lib/types"
 import { CardList } from "@/components/cards/card-list"
 import { CardGoalPanel } from "@/components/cards/card-goal-panel"
@@ -15,6 +16,10 @@ export default async function CardsPage() {
     id: s.card.id,
     name: s.card.name,
     total: s.total.toNumber(),
+    closingDay: s.card.closingDay,
+    bestPurchaseDay: s.card.closingDay
+      ? bestPurchaseDate(s.card.closingDay, month).getUTCDate()
+      : null,
   }))
 
   return (

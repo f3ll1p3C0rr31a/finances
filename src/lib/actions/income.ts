@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache"
 
+import { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { requireUserId } from "@/lib/session"
 import { monthKeyFromDate } from "@/lib/calculations/month"
 import { resolveDueDate } from "@/lib/calculations/businessDay"
+import { adjustActualBalance } from "@/lib/actions/monthly"
 import { incomeEntrySchema, type IncomeEntryInput } from "@/lib/validation/schemas"
 
 function revalidateMonth(month: Date) {
@@ -16,6 +18,8 @@ export async function createIncomeEntry(month: Date, input: IncomeEntryInput) {
   const userId = await requireUserId()
   const data = incomeEntrySchema.parse(input)
   const dueDate = data.dueDay ? resolveDueDate(month, data.dueDayType, data.dueDay) : null
+
+  let entryId: string
 
   if (data.recurring) {
     const template = await prisma.incomeTemplate.create({
@@ -28,7 +32,7 @@ export async function createIncomeEntry(month: Date, input: IncomeEntryInput) {
         startMonth: month,
       },
     })
-    await prisma.incomeEntry.create({
+    const entry = await prisma.incomeEntry.create({
       data: {
         userId,
         templateId: template.id,
@@ -40,8 +44,9 @@ export async function createIncomeEntry(month: Date, input: IncomeEntryInput) {
         amount: data.amount,
       },
     })
+    entryId = entry.id
   } else {
-    await prisma.incomeEntry.create({
+    const entry = await prisma.incomeEntry.create({
       data: {
         userId,
         name: data.name,
@@ -52,9 +57,11 @@ export async function createIncomeEntry(month: Date, input: IncomeEntryInput) {
         amount: data.amount,
       },
     })
+    entryId = entry.id
   }
 
   revalidateMonth(month)
+  return { id: entryId }
 }
 
 export async function updateIncomeEntry(id: string, input: IncomeEntryInput) {
@@ -74,11 +81,20 @@ export async function updateIncomeEntry(id: string, input: IncomeEntryInput) {
     },
   })
 
+  // If the amount changed while already marked received, keep the real
+  // balance consistent with the new amount.
+  if (existing.received && !existing.amount.equals(data.amount)) {
+    await adjustActualBalance(userId, entry.month, new Prisma.Decimal(data.amount).sub(existing.amount))
+  }
+
   revalidateMonth(entry.month)
 }
 
 export async function setIncomeReceived(id: string, received: boolean) {
   const userId = await requireUserId()
+  const existing = await prisma.incomeEntry.findUniqueOrThrow({ where: { id, userId } })
+  if (existing.received === received) return
+
   const entry = await prisma.incomeEntry.update({
     where: { id, userId },
     data: {
@@ -86,11 +102,19 @@ export async function setIncomeReceived(id: string, received: boolean) {
       receivedAt: received ? new Date() : null,
     },
   })
+
+  const amount = entry.receivedAmount ?? entry.amount
+  await adjustActualBalance(userId, entry.month, received ? amount : amount.neg())
+
   revalidateMonth(entry.month)
 }
 
 export async function deleteIncomeEntry(id: string) {
   const userId = await requireUserId()
   const entry = await prisma.incomeEntry.delete({ where: { id, userId } })
+  if (entry.received) {
+    const amount = entry.receivedAmount ?? entry.amount
+    await adjustActualBalance(userId, entry.month, amount.neg())
+  }
   revalidateMonth(entry.month)
 }

@@ -24,8 +24,21 @@ function revalidateCards() {
 export async function createCard(input: CardInput) {
   const userId = await requireUserId()
   const data = cardSchema.parse(input)
-  await prisma.card.create({ data: { userId, name: data.name } })
+  await prisma.card.create({
+    data: { userId, name: data.name, closingDay: data.closingDay ?? null },
+  })
   revalidateCards()
+}
+
+export async function updateCard(id: string, input: CardInput) {
+  const userId = await requireUserId()
+  const data = cardSchema.parse(input)
+  await prisma.card.update({
+    where: { id, userId },
+    data: { name: data.name, closingDay: data.closingDay ?? null },
+  })
+  revalidateCards()
+  revalidatePath(`/cards/${id}`)
 }
 
 export async function deleteCard(id: string) {
@@ -44,7 +57,7 @@ export async function createCardPurchase(cardId: string, input: CardPurchaseInpu
   const purchaseDate = new Date(Date.UTC(year, month - 1, day))
   const purchaseMonth = new Date(Date.UTC(year, month - 1, 1))
 
-  await prisma.$transaction(async (tx) => {
+  const purchaseId = await prisma.$transaction(async (tx) => {
     const purchase = await tx.cardPurchase.create({
       data: {
         cardId,
@@ -69,10 +82,13 @@ export async function createCardPurchase(cardId: string, input: CardPurchaseInpu
         })),
       })
     }
+
+    return purchase.id
   })
 
   revalidateCards()
   revalidatePath(`/cards/${cardId}`)
+  return { id: purchaseId }
 }
 
 export async function deleteCardPurchase(purchaseId: string) {

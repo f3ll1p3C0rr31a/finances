@@ -24,14 +24,18 @@ function sameDay(a: Date, b: Date): boolean {
   )
 }
 
+export type CardBestDay = { cardName: string; day: number }
+
 export function MonthCalendar({
   month,
   incomeEntries,
   expenseEntries,
+  cardBestDays = [],
 }: {
   month: Date
   incomeEntries: SerializedIncomeEntry[]
   expenseEntries: SerializedExpenseEntry[]
+  cardBestDays?: CardBestDay[]
 }) {
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined)
 
@@ -41,6 +45,9 @@ export function MonthCalendar({
   const expenseDates = expenseEntries
     .filter((e) => e.dueDate)
     .map((e) => toLocalMidnight(new Date(e.dueDate as string)))
+  const cardDayDates = cardBestDays.map((c) =>
+    toLocalMidnight(new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth(), c.day)))
+  )
 
   const bothDates = incomeDates.filter((d) => expenseDates.some((e) => sameDay(d, e)))
   const onlyIncomeDates = incomeDates.filter((d) => !bothDates.some((b) => sameDay(d, b)))
@@ -55,6 +62,9 @@ export function MonthCalendar({
     ? expenseEntries.filter(
         (e) => e.dueDate && sameDay(toLocalMidnight(new Date(e.dueDate)), selectedDay)
       )
+    : []
+  const dayCards = selectedDay
+    ? cardBestDays.filter((c, i) => sameDay(cardDayDates[i], selectedDay))
     : []
 
   return (
@@ -72,11 +82,13 @@ export function MonthCalendar({
             hasIncome: onlyIncomeDates,
             hasExpense: onlyExpenseDates,
             hasBoth: bothDates,
+            hasCardDay: cardDayDates,
           }}
           modifiersClassNames={{
             hasIncome: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
             hasExpense: "bg-destructive/15 text-destructive",
             hasBoth: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+            hasCardDay: "ring-2 ring-inset ring-blue-500/60",
           }}
         />
         <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -84,12 +96,20 @@ export function MonthCalendar({
             <p className="text-sm text-muted-foreground">
               Clique em um dia para ver os lançamentos previstos.
             </p>
-          ) : dayIncome.length === 0 && dayExpense.length === 0 ? (
+          ) : dayIncome.length === 0 && dayExpense.length === 0 && dayCards.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Nenhum lançamento neste dia.
             </p>
           ) : (
             <ul className="flex flex-col gap-1.5 text-sm">
+              {dayCards.map((c) => (
+                <li key={c.cardName} className="flex items-center gap-1.5">
+                  <Badge className="border-blue-500/60 text-blue-700 dark:text-blue-400" variant="outline">
+                    Melhor dia
+                  </Badge>
+                  Comprar no {c.cardName}
+                </li>
+              ))}
               {dayIncome.map((e) => (
                 <li key={e.id} className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-1.5">

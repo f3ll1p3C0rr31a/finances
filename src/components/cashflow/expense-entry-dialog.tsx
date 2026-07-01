@@ -11,9 +11,13 @@ import {
   type ExpenseEntryInput,
 } from "@/lib/validation/schemas"
 import { createExpenseEntry, updateExpenseEntry } from "@/lib/actions/expense"
+import { setExpenseEntryTags } from "@/lib/actions/tags"
 import type { SerializedExpenseEntry } from "@/lib/types"
+import type { TagOption } from "@/components/tags/tag-multi-select"
+import { TagMultiSelect } from "@/components/tags/tag-multi-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
@@ -46,12 +50,24 @@ const CATEGORY_LABELS = {
   ONE_OFF: "Avulsa",
 } as const
 
+const PAYMENT_METHOD_LABELS = {
+  CASH: "Dinheiro",
+  PIX: "Pix",
+  TRANSFER: "Transferência",
+  CARD: "Cartão",
+  OTHER: "Outro",
+} as const
+
+type PixKeyOption = { id: string; label: string }
+
 type Props = {
   month: string
   entry?: SerializedExpenseEntry
   triggerLabel: string
   triggerVariant?: "default" | "outline" | "ghost" | "secondary"
   triggerSize?: "default" | "sm" | "xs" | "icon-sm"
+  allTags: TagOption[]
+  pixPayees: PixKeyOption[]
 }
 
 export function ExpenseEntryDialog({
@@ -60,9 +76,12 @@ export function ExpenseEntryDialog({
   triggerLabel,
   triggerVariant = "default",
   triggerSize = "default",
+  allTags,
+  pixPayees,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
+  const [tagIds, setTagIds] = useState<string[]>(entry?.tags.map((t) => t.id) ?? [])
 
   const form = useForm<ExpenseEntryFormValues, unknown, ExpenseEntryInput>({
     resolver: zodResolver(expenseEntrySchema),
@@ -75,23 +94,29 @@ export function ExpenseEntryDialog({
       recurring: entry?.isRecurring ?? false,
       paidBy: entry?.paidBy ?? "SELF",
       paidByName: entry?.paidByName ?? "",
+      paymentMethod: entry?.paymentMethod ?? "PIX",
+      pixKeyId: entry?.pixKeyId ?? null,
     },
   })
 
   const category = useWatch({ control: form.control, name: "category" })
   const paidBy = useWatch({ control: form.control, name: "paidBy" })
   const dueDayType = useWatch({ control: form.control, name: "dueDayType" })
+  const paymentMethod = useWatch({ control: form.control, name: "paymentMethod" })
 
   function onSubmit(values: ExpenseEntryInput) {
     startTransition(async () => {
       try {
         const [year, monthIndex] = month.split("-").map(Number)
         const monthDate = new Date(Date.UTC(year, monthIndex - 1, 1))
+        let entryId: string
         if (entry) {
           await updateExpenseEntry(entry.id, values)
+          entryId = entry.id
         } else {
-          await createExpenseEntry(monthDate, values)
+          entryId = (await createExpenseEntry(monthDate, values)).id
         }
+        await setExpenseEntryTags(entryId, tagIds)
         toast.success("Despesa salva.")
         setOpen(false)
         form.reset()
@@ -135,12 +160,7 @@ export function ExpenseEntryDialog({
                 <FormItem>
                   <FormLabel>Valor</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      {...field}
-                      value={String(field.value ?? "")}
-                    />
+                    <CurrencyInput value={Number(field.value) || 0} onChange={field.onChange} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -238,6 +258,68 @@ export function ExpenseEntryDialog({
             ) : null}
             <FormField
               control={form.control}
+              name="paymentMethod"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Forma de pagamento</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue>
+                          {(value: string) =>
+                            PAYMENT_METHOD_LABELS[value as keyof typeof PAYMENT_METHOD_LABELS]
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {paymentMethod === "PIX" ? (
+              <FormField
+                control={form.control}
+                name="pixKeyId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Pagar para (chave Pix, opcional)</FormLabel>
+                    <Select
+                      value={field.value ?? "none"}
+                      onValueChange={(v) => field.onChange(v === "none" ? null : v)}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue>
+                            {() =>
+                              pixPayees.find((p) => p.id === field.value)?.label ?? "Nenhuma"
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhuma</SelectItem>
+                        {pixPayees.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
+            <FormField
+              control={form.control}
               name="paidBy"
               render={({ field }) => (
                 <FormItem>
@@ -274,6 +356,10 @@ export function ExpenseEntryDialog({
                 )}
               />
             ) : null}
+            <div className="grid gap-2">
+              <FormLabel>Etiquetas</FormLabel>
+              <TagMultiSelect allTags={allTags} selectedIds={tagIds} onChange={setTagIds} />
+            </div>
             <DialogFooter>
               <Button type="submit" disabled={pending}>
                 {pending ? "Salvando..." : "Salvar"}

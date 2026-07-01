@@ -1,7 +1,7 @@
 import Link from "next/link"
 
 import type { SerializedCardSummary } from "@/lib/types"
-import { formatCurrency } from "@/lib/calculations/format"
+import { MoneyText } from "@/components/ui/money-text"
 import {
   Table,
   TableBody,
@@ -33,7 +33,9 @@ export function CardsSummary({ cards }: { cards: SerializedCardSummary[] }) {
           {cards.map((card) => (
             <TableRow key={card.id}>
               <TableCell className="font-medium">{card.name}</TableCell>
-              <TableCell className="text-right">{formatCurrency(card.total)}</TableCell>
+              <TableCell className="text-right">
+                <MoneyText value={-card.total} />
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
