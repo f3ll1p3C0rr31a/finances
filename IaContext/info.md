@@ -38,6 +38,8 @@ As versões exatas estão em `package.json` e `package-lock.json`.
 - Assinaturas pagas por cartão ou fora do cartão.
 - Etiquetas aplicáveis a entradas, despesas e compras.
 - Gráficos de saldo, entradas/saídas, cartões e gastos por etiqueta.
+- Matriz financeira anual/12 meses com lançamentos nas linhas e meses nas
+  colunas, inspirada na planilha original.
 - Cadastro informativo de contas e chaves Pix próprias/de favorecidos.
 - Deploy automático da branch `main` em runner self-hosted.
 
@@ -49,7 +51,7 @@ As versões exatas estão em `package.json` e `package-lock.json`.
 | `/login` | Autenticação |
 | `/dashboard` | Redireciona para o mês atual |
 | `/dashboard/[month]` | Visão financeira do mês `AAAA-MM` |
-| `/cards` | Cartões e meta mensal |
+| `/cards?month=AAAA-MM` | Cartões e meta do mês selecionado |
 | `/cards/[cardId]` | Compras, limite e histórico do cartão |
 | `/assinaturas` | Assinaturas ativas e canceladas |
 | `/informacoes` | Contas e chaves Pix |

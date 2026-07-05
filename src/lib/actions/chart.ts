@@ -1,9 +1,17 @@
 import { prisma } from "@/lib/prisma"
 import { computeMonthTotals, computePlannedBalance } from "@/lib/calculations/balanceChain"
 import { getCardMonthBudget, getCardMonthTotal } from "@/lib/actions/cardSummary"
-import { getNonCardSubscriptionsTotal } from "@/lib/actions/subscriptionSummary"
+import { getNonCardSubscriptionsForMonth } from "@/lib/actions/subscriptionSummary"
 import { ensureMonthGenerated } from "@/lib/actions/monthly"
 import { addMonths, formatMonthLabel, monthKeyFromDate } from "@/lib/calculations/month"
+import { sumAmounts } from "@/lib/calculations/money"
+
+export type MonthlyBreakdownItem = {
+  key: string
+  label: string
+  group: "card" | "income" | "expense"
+  value: number
+}
 
 export type MonthChartPoint = {
   month: string
@@ -11,6 +19,9 @@ export type MonthChartPoint = {
   totalIncome: number
   totalExpense: number
   balance: number
+  openingBalance: number
+  plannedBalance: number
+  breakdown: MonthlyBreakdownItem[]
 }
 
 export type BalanceChartRanges = {
@@ -64,17 +75,58 @@ export async function getBalanceChartRanges(
         prisma.incomeEntry.findMany({ where: { userId, month: balanceRow.month } }),
         prisma.expenseEntry.findMany({ where: { userId, month: balanceRow.month } }),
         getCardMonthBudget(userId, balanceRow.month),
-        getNonCardSubscriptionsTotal(userId, balanceRow.month),
+        getNonCardSubscriptionsForMonth(userId, balanceRow.month),
       ])
 
       const { totalIncome, totalExpense: entriesExpense } = computeMonthTotals(incomes, expenses)
-      const totalExpense = entriesExpense.add(cards.plannedTotal).add(nonCardSubscriptions)
+      const subscriptionsTotal = sumAmounts(nonCardSubscriptions.map((sub) => sub.amount))
+      const totalExpense = entriesExpense.add(cards.plannedTotal).add(subscriptionsTotal)
       const plannedBalance = computePlannedBalance(
         balanceRow.openingBalance,
         totalIncome,
         totalExpense
       )
       const balance = balanceRow.actualBalance ?? plannedBalance
+      const breakdown: MonthlyBreakdownItem[] = [
+        ...cards.summaries.map((summary) => ({
+          key: `card:${summary.card.id}`,
+          label: summary.card.name,
+          group: "card" as const,
+          value: summary.total.neg().toNumber(),
+        })),
+        ...(cards.reserve.gt(0)
+          ? [
+              {
+                key: "card:reserve",
+                label: "Disponível para gastar nos cartões",
+                group: "card" as const,
+                value: cards.reserve.neg().toNumber(),
+              },
+            ]
+          : []),
+        ...incomes
+          .filter((income) => !income.uncertain || income.received)
+          .map((income) => ({
+            key: `income:${income.name}`,
+            label: income.name,
+            group: "income" as const,
+            value: (income.receivedAmount ?? income.amount).toNumber(),
+          })),
+        ...expenses
+          .filter((expense) => !expense.uncertain || expense.paid)
+          .map((expense) => ({
+            key: `expense:${expense.name}`,
+            label: expense.name,
+            group: "expense" as const,
+            value: (expense.paidAmount ?? expense.amount).neg().toNumber(),
+          })),
+        ...nonCardSubscriptions.map((subscription) => ({
+          key: `expense:subscription:${subscription.id}`,
+          label: subscription.name,
+          group: "expense" as const,
+          value: subscription.amount.neg().toNumber(),
+        })),
+      ]
 
       return {
         month: monthKeyFromDate(balanceRow.month),
@@ -82,6 +134,9 @@ export async function getBalanceChartRanges(
         totalIncome: totalIncome.toNumber(),
         totalExpense: totalExpense.toNumber(),
         balance: balance.toNumber(),
+        openingBalance: balanceRow.openingBalance.toNumber(),
+        plannedBalance: plannedBalance.toNumber(),
+        breakdown,
       }
     })
   )

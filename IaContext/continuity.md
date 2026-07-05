@@ -26,6 +26,10 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - `actualBalance` agora aparece como “Saldo Atual” imediatamente abaixo do
   planejado, sincroniza visualmente após Pago/Recebido e parte do saldo inicial
   quando ainda não tiver sido gravado;
+- a visão financeira ganhou uma matriz semelhante à planilha original, com
+  lançamentos por linha, meses por coluna, total lateral e resumos no rodapé;
+- a guia Cartões ganhou navegação Anterior/Próximo via `?month=AAAA-MM`, e
+  todos os cálculos da página respeitam o mês escolhido;
 - o bloco separado de cartões foi removido do dashboard;
 - os gráficos oferecem as visões “Ano completo” e “Próximos 12 meses”, ambas
   com 12 meses completos relativos ao mês aberto.
@@ -48,6 +52,8 @@ Foram ajustados o dashboard e a exclusão de despesas:
   liquidação.
 - Teste do Saldo Atual: confirmou inicialização em R$ 100, movimento de +R$ 50
   para R$ 150 e reversão para R$ 100.
+- Teste da matriz: confirmou 12 meses em ambas as visões e detalhamento correto
+  de cartão e receita.
 - Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
   2026-07-05.
 - Testes automatizados: não existem no projeto.

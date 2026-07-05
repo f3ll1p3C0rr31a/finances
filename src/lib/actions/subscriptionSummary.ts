@@ -30,8 +30,11 @@ export async function getNonCardSubscriptionsTotal(
   userId: string,
   month: Date
 ): Promise<Prisma.Decimal> {
+  const subs = await getNonCardSubscriptionsForMonth(userId, month)
+  return sumAmounts(subs.map((s) => s.amount))
+}
+
+export async function getNonCardSubscriptionsForMonth(userId: string, month: Date) {
   const subs = await prisma.subscription.findMany({ where: { userId, cardId: null } })
-  return sumAmounts(
-    subs.filter((s) => isSubscriptionActiveInMonth(s, month)).map((s) => s.amount)
-  )
+  return subs.filter((s) => isSubscriptionActiveInMonth(s, month))
 }

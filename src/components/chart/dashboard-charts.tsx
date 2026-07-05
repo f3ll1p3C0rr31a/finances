@@ -4,6 +4,7 @@ import { useState } from "react"
 
 import type { MonthChartPoint } from "@/lib/actions/chart"
 import { BalanceChart, IncomeExpenseChart } from "@/components/chart/balance-chart"
+import { MonthlyMatrix } from "@/components/chart/monthly-matrix"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -49,6 +50,15 @@ export function DashboardCharts({
           </Button>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Planejamento mensal detalhado</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <MonthlyMatrix data={data} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

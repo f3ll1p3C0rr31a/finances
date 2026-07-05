@@ -124,6 +124,17 @@ O alias `@/*` aponta para `src/*`.
 - `CardInvoicePayment` guarda o estado pago por cartão e mês. Ao marcar uma
   fatura como paga, seu total é descontado do saldo real e salvo em
   `paidAmount`; desmarcar reverte exatamente esse valor.
+- A página `/cards` seleciona o mês por `searchParams.month`; totais, meta,
+  reserva e estado pago devem sempre usar esse mês, não implicitamente o atual.
+
+### Visão mensal matricial
+
+- `getBalanceChartRanges()` também fornece o detalhamento de cada mês por
+  cartão, reserva da meta, entrada, despesa e assinatura.
+- A matriz agrega linhas de mesmo tipo/nome, mantém 12 colunas para o período
+  escolhido e calcula a coluna Total no cliente.
+- Linhas finais mostram saldo inicial, saldo, total de entradas, total de
+  saídas e diferença. Os gráficos permanecem como complemento visual.
 
 ### Assinaturas
 
