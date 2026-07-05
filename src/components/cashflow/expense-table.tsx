@@ -64,8 +64,12 @@ export function ExpenseTable({
   function remove(id: string) {
     startTransition(async () => {
       try {
-        await deleteExpenseEntry(id)
-        toast.success("Despesa removida.")
+        const result = await deleteExpenseEntry(id)
+        toast.success(
+          result.recurring
+            ? `Despesa recorrente removida (${result.deletedEntries} meses).`
+            : "Despesa removida."
+        )
       } catch {
         toast.error("Não foi possível remover.")
       }

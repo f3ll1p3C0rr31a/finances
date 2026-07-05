@@ -9,15 +9,20 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - excluir uma despesa recorrente agora remove seu template e todas as
   ocorrências, em vez de permitir que ela seja recriada automaticamente;
 - os ajustes de saldo real são desfeitos e a cadeia mensal é recalculada;
+- a remoção foi extraída para um serviço testável e validada por integração
+  contra PostgreSQL com dados temporários;
 - cartões ativos aparecem como linhas variáveis calculadas no topo de Despesas;
 - o bloco separado de cartões foi removido do dashboard;
 - os gráficos oferecem as visões “Ano completo” e “Próximos 12 meses”, ambas
   com 12 meses completos relativos ao mês aberto.
+- o deploy expõe `/api/version` e só passa no health check quando o SHA servido
+  corresponde ao commit disparado pelo GitHub Actions.
 
 ## Validação desta passagem
 
 - `npm run lint`: passou em 2026-07-05.
 - `npm run build`: passou após os ajustes em 2026-07-05 com Next.js 16.2.9.
+- Teste de integração isolado da exclusão recorrente: passou em 2026-07-05.
 - Testes automatizados: não existem no projeto.
 
 ## Débitos documentais confirmados

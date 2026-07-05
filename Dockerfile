@@ -10,6 +10,9 @@ RUN npm ci
 
 COPY . .
 
+ARG APP_COMMIT_SHA=unknown
+ENV APP_COMMIT_SHA=$APP_COMMIT_SHA
+
 RUN npx prisma generate
 RUN npm run build
 

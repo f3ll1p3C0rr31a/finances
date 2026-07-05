@@ -10,12 +10,17 @@ services:
       - finances_postgres_data:/var/lib/postgresql/data
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        APP_COMMIT_SHA: ${APP_COMMIT_SHA:-unknown}
     restart: unless-stopped
     depends_on:
       - postgres
     env_file:
       - .env
+    environment:
+      APP_COMMIT_SHA: ${APP_COMMIT_SHA:-unknown}
     ports:
       - "8092:3000"
 

@@ -82,7 +82,10 @@ Push em `main` dispara `.github/workflows/deploy.yml` no runner
    preservando `.env`;
 3. executa `docker compose ... up -d --build`;
 4. aplica migrations no início do container;
-5. verifica `http://127.0.0.1:8092/login`.
+5. verifica `/api/version` contra o SHA esperado e depois testa `/login`.
+
+O endpoint público `/api/version` informa o commit executado pelo contêiner.
+O deploy falha se a imagem ativa não corresponder a `GITHUB_SHA`.
 
 Arquivos de referência:
 

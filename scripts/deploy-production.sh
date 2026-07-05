@@ -8,6 +8,8 @@ COMPOSE_FILE="docker-compose.production.yml"
 PROJECT="finances"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 WORKSPACE="${GITHUB_WORKSPACE:-$(pwd)}"
+APP_COMMIT_SHA="${GITHUB_SHA:-$(git -C "$WORKSPACE" rev-parse HEAD)}"
+export APP_COMMIT_SHA
 
 mkdir -p "$APP_DIR" "$BACKUPS_DIR"
 
@@ -39,13 +41,18 @@ docker compose -p "$PROJECT" -f "$COMPOSE_FILE" up -d --build
 
 echo "==> Health check"
 for _ in $(seq 1 30); do
-  if curl -sf http://127.0.0.1:8092/login >/dev/null; then
-    echo "Health check passed"
-    exit 0
+  VERSION_RESPONSE=$(curl -sf http://127.0.0.1:8092/api/version 2>/dev/null || true)
+  if [[ "$VERSION_RESPONSE" == *"\"commit\":\"$APP_COMMIT_SHA\""* ]]; then
+    if curl -sf http://127.0.0.1:8092/login >/dev/null; then
+      echo "Health check passed for commit $APP_COMMIT_SHA"
+      exit 0
+    fi
   fi
   sleep 1
 done
 
 echo "Health check FAILED — dumping logs"
+echo "Expected commit: $APP_COMMIT_SHA"
+echo "Version endpoint: ${VERSION_RESPONSE:-unavailable}"
 docker compose -p "$PROJECT" -f "$COMPOSE_FILE" logs --tail 50 app
 exit 1
