@@ -23,6 +23,9 @@ Foram ajustados o dashboard e a exclusão de despesas:
   recebidas/pagas;
 - o resumo mensal ganhou uma prévia separada que considera valores incertos sem
   tratá-la como saldo oficial;
+- `actualBalance` agora aparece como “Saldo Atual” imediatamente abaixo do
+  planejado, sincroniza visualmente após Pago/Recebido e parte do saldo inicial
+  quando ainda não tiver sido gravado;
 - o bloco separado de cartões foi removido do dashboard;
 - os gráficos oferecem as visões “Ano completo” e “Próximos 12 meses”, ambas
   com 12 meses completos relativos ao mês aberto.
@@ -43,6 +46,8 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - Teste de integração de pendências incertas: confirmou avanço de mês, exclusão
   dos totais enquanto pendentes, inclusão na prévia e contabilização após
   liquidação.
+- Teste do Saldo Atual: confirmou inicialização em R$ 100, movimento de +R$ 50
+  para R$ 150 e reversão para R$ 100.
 - Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
   2026-07-05.
 - Testes automatizados: não existem no projeto.

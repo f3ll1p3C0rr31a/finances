@@ -193,11 +193,9 @@ export async function recalcOpeningBalanceChain(userId: string, fromMonth: Date)
 }
 
 /**
- * Nudges a month's manually-set actual balance by `delta` — used so
- * that checking an entry as paid/received keeps the real balance in
- * sync without requiring a manual re-entry. A no-op when the actual
- * balance hasn't been set yet (the planned balance already reflects
- * every entry regardless of its paid/received state).
+ * Nudges a month's current balance by `delta`. If it has not been initialized
+ * yet, the opening balance is used as the starting point so the first
+ * paid/received toggle is never silently ignored.
  */
 export async function adjustActualBalance(
   userId: string,
@@ -207,12 +205,12 @@ export async function adjustActualBalance(
   const balance = await prisma.monthlyBalance.findUnique({
     where: { userId_month: { userId, month } },
   })
-  if (!balance || balance.actualBalance == null) return
+  if (!balance) return
 
   await prisma.monthlyBalance.update({
     where: { id: balance.id },
     data: {
-      actualBalance: balance.actualBalance.add(delta),
+      actualBalance: (balance.actualBalance ?? balance.openingBalance).add(delta),
       actualBalanceAt: new Date(),
     },
   })

@@ -107,6 +107,7 @@ export default async function DashboardMonthPage({
       />
       <div className="grid gap-6 lg:grid-cols-2">
         <BalancePanel
+          key={`${monthKey}-${data.balance.actualBalanceAt?.toISOString() ?? "unset"}`}
           month={monthKey}
           openingBalance={data.balance.openingBalance.toNumber()}
           totalIncome={data.totalIncome.toNumber()}

@@ -37,7 +37,7 @@ export function BalancePanel({
   actualBalance,
   actualBalanceAt,
 }: Props) {
-  const [value, setValue] = useState(actualBalance ?? plannedBalance)
+  const [value, setValue] = useState(actualBalance ?? openingBalance)
   const [pending, startTransition] = useTransition()
 
   function save() {
@@ -80,6 +80,28 @@ export function BalancePanel({
           <dd className="text-right font-medium">
             <MoneyText value={plannedBalance} />
           </dd>
+        </dl>
+        <div className="flex flex-col gap-2 border-t pt-3">
+          <Label htmlFor="actual-balance">Saldo Atual</Label>
+          <div className="flex max-w-56 gap-2">
+            <CurrencyInput id="actual-balance" value={value} onChange={setValue} />
+            <Button onClick={save} disabled={pending} size="sm">
+              {pending ? "Salvando..." : "Salvar"}
+            </Button>
+          </div>
+          {actualBalanceAt ? (
+            <p className="text-xs text-muted-foreground">
+              Atualizado em {new Date(actualBalanceAt).toLocaleString("pt-BR")}. Os botões
+              Pago e Recebido atualizam este saldo automaticamente.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Ainda não atualizado — o primeiro pagamento ou recebimento partirá do saldo
+              inicial.
+            </p>
+          )}
+        </div>
+        <dl className="grid grid-cols-2 gap-2 border-t pt-3 text-sm">
           <dt className="font-medium">Prévia com valores incertos</dt>
           <dd className="text-right font-medium">
             <MoneyText value={previewBalance} />
@@ -92,24 +114,6 @@ export function BalancePanel({
             fazem parte do saldo planejado ou real.
           </p>
         ) : null}
-        <div className="flex flex-col gap-2 border-t pt-3">
-          <Label htmlFor="actual-balance">Saldo real (atualize quando conferir a conta)</Label>
-          <div className="flex max-w-56 gap-2">
-            <CurrencyInput id="actual-balance" value={value} onChange={setValue} />
-            <Button onClick={save} disabled={pending} size="sm">
-              {pending ? "Salvando..." : "Salvar"}
-            </Button>
-          </div>
-          {actualBalanceAt ? (
-            <p className="text-xs text-muted-foreground">
-              Atualizado em {new Date(actualBalanceAt).toLocaleString("pt-BR")}
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Ainda não atualizado — usando o saldo planejado.
-            </p>
-          )}
-        </div>
       </CardContent>
     </Card>
   )

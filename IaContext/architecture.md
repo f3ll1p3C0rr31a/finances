@@ -98,8 +98,11 @@ O alias `@/*` aponta para `src/*`.
 - Despesas totais incluem lançamentos, cartões e assinaturas fora de cartão.
 - Alterações que afetam um mês materializado podem exigir
   `recalcOpeningBalanceChain()`.
-- Marcar uma entrada recebida ou despesa paga ajusta o saldo real somente se
-  ele já tiver sido definido.
+- Marcar uma entrada recebida ou despesa paga ajusta o Saldo Atual.
+- Na interface, `actualBalance` é apresentado como “Saldo Atual”. Recebimentos
+  somam, pagamentos subtraem e desmarcar aplica o movimento inverso.
+- Se o Saldo Atual ainda não existir, o primeiro movimento parte de
+  `openingBalance`; ele nunca deve ser silenciosamente ignorado.
 
 ### Cartões
 
