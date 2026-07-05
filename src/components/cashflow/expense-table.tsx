@@ -7,6 +7,8 @@ import { toast } from "sonner"
 import type { SerializedCardSummary, SerializedExpenseEntry } from "@/lib/types"
 import type { TagOption } from "@/components/tags/tag-multi-select"
 import { setExpensePaid, deleteExpenseEntry } from "@/lib/actions/expense"
+import { setCardInvoicePaid } from "@/lib/actions/cardPayments"
+import { monthFromKey } from "@/lib/calculations/month"
 import { formatDueDay } from "@/lib/calculations/format"
 import { MoneyText } from "@/components/ui/money-text"
 import { Switch } from "@/components/ui/switch"
@@ -57,6 +59,16 @@ export function ExpenseTable({
         await setExpensePaid(id, paid)
       } catch {
         toast.error("Não foi possível atualizar.")
+      }
+    })
+  }
+
+  function toggleCardPaid(cardId: string, paid: boolean) {
+    startTransition(async () => {
+      try {
+        await setCardInvoicePaid(cardId, monthFromKey(month), paid)
+      } catch {
+        toast.error("Não foi possível atualizar o pagamento da fatura.")
       }
     })
   }
@@ -125,8 +137,12 @@ export function ExpenseTable({
               <TableCell className="text-right">
                 <MoneyText value={-card.total} />
               </TableCell>
-              <TableCell className="text-center text-xs text-muted-foreground">
-                Automático
+              <TableCell className="text-center">
+                <Switch
+                  checked={card.paid}
+                  disabled={pending}
+                  onCheckedChange={(checked) => toggleCardPaid(card.id, checked)}
+                />
               </TableCell>
               <TableCell className="text-right">
                 <Button variant="ghost" size="xs" render={<Link href={`/cards/${card.id}`} />}>

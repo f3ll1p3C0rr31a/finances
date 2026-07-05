@@ -101,6 +101,9 @@ O alias `@/*` aponta para `src/*`.
 - No dashboard, cada cartão ativo aparece no topo de Despesas como uma linha
   variável calculada. Essa linha é apenas uma representação da fatura já
   incluída nos totais, não um `ExpenseEntry` duplicado.
+- `CardInvoicePayment` guarda o estado pago por cartão e mês. Ao marcar uma
+  fatura como paga, seu total é descontado do saldo real e salvo em
+  `paidAmount`; desmarcar reverte exatamente esse valor.
 
 ### Assinaturas
 

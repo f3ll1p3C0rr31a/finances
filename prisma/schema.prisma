@@ -58,17 +58,17 @@ enum PixKeyKind {
 /// A recurring income rule (e.g. monthly salary). One-time income is
 /// created directly as an IncomeEntry with no template.
 model IncomeTemplate {
-  id            String    @id @default(cuid())
+  id            String     @id @default(cuid())
   userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   name          String
-  defaultAmount Decimal   @db.Decimal(12, 2)
+  defaultAmount Decimal    @db.Decimal(12, 2)
   dayOfMonth    Int?
   dueDayType    DueDayType @default(CALENDAR_DAY)
-  startMonth    DateTime  @db.Date
-  endMonth      DateTime? @db.Date
-  active        Boolean   @default(true)
-  createdAt     DateTime  @default(now())
+  startMonth    DateTime   @db.Date
+  endMonth      DateTime?  @db.Date
+  active        Boolean    @default(true)
+  createdAt     DateTime   @default(now())
 
   entries IncomeEntry[]
 
@@ -78,23 +78,23 @@ model IncomeTemplate {
 /// One concrete month's income row, either generated from a template
 /// or created directly as a one-off.
 model IncomeEntry {
-  id             String    @id @default(cuid())
+  id             String          @id @default(cuid())
   userId         String
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   templateId     String?
   template       IncomeTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   name           String
-  month          DateTime  @db.Date
-  dueDate        DateTime? @db.Date
-  dueDayType     DueDayType @default(CALENDAR_DAY)
+  month          DateTime        @db.Date
+  dueDate        DateTime?       @db.Date
+  dueDayType     DueDayType      @default(CALENDAR_DAY)
   dueDayValue    Int?
-  amount         Decimal   @db.Decimal(12, 2)
-  received       Boolean   @default(false)
+  amount         Decimal         @db.Decimal(12, 2)
+  received       Boolean         @default(false)
   receivedAt     DateTime?
-  receivedAmount Decimal?  @db.Decimal(12, 2)
+  receivedAmount Decimal?        @db.Decimal(12, 2)
   notes          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   tags IncomeEntryTag[]
 
@@ -126,29 +126,29 @@ model ExpenseTemplate {
 /// One concrete month's expense row, either generated from a template
 /// or created directly as a one-off.
 model ExpenseEntry {
-  id         String          @id @default(cuid())
-  userId     String
-  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  templateId String?
-  template   ExpenseTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  name       String
-  category   ExpenseCategory
-  month      DateTime        @db.Date
-  dueDate    DateTime?       @db.Date
-  dueDayType DueDayType      @default(CALENDAR_DAY)
-  dueDayValue Int?
-  amount     Decimal         @db.Decimal(12, 2)
-  paid       Boolean         @default(false)
-  paidAt     DateTime?
-  paidAmount Decimal?        @db.Decimal(12, 2)
-  paidBy     PaidBy          @default(SELF)
-  paidByName String?
-  paymentMethod PaymentMethod @default(PIX)
-  pixKeyId   String?
-  pixKey     PixKey?         @relation(fields: [pixKeyId], references: [id], onDelete: SetNull)
-  notes      String?
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+  id            String           @id @default(cuid())
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId    String?
+  template      ExpenseTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  name          String
+  category      ExpenseCategory
+  month         DateTime         @db.Date
+  dueDate       DateTime?        @db.Date
+  dueDayType    DueDayType       @default(CALENDAR_DAY)
+  dueDayValue   Int?
+  amount        Decimal          @db.Decimal(12, 2)
+  paid          Boolean          @default(false)
+  paidAt        DateTime?
+  paidAmount    Decimal?         @db.Decimal(12, 2)
+  paidBy        PaidBy           @default(SELF)
+  paidByName    String?
+  paymentMethod PaymentMethod    @default(PIX)
+  pixKeyId      String?
+  pixKey        PixKey?          @relation(fields: [pixKeyId], references: [id], onDelete: SetNull)
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   tags ExpenseEntryTag[]
 
@@ -188,10 +188,29 @@ model Card {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
 
-  purchases     CardPurchase[]
-  subscriptions Subscription[]
+  purchases       CardPurchase[]
+  subscriptions   Subscription[]
+  invoicePayments CardInvoicePayment[]
 
   @@index([userId])
+}
+
+/// Payment state for one card invoice in one month. paidAmount stores the
+/// invoice total applied to the real balance so unchecking can reverse the
+/// exact same amount even if purchases are edited later.
+model CardInvoicePayment {
+  id         String    @id @default(cuid())
+  cardId     String
+  card       Card      @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  month      DateTime  @db.Date
+  paid       Boolean   @default(false)
+  paidAt     DateTime?
+  paidAmount Decimal?  @db.Decimal(12, 2)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([cardId, month])
+  @@index([month])
 }
 
 /// A single-payment purchase (installmentCount = 1, no CardInstallment

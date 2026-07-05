@@ -36,6 +36,7 @@ export type SerializedCardSummary = {
   id: string
   name: string
   total: number
+  paid: boolean
   closingDay: number | null
   bestPurchaseDay: number | null
 }

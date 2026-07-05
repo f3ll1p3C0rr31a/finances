@@ -12,6 +12,8 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - a remoção foi extraída para um serviço testável e validada por integração
   contra PostgreSQL com dados temporários;
 - cartões ativos aparecem como linhas variáveis calculadas no topo de Despesas;
+- a coluna Pago dessas linhas agora possui um switch persistente por cartão e
+  mês; marcar/desmarcar ajusta e reverte o saldo real pelo valor da fatura;
 - o bloco separado de cartões foi removido do dashboard;
 - os gráficos oferecem as visões “Ano completo” e “Próximos 12 meses”, ambas
   com 12 meses completos relativos ao mês aberto.
@@ -26,6 +28,7 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - `npm run lint`: passou em 2026-07-05.
 - `npm run build`: passou após os ajustes em 2026-07-05 com Next.js 16.2.9.
 - Teste de integração isolado da exclusão recorrente: passou em 2026-07-05.
+- Teste de integração do pagamento e estorno de fatura: passou em 2026-07-05.
 - Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
   2026-07-05.
 - Testes automatizados: não existem no projeto.

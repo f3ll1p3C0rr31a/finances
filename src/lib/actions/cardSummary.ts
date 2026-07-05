@@ -36,12 +36,19 @@ export async function getCardsMonthSummary(userId: string, month: Date) {
   const cards = await prisma.card.findMany({
     where: { userId, active: true },
     orderBy: { name: "asc" },
+    include: {
+      invoicePayments: {
+        where: { month },
+        take: 1,
+      },
+    },
   })
 
   const summaries = await Promise.all(
     cards.map(async (card) => ({
       card,
       total: await getCardMonthTotal(userId, card.id, month),
+      paid: card.invoicePayments[0]?.paid ?? false,
     }))
   )
 

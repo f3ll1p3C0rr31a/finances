@@ -16,6 +16,7 @@ export default async function CardsPage() {
     id: s.card.id,
     name: s.card.name,
     total: s.total.toNumber(),
+    paid: s.paid,
     closingDay: s.card.closingDay,
     bestPurchaseDay: s.card.closingDay
       ? bestPurchaseDate(s.card.closingDay, month).getUTCDate()
