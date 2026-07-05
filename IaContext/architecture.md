@@ -76,6 +76,19 @@ O alias `@/*` aponta para `src/*`.
 - Excluir uma despesa recorrente remove o template e todas as ocorrências
   materializadas; saldos reais previamente ajustados são compensados.
 
+### Pendências incertas
+
+- `IncomeEntry.uncertain` e `ExpenseEntry.uncertain` identificam valores sem
+  data certa que não são recorrências.
+- Enquanto pendente, o lançamento fica apenas no mês civil atual e é movido
+  para o mês seguinte quando o dashboard passa a operar nesse mês.
+- Entradas incertas não recebidas e despesas incertas não pagas ficam fora dos
+  totais oficiais, do saldo planejado e dos gráficos.
+- A prévia de saldo é `saldo planejado + entradas incertas - despesas incertas`.
+- Ao marcar como recebido/pago, o lançamento passa a integrar os totais do mês
+  em que foi liquidado, deixa a prévia pendente e não avança mais.
+- Pendência incerta e template recorrente são conceitos mutuamente exclusivos.
+
 ### Cadeia de saldo
 
 - `openingBalance` vem do fechamento do mês anterior.

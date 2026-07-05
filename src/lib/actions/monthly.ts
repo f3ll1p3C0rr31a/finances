@@ -1,9 +1,13 @@
 import { Prisma } from "@/generated/prisma/client"
 
 import { prisma } from "@/lib/prisma"
-import { addMonths } from "@/lib/calculations/month"
+import { addMonths, currentMonth } from "@/lib/calculations/month"
 import { resolveDueDate } from "@/lib/calculations/businessDay"
-import { computeMonthTotals, computePlannedBalance } from "@/lib/calculations/balanceChain"
+import {
+  computeMonthTotals,
+  computePlannedBalance,
+  computeUncertainPreview,
+} from "@/lib/calculations/balanceChain"
 import { getCardMonthBudget } from "@/lib/actions/cardSummary"
 import { getNonCardSubscriptionsTotal } from "@/lib/actions/subscriptionSummary"
 
@@ -64,6 +68,39 @@ async function ensureTemplateEntries(userId: string, month: Date) {
       },
     })
   }
+}
+
+async function rollPendingUncertainEntries(userId: string): Promise<void> {
+  const targetMonth = currentMonth()
+
+  await Promise.all([
+    prisma.incomeEntry.updateMany({
+      where: {
+        userId,
+        uncertain: true,
+        received: false,
+        month: { lt: targetMonth },
+      },
+      data: {
+        month: targetMonth,
+        dueDate: null,
+        dueDayValue: null,
+      },
+    }),
+    prisma.expenseEntry.updateMany({
+      where: {
+        userId,
+        uncertain: true,
+        paid: false,
+        month: { lt: targetMonth },
+      },
+      data: {
+        month: targetMonth,
+        dueDate: null,
+        dueDayValue: null,
+      },
+    }),
+  ])
 }
 
 async function plannedClosingBalance(
@@ -183,6 +220,7 @@ export async function adjustActualBalance(
 }
 
 export async function getMonthData(userId: string, month: Date) {
+  await rollPendingUncertainEntries(userId)
   await ensureMonthGenerated(userId, month)
 
   const [incomeEntries, expenseEntries, balance, cards, nonCardSubscriptions] = await Promise.all([
@@ -202,9 +240,11 @@ export async function getMonthData(userId: string, month: Date) {
   ])
 
   const { totalIncome, totalExpense: entriesExpense } = computeMonthTotals(incomeEntries, expenseEntries)
+  const uncertainPreview = computeUncertainPreview(incomeEntries, expenseEntries)
   const totalExpense = entriesExpense.add(cards.plannedTotal).add(nonCardSubscriptions)
   const difference = totalIncome.sub(totalExpense)
   const plannedBalance = computePlannedBalance(balance.openingBalance, totalIncome, totalExpense)
+  const previewBalance = plannedBalance.add(uncertainPreview.net)
   const closingBalance = balance.actualBalance ?? plannedBalance
 
   return {
@@ -219,6 +259,9 @@ export async function getMonthData(userId: string, month: Date) {
     totalExpense,
     difference,
     plannedBalance,
+    previewBalance,
+    pendingUncertainIncome: uncertainPreview.pendingIncome,
+    pendingUncertainExpense: uncertainPreview.pendingExpense,
     closingBalance,
   }
 }

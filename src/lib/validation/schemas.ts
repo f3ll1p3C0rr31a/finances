@@ -9,6 +9,7 @@ export const incomeEntrySchema = z.object({
   dueDay: z.coerce.number().int().min(1).max(31).optional().nullable(),
   dueDayType: dueDayTypeSchema,
   recurring: z.boolean(),
+  uncertain: z.boolean(),
 })
 export type IncomeEntryFormValues = z.input<typeof incomeEntrySchema>
 export type IncomeEntryInput = z.output<typeof incomeEntrySchema>
@@ -20,6 +21,7 @@ export const expenseEntrySchema = z.object({
   dueDayType: dueDayTypeSchema,
   category: z.enum(["FIXED", "VARIABLE", "ONE_OFF"]),
   recurring: z.boolean(),
+  uncertain: z.boolean(),
   paidBy: z.enum(["SELF", "THIRD_PARTY"]),
   paidByName: z.string().trim().optional().nullable(),
   paymentMethod: z.enum(["CASH", "PIX", "TRANSFER", "CARD", "OTHER"]),

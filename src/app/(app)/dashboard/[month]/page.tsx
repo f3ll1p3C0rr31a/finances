@@ -59,6 +59,7 @@ export default async function DashboardMonthPage({
     dueDate: entry.dueDate ? entry.dueDate.toISOString() : null,
     received: entry.received,
     isRecurring: entry.templateId != null,
+    uncertain: entry.uncertain,
     tags: entry.tags.map((t) => ({ id: t.tag.id, name: t.tag.name })),
   }))
 
@@ -74,6 +75,7 @@ export default async function DashboardMonthPage({
     paidBy: entry.paidBy,
     paidByName: entry.paidByName,
     isRecurring: entry.templateId != null,
+    uncertain: entry.uncertain,
     tags: entry.tags.map((t) => ({ id: t.tag.id, name: t.tag.name })),
     paymentMethod: entry.paymentMethod,
     pixKeyId: entry.pixKeyId,
@@ -111,6 +113,9 @@ export default async function DashboardMonthPage({
           totalExpense={data.totalExpense.toNumber()}
           difference={data.difference.toNumber()}
           plannedBalance={data.plannedBalance.toNumber()}
+          previewBalance={data.previewBalance.toNumber()}
+          pendingUncertainIncome={data.pendingUncertainIncome.toNumber()}
+          pendingUncertainExpense={data.pendingUncertainExpense.toNumber()}
           actualBalance={data.balance.actualBalance?.toNumber() ?? null}
           actualBalanceAt={data.balance.actualBalanceAt?.toISOString() ?? null}
         />

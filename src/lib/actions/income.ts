@@ -5,9 +5,9 @@ import { revalidatePath } from "next/cache"
 import { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { requireUserId } from "@/lib/session"
-import { monthKeyFromDate } from "@/lib/calculations/month"
+import { currentMonth, monthKeyFromDate } from "@/lib/calculations/month"
 import { resolveDueDate } from "@/lib/calculations/businessDay"
-import { adjustActualBalance } from "@/lib/actions/monthly"
+import { adjustActualBalance, recalcOpeningBalanceChain } from "@/lib/actions/monthly"
 import { incomeEntrySchema, type IncomeEntryInput } from "@/lib/validation/schemas"
 
 function revalidateMonth(month: Date) {
@@ -17,11 +17,15 @@ function revalidateMonth(month: Date) {
 export async function createIncomeEntry(month: Date, input: IncomeEntryInput) {
   const userId = await requireUserId()
   const data = incomeEntrySchema.parse(input)
-  const dueDate = data.dueDay ? resolveDueDate(month, data.dueDayType, data.dueDay) : null
+  const entryMonth = data.uncertain ? currentMonth() : month
+  const dueDate =
+    !data.uncertain && data.dueDay
+      ? resolveDueDate(entryMonth, data.dueDayType, data.dueDay)
+      : null
 
   let entryId: string
 
-  if (data.recurring) {
+  if (data.recurring && !data.uncertain) {
     const template = await prisma.incomeTemplate.create({
       data: {
         userId,
@@ -29,7 +33,7 @@ export async function createIncomeEntry(month: Date, input: IncomeEntryInput) {
         defaultAmount: data.amount,
         dayOfMonth: data.dueDay ?? null,
         dueDayType: data.dueDayType,
-        startMonth: month,
+        startMonth: entryMonth,
       },
     })
     const entry = await prisma.incomeEntry.create({
@@ -37,7 +41,7 @@ export async function createIncomeEntry(month: Date, input: IncomeEntryInput) {
         userId,
         templateId: template.id,
         name: data.name,
-        month,
+        month: entryMonth,
         dueDate,
         dueDayType: data.dueDayType,
         dueDayValue: data.dueDay ?? null,
@@ -50,17 +54,18 @@ export async function createIncomeEntry(month: Date, input: IncomeEntryInput) {
       data: {
         userId,
         name: data.name,
-        month,
+        month: entryMonth,
         dueDate,
         dueDayType: data.dueDayType,
         dueDayValue: data.dueDay ?? null,
         amount: data.amount,
+        uncertain: data.uncertain,
       },
     })
     entryId = entry.id
   }
 
-  revalidateMonth(month)
+  revalidateMonth(entryMonth)
   return { id: entryId }
 }
 
@@ -69,6 +74,9 @@ export async function updateIncomeEntry(id: string, input: IncomeEntryInput) {
   const data = incomeEntrySchema.parse(input)
 
   const existing = await prisma.incomeEntry.findUniqueOrThrow({ where: { id, userId } })
+  if (existing.templateId && data.uncertain) {
+    throw new Error("A recurring income cannot become uncertain")
+  }
 
   const entry = await prisma.incomeEntry.update({
     where: { id, userId },
@@ -76,8 +84,12 @@ export async function updateIncomeEntry(id: string, input: IncomeEntryInput) {
       name: data.name,
       amount: data.amount,
       dueDayType: data.dueDayType,
-      dueDayValue: data.dueDay ?? null,
-      dueDate: data.dueDay ? resolveDueDate(existing.month, data.dueDayType, data.dueDay) : null,
+      dueDayValue: data.uncertain ? null : data.dueDay ?? null,
+      dueDate:
+        !data.uncertain && data.dueDay
+          ? resolveDueDate(existing.month, data.dueDayType, data.dueDay)
+          : null,
+      uncertain: data.uncertain,
     },
   })
 
@@ -105,6 +117,9 @@ export async function setIncomeReceived(id: string, received: boolean) {
 
   const amount = entry.receivedAmount ?? entry.amount
   await adjustActualBalance(userId, entry.month, received ? amount : amount.neg())
+  if (entry.uncertain) {
+    await recalcOpeningBalanceChain(userId, entry.month)
+  }
 
   revalidateMonth(entry.month)
 }

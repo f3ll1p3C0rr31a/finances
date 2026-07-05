@@ -186,11 +186,22 @@ export function ExpenseTable({
           ) : entries.length > 0 ? (
             entries.map((entry) => (
               <TableRow key={entry.id}>
-                <TableCell className="font-medium">{entry.name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {entry.name}
+                    {entry.uncertain && !entry.paid ? (
+                      <Badge variant="outline">Incerta · avança até pagar</Badge>
+                    ) : null}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Badge variant="secondary">{CATEGORY_LABELS[entry.category]}</Badge>
                 </TableCell>
-                <TableCell>{formatDueDay(entry.dueDay, entry.dueDayType)}</TableCell>
+                <TableCell>
+                  {entry.uncertain && !entry.paid
+                    ? "Sem data"
+                    : formatDueDay(entry.dueDay, entry.dueDayType)}
+                </TableCell>
                 <TableCell>
                   {entry.paidBy === "THIRD_PARTY" ? (
                     <Badge variant="outline">{entry.paidByName || "Terceiro"}</Badge>

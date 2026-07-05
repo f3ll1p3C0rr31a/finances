@@ -28,9 +28,11 @@ As versões exatas estão em `package.json` e `package-lock.json`.
 - Login por e-mail e senha.
 - Dashboard mensal em `/dashboard/[month]`.
 - Entradas e despesas avulsas ou recorrentes.
+- Entradas e despesas incertas, carregadas para o mês atual até a liquidação.
 - Vencimento por dia corrido ou por enésimo dia útil brasileiro.
 - Marcação de recebido/pago com ajuste do saldo real.
 - Saldo inicial, saldo planejado e saldo real com propagação entre meses.
+- Prévia de saldo que inclui pendências incertas sem alterar o saldo oficial.
 - Cartões, limite, fechamento, melhor dia de compra e compras parceladas.
 - Meta mensal combinada para gastos de cartões.
 - Assinaturas pagas por cartão ou fora do cartão.

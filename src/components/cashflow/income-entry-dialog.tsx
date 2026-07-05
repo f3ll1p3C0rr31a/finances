@@ -73,10 +73,12 @@ export function IncomeEntryDialog({
       dueDay: entry?.dueDay ?? undefined,
       dueDayType: entry?.dueDayType ?? "CALENDAR_DAY",
       recurring: entry?.isRecurring ?? false,
+      uncertain: entry?.uncertain ?? false,
     },
   })
 
   const dueDayType = useWatch({ control: form.control, name: "dueDayType" })
+  const uncertain = useWatch({ control: form.control, name: "uncertain" })
 
   function onSubmit(values: IncomeEntryInput) {
     startTransition(async () => {
@@ -140,7 +142,36 @@ export function IncomeEntryDialog({
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-3">
+            {!entry?.isRecurring ? (
+              <FormField
+                control={form.control}
+                name="uncertain"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between gap-4 rounded-lg border p-3">
+                    <div>
+                      <FormLabel>Recebimento incerto</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        Não entra no total até ser recebido e avança para o próximo mês.
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked)
+                          if (checked) {
+                            form.setValue("recurring", false)
+                            form.setValue("dueDay", null)
+                          }
+                        }}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            ) : null}
+            {!uncertain ? (
+              <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="dueDayType"
@@ -187,8 +218,9 @@ export function IncomeEntryDialog({
                   </FormItem>
                 )}
               />
-            </div>
-            {!entry ? (
+              </div>
+            ) : null}
+            {!entry && !uncertain ? (
               <FormField
                 control={form.control}
                 name="recurring"

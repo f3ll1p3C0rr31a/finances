@@ -17,6 +17,9 @@ type Props = {
   totalExpense: number
   difference: number
   plannedBalance: number
+  previewBalance: number
+  pendingUncertainIncome: number
+  pendingUncertainExpense: number
   actualBalance: number | null
   actualBalanceAt: string | null
 }
@@ -28,6 +31,9 @@ export function BalancePanel({
   totalExpense,
   difference,
   plannedBalance,
+  previewBalance,
+  pendingUncertainIncome,
+  pendingUncertainExpense,
   actualBalance,
   actualBalanceAt,
 }: Props) {
@@ -74,7 +80,18 @@ export function BalancePanel({
           <dd className="text-right font-medium">
             <MoneyText value={plannedBalance} />
           </dd>
+          <dt className="font-medium">Prévia com valores incertos</dt>
+          <dd className="text-right font-medium">
+            <MoneyText value={previewBalance} />
+          </dd>
         </dl>
+        {pendingUncertainIncome > 0 || pendingUncertainExpense > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            A prévia considera <MoneyText value={pendingUncertainIncome} /> a receber e{" "}
+            <MoneyText value={-pendingUncertainExpense} /> a pagar. Esses valores ainda não
+            fazem parte do saldo planejado ou real.
+          </p>
+        ) : null}
         <div className="flex flex-col gap-2 border-t pt-3">
           <Label htmlFor="actual-balance">Saldo real (atualize quando conferir a conta)</Label>
           <div className="flex max-w-56 gap-2">

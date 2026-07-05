@@ -5,8 +5,9 @@ import { requireUserId } from "@/lib/session"
 import { revalidatePath } from "next/cache"
 import { Prisma } from "@/generated/prisma/client"
 import { monthKeyFromDate } from "@/lib/calculations/month"
+import { currentMonth } from "@/lib/calculations/month"
 import { resolveDueDate } from "@/lib/calculations/businessDay"
-import { adjustActualBalance } from "@/lib/actions/monthly"
+import { adjustActualBalance, recalcOpeningBalanceChain } from "@/lib/actions/monthly"
 import { deleteExpenseForUser } from "@/lib/services/deleteExpense"
 import { expenseEntrySchema, type ExpenseEntryInput } from "@/lib/validation/schemas"
 
@@ -17,12 +18,16 @@ function revalidateMonth(month: Date) {
 export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) {
   const userId = await requireUserId()
   const data = expenseEntrySchema.parse(input)
-  const dueDate = data.dueDay ? resolveDueDate(month, data.dueDayType, data.dueDay) : null
+  const entryMonth = data.uncertain ? currentMonth() : month
+  const dueDate =
+    !data.uncertain && data.dueDay
+      ? resolveDueDate(entryMonth, data.dueDayType, data.dueDay)
+      : null
   const paidByName = data.paidBy === "THIRD_PARTY" ? data.paidByName ?? null : null
 
   let entryId: string
 
-  if (data.recurring && data.category !== "ONE_OFF") {
+  if (data.recurring && !data.uncertain && data.category !== "ONE_OFF") {
     const template = await prisma.expenseTemplate.create({
       data: {
         userId,
@@ -31,7 +36,7 @@ export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) 
         defaultAmount: data.amount,
         dayOfMonth: data.dueDay ?? null,
         dueDayType: data.dueDayType,
-        startMonth: month,
+        startMonth: entryMonth,
       },
     })
     const entry = await prisma.expenseEntry.create({
@@ -40,7 +45,7 @@ export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) 
         templateId: template.id,
         name: data.name,
         category: data.category,
-        month,
+        month: entryMonth,
         dueDate,
         dueDayType: data.dueDayType,
         dueDayValue: data.dueDay ?? null,
@@ -58,7 +63,7 @@ export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) 
         userId,
         name: data.name,
         category: data.category,
-        month,
+        month: entryMonth,
         dueDate,
         dueDayType: data.dueDayType,
         dueDayValue: data.dueDay ?? null,
@@ -67,12 +72,13 @@ export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) 
         paidByName,
         paymentMethod: data.paymentMethod,
         pixKeyId: data.pixKeyId ?? null,
+        uncertain: data.uncertain,
       },
     })
     entryId = entry.id
   }
 
-  revalidateMonth(month)
+  revalidateMonth(entryMonth)
   return { id: entryId }
 }
 
@@ -82,6 +88,9 @@ export async function updateExpenseEntry(id: string, input: ExpenseEntryInput) {
   const paidByName = data.paidBy === "THIRD_PARTY" ? data.paidByName ?? null : null
 
   const existing = await prisma.expenseEntry.findUniqueOrThrow({ where: { id, userId } })
+  if (existing.templateId && data.uncertain) {
+    throw new Error("A recurring expense cannot become uncertain")
+  }
 
   const entry = await prisma.expenseEntry.update({
     where: { id, userId },
@@ -90,8 +99,12 @@ export async function updateExpenseEntry(id: string, input: ExpenseEntryInput) {
       amount: data.amount,
       category: data.category,
       dueDayType: data.dueDayType,
-      dueDayValue: data.dueDay ?? null,
-      dueDate: data.dueDay ? resolveDueDate(existing.month, data.dueDayType, data.dueDay) : null,
+      dueDayValue: data.uncertain ? null : data.dueDay ?? null,
+      dueDate:
+        !data.uncertain && data.dueDay
+          ? resolveDueDate(existing.month, data.dueDayType, data.dueDay)
+          : null,
+      uncertain: data.uncertain,
       paidBy: data.paidBy,
       paidByName,
       paymentMethod: data.paymentMethod,
@@ -125,6 +138,9 @@ export async function setExpensePaid(id: string, paid: boolean) {
 
   const amount = entry.paidAmount ?? entry.amount
   await adjustActualBalance(userId, entry.month, paid ? amount.neg() : amount)
+  if (entry.uncertain) {
+    await recalcOpeningBalanceChain(userId, entry.month)
+  }
 
   revalidateMonth(entry.month)
 }

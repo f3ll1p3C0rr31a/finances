@@ -123,6 +123,7 @@ export function ExpenseEntryDialog({
       dueDayType: entry?.dueDayType ?? "CALENDAR_DAY",
       category: entry?.category ?? "FIXED",
       recurring: entry?.isRecurring ?? false,
+      uncertain: entry?.uncertain ?? false,
       paidBy: entry?.paidBy ?? "SELF",
       paidByName: entry?.paidByName ?? "",
       paymentMethod: entry?.paymentMethod ?? "PIX",
@@ -131,6 +132,7 @@ export function ExpenseEntryDialog({
   })
 
   const category = useWatch({ control: form.control, name: "category" })
+  const uncertain = useWatch({ control: form.control, name: "uncertain" })
   const paidBy = useWatch({ control: form.control, name: "paidBy" })
   const dueDayType = useWatch({ control: form.control, name: "dueDayType" })
   const paymentMethod = useWatch({ control: form.control, name: "paymentMethod" })
@@ -223,7 +225,36 @@ export function ExpenseEntryDialog({
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-3">
+            {!entry?.isRecurring ? (
+              <FormField
+                control={form.control}
+                name="uncertain"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between gap-4 rounded-lg border p-3">
+                    <div>
+                      <FormLabel>Pagamento incerto</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        Não entra no total até ser pago e avança para o próximo mês.
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked)
+                          if (checked) {
+                            form.setValue("recurring", false)
+                            form.setValue("dueDay", null)
+                          }
+                        }}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            ) : null}
+            {!uncertain ? (
+              <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="dueDayType"
@@ -326,8 +357,9 @@ export function ExpenseEntryDialog({
                   )
                 }}
               />
-            </div>
-            {!entry && category !== "ONE_OFF" ? (
+              </div>
+            ) : null}
+            {!entry && !uncertain && category !== "ONE_OFF" ? (
               <FormField
                 control={form.control}
                 name="recurring"

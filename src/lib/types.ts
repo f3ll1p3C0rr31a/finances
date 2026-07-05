@@ -11,6 +11,7 @@ export type SerializedIncomeEntry = {
   dueDate: string | null
   received: boolean
   isRecurring: boolean
+  uncertain: boolean
   tags: TagRef[]
 }
 
@@ -26,6 +27,7 @@ export type SerializedExpenseEntry = {
   paidBy: "SELF" | "THIRD_PARTY"
   paidByName: string | null
   isRecurring: boolean
+  uncertain: boolean
   tags: TagRef[]
   paymentMethod: PaymentMethod
   pixKeyId: string | null

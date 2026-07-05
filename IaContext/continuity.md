@@ -18,6 +18,11 @@ Foram ajustados o dashboard e a exclusão de despesas:
   despesa prevista e incluída no saldo planejado e nos gráficos;
 - o vencimento de despesas passou de campo numérico para calendário; no modo
   dia útil, datas não úteis ficam indisponíveis;
+- entradas e despesas podem ser marcadas como incertas: ficam fora dos totais,
+  avançam para o mês atual enquanto pendentes e entram no mês quando
+  recebidas/pagas;
+- o resumo mensal ganhou uma prévia separada que considera valores incertos sem
+  tratá-la como saldo oficial;
 - o bloco separado de cartões foi removido do dashboard;
 - os gráficos oferecem as visões “Ano completo” e “Próximos 12 meses”, ambas
   com 12 meses completos relativos ao mês aberto.
@@ -35,6 +40,9 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - Teste de integração do pagamento e estorno de fatura: passou em 2026-07-05.
 - Teste de integração da reserva da meta (R$ 4.500 gastos / R$ 5.000 de meta):
   passou com reserva de R$ 500 e despesa planejada de R$ 5.000.
+- Teste de integração de pendências incertas: confirmou avanço de mês, exclusão
+  dos totais enquanto pendentes, inclusão na prévia e contabilização após
+  liquidação.
 - Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
   2026-07-05.
 - Testes automatizados: não existem no projeto.

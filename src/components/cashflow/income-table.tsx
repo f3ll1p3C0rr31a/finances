@@ -80,8 +80,19 @@ export function IncomeTable({
           ) : (
             entries.map((entry) => (
               <TableRow key={entry.id}>
-                <TableCell className="font-medium">{entry.name}</TableCell>
-                <TableCell>{formatDueDay(entry.dueDay, entry.dueDayType)}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {entry.name}
+                    {entry.uncertain && !entry.received ? (
+                      <Badge variant="outline">Incerta · avança até receber</Badge>
+                    ) : null}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {entry.uncertain && !entry.received
+                    ? "Sem data"
+                    : formatDueDay(entry.dueDay, entry.dueDayType)}
+                </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
                     {entry.tags.map((tag) => (
