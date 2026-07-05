@@ -17,12 +17,17 @@ Foram ajustados o dashboard e a exclusão de despesas:
   com 12 meses completos relativos ao mês aberto.
 - o deploy expõe `/api/version` e só passa no health check quando o SHA servido
   corresponde ao commit disparado pelo GitHub Actions.
+- Em produção, a duplicidade “Nubank” foi removida pelo serviço de domínio em
+  2026-07-05: um template e 12 ocorrências foram apagados; o cartão foi
+  preservado. Foi criado backup SQL imediatamente antes da operação.
 
 ## Validação desta passagem
 
 - `npm run lint`: passou em 2026-07-05.
 - `npm run build`: passou após os ajustes em 2026-07-05 com Next.js 16.2.9.
 - Teste de integração isolado da exclusão recorrente: passou em 2026-07-05.
+- Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
+  2026-07-05.
 - Testes automatizados: não existem no projeto.
 
 ## Débitos documentais confirmados
