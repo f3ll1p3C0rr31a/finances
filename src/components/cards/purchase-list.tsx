@@ -15,6 +15,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -93,6 +94,15 @@ export function PurchaseList({
     })
     return copy
   }, [purchases, sort])
+
+  const totalInstallments = useMemo(
+    () => purchases.reduce((sum, p) => sum + p.installmentAmount, 0),
+    [purchases]
+  )
+  const totalCommitted = useMemo(
+    () => purchases.reduce((sum, p) => sum + p.totalAmount, 0),
+    [purchases]
+  )
 
   function toggleSort(key: SortKey) {
     setSort((prev) =>
@@ -268,6 +278,22 @@ export function PurchaseList({
             })
           )}
         </TableBody>
+        {purchases.length > 0 ? (
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={6} className="text-right font-medium">
+                Total comprometido no cartão
+              </TableCell>
+              <TableCell className="text-right font-semibold">
+                <MoneyText value={-totalInstallments} />
+              </TableCell>
+              <TableCell className="text-right font-semibold">
+                <MoneyText value={-totalCommitted} />
+              </TableCell>
+              <TableCell />
+            </TableRow>
+          </TableFooter>
+        ) : null}
       </Table>
     </div>
   )

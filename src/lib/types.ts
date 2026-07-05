@@ -40,11 +40,24 @@ export type SerializedCardSummary = {
   bestPurchaseDay: number | null
 }
 
+export type SerializedSubscription = {
+  id: string
+  name: string
+  amount: number
+  paymentMethod: PaymentMethod
+  cardId: string | null
+  cardName: string | null
+  active: boolean
+  startMonth: string
+  cancelledMonth: string | null
+}
+
 export type SerializedCardPurchase = {
   id: string
   description: string
   totalAmount: number
   installmentAmount: number
+  remainingAmount: number
   purchaseDate: string
   installmentCount: number
   hasInterest: boolean

@@ -38,7 +38,7 @@ Se qualquer check acima falhar, resolva antes de tentar commitar/fazer push.
 Um push sem autenticação configurada vai travar silenciosamente ou pedir senha
 que não existe.
 
----
+---t
 
 ## 1. Arquitetura geral
 

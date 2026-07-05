@@ -25,7 +25,12 @@ export async function createCard(input: CardInput) {
   const userId = await requireUserId()
   const data = cardSchema.parse(input)
   await prisma.card.create({
-    data: { userId, name: data.name, closingDay: data.closingDay ?? null },
+    data: {
+      userId,
+      name: data.name,
+      closingDay: data.closingDay ?? null,
+      creditLimit: data.creditLimit != null ? new Prisma.Decimal(data.creditLimit) : null,
+    },
   })
   revalidateCards()
 }
@@ -35,7 +40,11 @@ export async function updateCard(id: string, input: CardInput) {
   const data = cardSchema.parse(input)
   await prisma.card.update({
     where: { id, userId },
-    data: { name: data.name, closingDay: data.closingDay ?? null },
+    data: {
+      name: data.name,
+      closingDay: data.closingDay ?? null,
+      creditLimit: data.creditLimit != null ? new Prisma.Decimal(data.creditLimit) : null,
+    },
   })
   revalidateCards()
   revalidatePath(`/cards/${id}`)

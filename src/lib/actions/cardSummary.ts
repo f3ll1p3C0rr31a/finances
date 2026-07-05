@@ -4,11 +4,16 @@ import { prisma } from "@/lib/prisma"
 import { addMonths } from "@/lib/calculations/month"
 import { sumAmounts } from "@/lib/calculations/money"
 import { computeGoalProgress } from "@/lib/calculations/goalProgress"
+import { getCardSubscriptionsTotal } from "@/lib/actions/subscriptionSummary"
 
-export async function getCardMonthTotal(cardId: string, month: Date): Promise<Prisma.Decimal> {
+export async function getCardMonthTotal(
+  userId: string,
+  cardId: string,
+  month: Date
+): Promise<Prisma.Decimal> {
   const nextMonth = addMonths(month, 1)
 
-  const [installments, singlePurchases] = await Promise.all([
+  const [installments, singlePurchases, subscriptionsTotal] = await Promise.all([
     prisma.cardInstallment.findMany({ where: { month, purchase: { cardId } } }),
     prisma.cardPurchase.findMany({
       where: {
@@ -17,11 +22,13 @@ export async function getCardMonthTotal(cardId: string, month: Date): Promise<Pr
         purchaseDate: { gte: month, lt: nextMonth },
       },
     }),
+    getCardSubscriptionsTotal(userId, cardId, month),
   ])
 
   return sumAmounts([
     ...installments.map((i) => i.amount),
     ...singlePurchases.map((p) => p.totalAmount),
+    subscriptionsTotal,
   ])
 }
 
@@ -34,7 +41,7 @@ export async function getCardsMonthSummary(userId: string, month: Date) {
   const summaries = await Promise.all(
     cards.map(async (card) => ({
       card,
-      total: await getCardMonthTotal(card.id, month),
+      total: await getCardMonthTotal(userId, card.id, month),
     }))
   )
 

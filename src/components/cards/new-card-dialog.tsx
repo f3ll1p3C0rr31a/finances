@@ -9,6 +9,7 @@ import { cardSchema, type CardFormValues, type CardInput } from "@/lib/validatio
 import { createCard, updateCard } from "@/lib/actions/cards"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/form"
 
 type Props = {
-  card?: { id: string; name: string; closingDay: number | null }
+  card?: { id: string; name: string; closingDay: number | null; creditLimit: number | null }
   triggerLabel?: string
   triggerVariant?: "default" | "outline" | "ghost" | "secondary"
   triggerSize?: "default" | "sm" | "xs" | "icon-sm"
@@ -45,7 +46,11 @@ export function NewCardDialog({
 
   const form = useForm<CardFormValues, unknown, CardInput>({
     resolver: zodResolver(cardSchema),
-    defaultValues: { name: card?.name ?? "", closingDay: card?.closingDay ?? undefined },
+    defaultValues: {
+      name: card?.name ?? "",
+      closingDay: card?.closingDay ?? undefined,
+      creditLimit: card?.creditLimit ?? undefined,
+    },
   })
 
   function onSubmit(values: CardInput) {
@@ -105,6 +110,22 @@ export function NewCardDialog({
                       max={31}
                       {...field}
                       value={String(field.value ?? "")}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="creditLimit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Limite de crédito (opcional)</FormLabel>
+                  <FormControl>
+                    <CurrencyInput
+                      value={Number(field.value) || 0}
+                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />

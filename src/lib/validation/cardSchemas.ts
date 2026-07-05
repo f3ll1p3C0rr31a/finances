@@ -3,6 +3,7 @@ import { z } from "zod"
 export const cardSchema = z.object({
   name: z.string().trim().min(1, "Informe um nome"),
   closingDay: z.coerce.number().int().min(1).max(31).optional().nullable(),
+  creditLimit: z.coerce.number().nonnegative("Informe um valor válido").optional().nullable(),
 })
 export type CardFormValues = z.input<typeof cardSchema>
 export type CardInput = z.output<typeof cardSchema>
