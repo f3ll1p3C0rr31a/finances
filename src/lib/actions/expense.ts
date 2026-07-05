@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache"
 import { Prisma } from "@/generated/prisma/client"
 import { monthKeyFromDate } from "@/lib/calculations/month"
 import { resolveDueDate } from "@/lib/calculations/businessDay"
-import { adjustActualBalance } from "@/lib/actions/monthly"
+import { adjustActualBalance, recalcOpeningBalanceChain } from "@/lib/actions/monthly"
 import { expenseEntrySchema, type ExpenseEntryInput } from "@/lib/validation/schemas"
 
 function revalidateMonth(month: Date) {
@@ -130,10 +130,54 @@ export async function setExpensePaid(id: string, paid: boolean) {
 
 export async function deleteExpenseEntry(id: string) {
   const userId = await requireUserId()
-  const entry = await prisma.expenseEntry.delete({ where: { id, userId } })
-  if (entry.paid) {
-    const amount = entry.paidAmount ?? entry.amount
-    await adjustActualBalance(userId, entry.month, amount)
+  const existing = await prisma.expenseEntry.findUniqueOrThrow({
+    where: { id, userId },
+  })
+  let recalculateFrom = existing.month
+
+  if (existing.templateId) {
+    const recurringEntries = await prisma.expenseEntry.findMany({
+      where: { userId, templateId: existing.templateId },
+    })
+
+    await prisma.$transaction([
+      prisma.expenseEntry.deleteMany({
+        where: { userId, templateId: existing.templateId },
+      }),
+      prisma.expenseTemplate.delete({
+        where: { id: existing.templateId, userId },
+      }),
+    ])
+
+    const paidByMonth = new Map<string, { month: Date; amount: Prisma.Decimal }>()
+    for (const entry of recurringEntries) {
+      if (entry.month < recalculateFrom) {
+        recalculateFrom = entry.month
+      }
+      if (!entry.paid) continue
+
+      const key = monthKeyFromDate(entry.month)
+      const amount = entry.paidAmount ?? entry.amount
+      const current = paidByMonth.get(key)
+      paidByMonth.set(key, {
+        month: entry.month,
+        amount: current ? current.amount.add(amount) : amount,
+      })
+    }
+
+    for (const { month, amount } of [...paidByMonth.values()].sort(
+      (a, b) => a.month.getTime() - b.month.getTime()
+    )) {
+      await adjustActualBalance(userId, month, amount)
+    }
+  } else {
+    const entry = await prisma.expenseEntry.delete({ where: { id, userId } })
+    if (entry.paid) {
+      const amount = entry.paidAmount ?? entry.amount
+      await adjustActualBalance(userId, entry.month, amount)
+    }
   }
-  revalidateMonth(entry.month)
+
+  await recalcOpeningBalanceChain(userId, recalculateFrom)
+  revalidatePath("/dashboard", "layout")
 }

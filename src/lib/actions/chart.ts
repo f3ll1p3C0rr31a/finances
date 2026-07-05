@@ -3,7 +3,7 @@ import { computeMonthTotals, computePlannedBalance } from "@/lib/calculations/ba
 import { getCardsMonthSummary, getCardMonthTotal } from "@/lib/actions/cardSummary"
 import { getNonCardSubscriptionsTotal } from "@/lib/actions/subscriptionSummary"
 import { ensureMonthGenerated } from "@/lib/actions/monthly"
-import { addMonths, currentMonth, formatMonthLabel, monthKeyFromDate } from "@/lib/calculations/month"
+import { addMonths, formatMonthLabel, monthKeyFromDate } from "@/lib/calculations/month"
 
 export type MonthChartPoint = {
   month: string
@@ -13,20 +13,52 @@ export type MonthChartPoint = {
   balance: number
 }
 
+export type BalanceChartRanges = {
+  year: MonthChartPoint[]
+  nextTwelveMonths: MonthChartPoint[]
+}
+
+function formatChartMonthLabel(month: Date): string {
+  const monthName = new Intl.DateTimeFormat("pt-BR", {
+    month: "short",
+    timeZone: "UTC",
+  })
+    .format(month)
+    .replace(".", "")
+
+  return `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)}/${String(
+    month.getUTCFullYear()
+  ).slice(-2)}`
+}
+
 /**
- * Returns the full monthly history plus a rolling 12-month forward window
- * from today, materializing future months on demand so the dashboard chart
- * always has data for the year ahead.
+ * Returns two complete dashboard windows relative to the selected month:
+ * its full calendar year and a rolling 12-month projection starting there.
  */
-export async function getBalanceHistory(userId: string): Promise<MonthChartPoint[]> {
-  await ensureMonthGenerated(userId, addMonths(currentMonth(), 11))
+export async function getBalanceChartRanges(
+  userId: string,
+  referenceMonth: Date
+): Promise<BalanceChartRanges> {
+  const yearStart = new Date(Date.UTC(referenceMonth.getUTCFullYear(), 0, 1))
+  const yearEnd = new Date(Date.UTC(referenceMonth.getUTCFullYear(), 11, 1))
+  const rollingEnd = addMonths(referenceMonth, 11)
+
+  for (let cursor = yearStart; cursor <= rollingEnd; cursor = addMonths(cursor, 1)) {
+    await ensureMonthGenerated(userId, cursor)
+  }
 
   const balances = await prisma.monthlyBalance.findMany({
-    where: { userId },
+    where: {
+      userId,
+      month: {
+        gte: yearStart,
+        lte: rollingEnd > yearEnd ? rollingEnd : yearEnd,
+      },
+    },
     orderBy: { month: "asc" },
   })
 
-  return Promise.all(
+  const points = await Promise.all(
     balances.map(async (balanceRow) => {
       const [incomes, expenses, cards, nonCardSubscriptions] = await Promise.all([
         prisma.incomeEntry.findMany({ where: { userId, month: balanceRow.month } }),
@@ -46,13 +78,24 @@ export async function getBalanceHistory(userId: string): Promise<MonthChartPoint
 
       return {
         month: monthKeyFromDate(balanceRow.month),
-        label: formatMonthLabel(balanceRow.month),
+        label: formatChartMonthLabel(balanceRow.month),
         totalIncome: totalIncome.toNumber(),
         totalExpense: totalExpense.toNumber(),
         balance: balance.toNumber(),
       }
     })
   )
+
+  return {
+    year: points.filter(
+      (point) => point.month >= monthKeyFromDate(yearStart) && point.month <= monthKeyFromDate(yearEnd)
+    ),
+    nextTwelveMonths: points.filter(
+      (point) =>
+        point.month >= monthKeyFromDate(referenceMonth) &&
+        point.month <= monthKeyFromDate(rollingEnd)
+    ),
+  }
 }
 
 export type CardMonthChartPoint = {

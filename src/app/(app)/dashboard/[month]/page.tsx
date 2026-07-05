@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 
 import { requireUserId } from "@/lib/session"
 import { getMonthData } from "@/lib/actions/monthly"
-import { getBalanceHistory } from "@/lib/actions/chart"
+import { getBalanceChartRanges } from "@/lib/actions/chart"
 import { getCardGoalData } from "@/lib/actions/cardSummary"
 import { listTags } from "@/lib/actions/tags"
 import { listPixKeys } from "@/lib/actions/pixKeys"
@@ -18,9 +18,8 @@ import { MonthNav } from "@/components/cashflow/month-nav"
 import { IncomeTable } from "@/components/cashflow/income-table"
 import { ExpenseTable } from "@/components/cashflow/expense-table"
 import { BalancePanel } from "@/components/cashflow/balance-panel"
-import { CardsSummary } from "@/components/cashflow/cards-summary"
 import { MonthCalendar } from "@/components/cashflow/month-calendar"
-import { BalanceChart, IncomeExpenseChart } from "@/components/chart/balance-chart"
+import { DashboardCharts } from "@/components/chart/dashboard-charts"
 import { CardGoalPanel } from "@/components/cards/card-goal-panel"
 import { SpendingByTagChart } from "@/components/chart/spending-by-tag-chart"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,9 +38,9 @@ export default async function DashboardMonthPage({
 
   const userId = await requireUserId()
   const month = monthFromKey(monthKey)
-  const [data, history, goalData, allTags, pixPayeeKeys, spendingRows] = await Promise.all([
-    getMonthData(userId, month),
-    getBalanceHistory(userId),
+  const data = await getMonthData(userId, month)
+  const [history, goalData, allTags, pixPayeeKeys, spendingRows] = await Promise.all([
+    getBalanceChartRanges(userId, month),
     getCardGoalData(userId, month),
     listTags(userId),
     listPixKeys(userId, "PAYEE"),
@@ -126,10 +125,10 @@ export default async function DashboardMonthPage({
       <ExpenseTable
         month={monthKey}
         entries={expenseEntries}
+        cards={cardSummaries}
         allTags={tagRefs}
         pixPayees={pixPayees}
       />
-      <CardsSummary cards={cardSummaries} />
       <Card>
         <CardHeader>
           <CardTitle>Gastos por etiqueta</CardTitle>
@@ -138,26 +137,11 @@ export default async function DashboardMonthPage({
           <SpendingByTagChart rows={spendingRows} />
         </CardContent>
       </Card>
-      {history.length > 0 ? (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Saldo ao longo do tempo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <BalanceChart data={history} />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Entradas vs. saídas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <IncomeExpenseChart data={history} />
-            </CardContent>
-          </Card>
-        </>
-      ) : null}
+      <DashboardCharts
+        year={history.year}
+        nextTwelveMonths={history.nextTwelveMonths}
+        referenceYear={month.getUTCFullYear()}
+      />
     </div>
   )
 }

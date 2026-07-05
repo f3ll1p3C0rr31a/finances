@@ -1,9 +1,10 @@
 "use client"
 
+import Link from "next/link"
 import { useTransition } from "react"
 import { toast } from "sonner"
 
-import type { SerializedExpenseEntry } from "@/lib/types"
+import type { SerializedCardSummary, SerializedExpenseEntry } from "@/lib/types"
 import type { TagOption } from "@/components/tags/tag-multi-select"
 import { setExpensePaid, deleteExpenseEntry } from "@/lib/actions/expense"
 import { formatDueDay } from "@/lib/calculations/format"
@@ -38,11 +39,13 @@ const PAYMENT_METHOD_LABELS = {
 export function ExpenseTable({
   month,
   entries,
+  cards,
   allTags,
   pixPayees,
 }: {
   month: string
   entries: SerializedExpenseEntry[]
+  cards: SerializedCardSummary[]
   allTags: TagOption[]
   pixPayees: { id: string; label: string }[]
 }) {
@@ -96,13 +99,45 @@ export function ExpenseTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {entries.length === 0 ? (
+          {cards.map((card) => (
+            <TableRow key={`card-${card.id}`} className="bg-muted/35">
+              <TableCell className="font-medium">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link href={`/cards/${card.id}`} className="hover:underline">
+                    {card.name}
+                  </Link>
+                  <Badge variant="outline">Calculado automaticamente</Badge>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge variant="secondary">Variável</Badge>
+              </TableCell>
+              <TableCell>—</TableCell>
+              <TableCell>Eu</TableCell>
+              <TableCell className="text-sm text-muted-foreground">Cartão</TableCell>
+              <TableCell>
+                <Badge variant="outline">Fatura do cartão</Badge>
+              </TableCell>
+              <TableCell className="text-right">
+                <MoneyText value={-card.total} />
+              </TableCell>
+              <TableCell className="text-center text-xs text-muted-foreground">
+                Automático
+              </TableCell>
+              <TableCell className="text-right">
+                <Button variant="ghost" size="xs" render={<Link href={`/cards/${card.id}`} />}>
+                  Gerenciar
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+          {entries.length === 0 && cards.length === 0 ? (
             <TableRow>
               <TableCell colSpan={9} className="text-center text-muted-foreground">
                 Nenhuma despesa neste mês.
               </TableCell>
             </TableRow>
-          ) : (
+          ) : entries.length > 0 ? (
             entries.map((entry) => (
               <TableRow key={entry.id}>
                 <TableCell className="font-medium">{entry.name}</TableCell>
@@ -163,7 +198,7 @@ export function ExpenseTable({
                 </TableCell>
               </TableRow>
             ))
-          )}
+          ) : null}
         </TableBody>
       </Table>
     </div>
