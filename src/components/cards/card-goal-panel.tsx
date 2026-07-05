@@ -14,12 +14,13 @@ type Props = {
   month: string
   goal: number | null
   spent: number
+  reserve: number
   remaining: number
   perDay: number
   daysLeft: number
 }
 
-export function CardGoalPanel({ month, goal, spent, remaining, perDay, daysLeft }: Props) {
+export function CardGoalPanel({ month, goal, spent, reserve, remaining, perDay, daysLeft }: Props) {
   const [value, setValue] = useState(goal ?? 0)
   const [pending, startTransition] = useTransition()
 
@@ -59,6 +60,10 @@ export function CardGoalPanel({ month, goal, spent, remaining, perDay, daysLeft 
           <dt className="text-muted-foreground">Restante dentro da meta</dt>
           <dd className="text-right">
             <MoneyText value={remaining} />
+          </dd>
+          <dt className="text-muted-foreground">Despesa ainda reservada</dt>
+          <dd className="text-right">
+            <MoneyText value={-reserve} />
           </dd>
           <dt className="font-medium">Você pode gastar por dia</dt>
           <dd className="text-right font-medium">

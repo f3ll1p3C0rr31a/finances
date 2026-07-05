@@ -98,6 +98,7 @@ export default async function DashboardMonthPage({
         month={monthKey}
         goal={goalData.goal?.toNumber() ?? null}
         spent={goalData.combinedTotal.toNumber()}
+        reserve={goalData.reserve.toNumber()}
         remaining={goalData.progress.remaining.toNumber()}
         perDay={goalData.progress.perDay.toNumber()}
         daysLeft={goalData.progress.daysLeft}
@@ -127,6 +128,7 @@ export default async function DashboardMonthPage({
         month={monthKey}
         entries={expenseEntries}
         cards={cardSummaries}
+        cardReserve={data.cardReserve.toNumber()}
         allTags={tagRefs}
         pixPayees={pixPayees}
       />

@@ -14,6 +14,10 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - cartões ativos aparecem como linhas variáveis calculadas no topo de Despesas;
 - a coluna Pago dessas linhas agora possui um switch persistente por cartão e
   mês; marcar/desmarcar ajusta e reverte o saldo real pelo valor da fatura;
+- a diferença positiva entre a meta combinada e as faturas é exibida como
+  despesa prevista e incluída no saldo planejado e nos gráficos;
+- o vencimento de despesas passou de campo numérico para calendário; no modo
+  dia útil, datas não úteis ficam indisponíveis;
 - o bloco separado de cartões foi removido do dashboard;
 - os gráficos oferecem as visões “Ano completo” e “Próximos 12 meses”, ambas
   com 12 meses completos relativos ao mês aberto.
@@ -29,6 +33,8 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - `npm run build`: passou após os ajustes em 2026-07-05 com Next.js 16.2.9.
 - Teste de integração isolado da exclusão recorrente: passou em 2026-07-05.
 - Teste de integração do pagamento e estorno de fatura: passou em 2026-07-05.
+- Teste de integração da reserva da meta (R$ 4.500 gastos / R$ 5.000 de meta):
+  passou com reserva de R$ 500 e despesa planejada de R$ 5.000.
 - Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
   2026-07-05.
 - Testes automatizados: não existem no projeto.

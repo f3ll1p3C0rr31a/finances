@@ -98,6 +98,10 @@ O alias `@/*` aponta para `src/*`.
   multiplicação pela quantidade.
 - Assinatura com `paymentMethod=CARD` entra no total mensal daquele cartão.
 - A meta de cartões compara o total combinado dos cartões ativos.
+- Enquanto as faturas somadas estiverem abaixo da meta mensal, a diferença é
+  tratada como reserva de despesa prevista. Portanto, o planejamento usa
+  `max(total das faturas, meta)`; ao gastar no cartão, a fatura cresce e a
+  reserva cai na mesma proporção.
 - No dashboard, cada cartão ativo aparece no topo de Despesas como uma linha
   variável calculada. Essa linha é apenas uma representação da fatura já
   incluída nos totais, não um `ExpenseEntry` duplicado.

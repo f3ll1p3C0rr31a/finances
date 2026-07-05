@@ -4,6 +4,8 @@ import { useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+import { ptBR } from "date-fns/locale"
+import { CalendarDays } from "lucide-react"
 
 import {
   expenseEntrySchema,
@@ -19,6 +21,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { Switch } from "@/components/ui/switch"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { isBusinessDay, resolveDueDate } from "@/lib/calculations/businessDay"
 import {
   Dialog,
   DialogContent,
@@ -70,6 +75,28 @@ type Props = {
   pixPayees: PixKeyOption[]
 }
 
+function toLocalDate(date: Date): Date {
+  return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+}
+
+function toUtcDate(date: Date): Date {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+}
+
+function businessDayOrdinal(date: Date): number {
+  const utcDate = toUtcDate(date)
+  let ordinal = 0
+
+  for (let day = 1; day <= utcDate.getUTCDate(); day++) {
+    const candidate = new Date(
+      Date.UTC(utcDate.getUTCFullYear(), utcDate.getUTCMonth(), day)
+    )
+    if (isBusinessDay(candidate)) ordinal++
+  }
+
+  return ordinal
+}
+
 export function ExpenseEntryDialog({
   month,
   entry,
@@ -80,8 +107,12 @@ export function ExpenseEntryDialog({
   pixPayees,
 }: Props) {
   const [open, setOpen] = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   const [tagIds, setTagIds] = useState<string[]>(entry?.tags.map((t) => t.id) ?? [])
+  const [year, monthIndex] = month.split("-").map(Number)
+  const monthDate = new Date(Date.UTC(year, monthIndex - 1, 1))
+  const localMonth = toLocalDate(monthDate)
 
   const form = useForm<ExpenseEntryFormValues, unknown, ExpenseEntryInput>({
     resolver: zodResolver(expenseEntrySchema),
@@ -107,8 +138,6 @@ export function ExpenseEntryDialog({
   function onSubmit(values: ExpenseEntryInput) {
     startTransition(async () => {
       try {
-        const [year, monthIndex] = month.split("-").map(Number)
-        const monthDate = new Date(Date.UTC(year, monthIndex - 1, 1))
         let entryId: string
         if (entry) {
           await updateExpenseEntry(entry.id, values)
@@ -223,23 +252,79 @@ export function ExpenseEntryDialog({
               <FormField
                 control={form.control}
                 name="dueDay"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {dueDayType === "BUSINESS_DAY" ? "Nº do dia útil" : "Dia de vencimento"}
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={31}
-                        {...field}
-                        value={String(field.value ?? "")}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const selectedDate = field.value
+                    ? toLocalDate(
+                        resolveDueDate(monthDate, dueDayType, Number(field.value))
+                      )
+                    : undefined
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Data de pagamento</FormLabel>
+                      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                        <PopoverTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full justify-start font-normal"
+                            />
+                          }
+                        >
+                          <CalendarDays />
+                          {selectedDate
+                            ? new Intl.DateTimeFormat("pt-BR").format(selectedDate)
+                            : "Selecionar data"}
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="p-0">
+                          <Calendar
+                            mode="single"
+                            locale={ptBR}
+                            month={localMonth}
+                            startMonth={localMonth}
+                            endMonth={localMonth}
+                            selected={selectedDate}
+                            disabled={(date) => {
+                              const outsideMonth =
+                                date.getFullYear() !== localMonth.getFullYear() ||
+                                date.getMonth() !== localMonth.getMonth()
+                              return (
+                                outsideMonth ||
+                                (dueDayType === "BUSINESS_DAY" &&
+                                  !isBusinessDay(toUtcDate(date)))
+                              )
+                            }}
+                            onSelect={(date) => {
+                              if (!date) return
+                              field.onChange(
+                                dueDayType === "BUSINESS_DAY"
+                                  ? businessDayOrdinal(date)
+                                  : date.getDate()
+                              )
+                              setCalendarOpen(false)
+                            }}
+                          />
+                          <div className="border-t p-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="w-full"
+                              onClick={() => {
+                                field.onChange(null)
+                                setCalendarOpen(false)
+                              }}
+                            >
+                              Sem data de pagamento
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )
+                }}
               />
             </div>
             {!entry && category !== "ONE_OFF" ? (

@@ -10,7 +10,7 @@ import { NewCardDialog } from "@/components/cards/new-card-dialog"
 export default async function CardsPage() {
   const userId = await requireUserId()
   const month = currentMonth()
-  const { summaries, combinedTotal, goal, progress } = await getCardGoalData(userId, month)
+  const { summaries, combinedTotal, goal, reserve, progress } = await getCardGoalData(userId, month)
 
   const cards: SerializedCardSummary[] = summaries.map((s) => ({
     id: s.card.id,
@@ -33,6 +33,7 @@ export default async function CardsPage() {
         month={monthKeyFromDate(month)}
         goal={goal?.toNumber() ?? null}
         spent={combinedTotal.toNumber()}
+        reserve={reserve.toNumber()}
         remaining={progress.remaining.toNumber()}
         perDay={progress.perDay.toNumber()}
         daysLeft={progress.daysLeft}

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma"
 import { requireUserId } from "@/lib/session"
 import { addMonths } from "@/lib/calculations/month"
 import { splitIntoInstallments } from "@/lib/calculations/installments"
+import { recalcOpeningBalanceChain } from "@/lib/actions/monthly"
 import {
   cardSchema,
   cardPurchaseSchema,
@@ -203,5 +204,6 @@ export async function setCardGoal(month: Date, input: CardGoalInput) {
     create: { userId, month, amount: data.amount },
   })
 
+  await recalcOpeningBalanceChain(userId, month)
   revalidateCards()
 }

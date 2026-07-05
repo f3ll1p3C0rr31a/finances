@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { computeMonthTotals, computePlannedBalance } from "@/lib/calculations/balanceChain"
-import { getCardsMonthSummary, getCardMonthTotal } from "@/lib/actions/cardSummary"
+import { getCardMonthBudget, getCardMonthTotal } from "@/lib/actions/cardSummary"
 import { getNonCardSubscriptionsTotal } from "@/lib/actions/subscriptionSummary"
 import { ensureMonthGenerated } from "@/lib/actions/monthly"
 import { addMonths, formatMonthLabel, monthKeyFromDate } from "@/lib/calculations/month"
@@ -63,12 +63,12 @@ export async function getBalanceChartRanges(
       const [incomes, expenses, cards, nonCardSubscriptions] = await Promise.all([
         prisma.incomeEntry.findMany({ where: { userId, month: balanceRow.month } }),
         prisma.expenseEntry.findMany({ where: { userId, month: balanceRow.month } }),
-        getCardsMonthSummary(userId, balanceRow.month),
+        getCardMonthBudget(userId, balanceRow.month),
         getNonCardSubscriptionsTotal(userId, balanceRow.month),
       ])
 
       const { totalIncome, totalExpense: entriesExpense } = computeMonthTotals(incomes, expenses)
-      const totalExpense = entriesExpense.add(cards.combinedTotal).add(nonCardSubscriptions)
+      const totalExpense = entriesExpense.add(cards.plannedTotal).add(nonCardSubscriptions)
       const plannedBalance = computePlannedBalance(
         balanceRow.openingBalance,
         totalIncome,

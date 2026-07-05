@@ -42,12 +42,14 @@ export function ExpenseTable({
   month,
   entries,
   cards,
+  cardReserve,
   allTags,
   pixPayees,
 }: {
   month: string
   entries: SerializedExpenseEntry[]
   cards: SerializedCardSummary[]
+  cardReserve: number
   allTags: TagOption[]
   pixPayees: { id: string; label: string }[]
 }) {
@@ -151,7 +153,31 @@ export function ExpenseTable({
               </TableCell>
             </TableRow>
           ))}
-          {entries.length === 0 && cards.length === 0 ? (
+          {cardReserve > 0 ? (
+            <TableRow className="bg-muted/20">
+              <TableCell className="font-medium">
+                <div className="flex flex-wrap items-center gap-2">
+                  Disponível para gastar nos cartões
+                  <Badge variant="outline">Despesa prevista pela meta</Badge>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge variant="secondary">Variável</Badge>
+              </TableCell>
+              <TableCell>—</TableCell>
+              <TableCell>Eu</TableCell>
+              <TableCell className="text-sm text-muted-foreground">Cartão</TableCell>
+              <TableCell>
+                <Badge variant="outline">Meta dos cartões</Badge>
+              </TableCell>
+              <TableCell className="text-right">
+                <MoneyText value={-cardReserve} />
+              </TableCell>
+              <TableCell className="text-center text-muted-foreground">—</TableCell>
+              <TableCell />
+            </TableRow>
+          ) : null}
+          {entries.length === 0 && cards.length === 0 && cardReserve === 0 ? (
             <TableRow>
               <TableCell colSpan={9} className="text-center text-muted-foreground">
                 Nenhuma despesa neste mês.
