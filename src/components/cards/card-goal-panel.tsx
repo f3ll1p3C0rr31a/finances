@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
 import { setCardGoal } from "@/lib/actions/cards"
+import { formatMonthLabel, monthFromKey } from "@/lib/calculations/month"
 import { MoneyText } from "@/components/ui/money-text"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { Button } from "@/components/ui/button"
@@ -12,17 +13,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 type Props = {
   month: string
+  projectionMonth: string
   goal: number | null
-  spent: number
+  projectedSpent: number
+  invoiceSpent: number
   reserve: number
   remaining: number
   perDay: number
   daysLeft: number
 }
 
-export function CardGoalPanel({ month, goal, spent, reserve, remaining, perDay, daysLeft }: Props) {
+export function CardGoalPanel({
+  month,
+  projectionMonth,
+  goal,
+  projectedSpent,
+  invoiceSpent,
+  reserve,
+  remaining,
+  perDay,
+  daysLeft,
+}: Props) {
   const [value, setValue] = useState(goal ?? 0)
   const [pending, startTransition] = useTransition()
+  const projectionLabel = formatMonthLabel(monthFromKey(projectionMonth))
 
   function save() {
     startTransition(async () => {
@@ -51,11 +65,19 @@ export function CardGoalPanel({ month, goal, spent, reserve, remaining, perDay, 
               {pending ? "Salvando..." : "Salvar"}
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            A meta deste mês compara o que já está previsto para a próxima fatura
+            ({projectionLabel}) e reserva apenas a diferença.
+          </p>
         </div>
         <dl className="grid grid-cols-2 gap-2 text-sm">
-          <dt className="text-muted-foreground">Gasto no mês</dt>
+          <dt className="text-muted-foreground">Fatura do mês</dt>
           <dd className="text-right">
-            <MoneyText value={-spent} />
+            <MoneyText value={-invoiceSpent} />
+          </dd>
+          <dt className="text-muted-foreground">Já previsto na próxima fatura</dt>
+          <dd className="text-right">
+            <MoneyText value={-projectedSpent} />
           </dd>
           <dt className="text-muted-foreground">Restante dentro da meta</dt>
           <dd className="text-right">

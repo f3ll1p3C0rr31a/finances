@@ -3,7 +3,9 @@ import { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { addMonths, currentMonth } from "@/lib/calculations/month"
 import { resolveDueDate } from "@/lib/calculations/businessDay"
+import { sumAmounts } from "@/lib/calculations/money"
 import {
+  computeOpenCashflow,
   computeMonthTotals,
   computePlannedBalance,
   computeUncertainPreview,
@@ -238,8 +240,16 @@ export async function getMonthData(userId: string, month: Date) {
   ])
 
   const { totalIncome, totalExpense: entriesExpense } = computeMonthTotals(incomeEntries, expenseEntries)
+  const openCashflow = computeOpenCashflow(incomeEntries, expenseEntries)
   const uncertainPreview = computeUncertainPreview(incomeEntries, expenseEntries)
   const totalExpense = entriesExpense.add(cards.plannedTotal).add(nonCardSubscriptions)
+  const pendingCardInvoices = sumAmounts(
+    cards.summaries.filter((summary) => !summary.paid).map((summary) => summary.total)
+  )
+  const futureExpense = openCashflow.futureExpense
+    .add(pendingCardInvoices)
+    .add(cards.reserve)
+    .add(nonCardSubscriptions)
   const difference = totalIncome.sub(totalExpense)
   const plannedBalance = computePlannedBalance(balance.openingBalance, totalIncome, totalExpense)
   const previewBalance = plannedBalance.add(uncertainPreview.net)
@@ -255,6 +265,8 @@ export async function getMonthData(userId: string, month: Date) {
     balance,
     totalIncome,
     totalExpense,
+    futureIncome: openCashflow.futureIncome,
+    futureExpense,
     difference,
     plannedBalance,
     previewBalance,

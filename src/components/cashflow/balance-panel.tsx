@@ -14,7 +14,9 @@ type Props = {
   month: string
   openingBalance: number
   totalIncome: number
+  futureIncome: number
   totalExpense: number
+  futureExpense: number
   difference: number
   plannedBalance: number
   previewBalance: number
@@ -28,7 +30,9 @@ export function BalancePanel({
   month,
   openingBalance,
   totalIncome,
+  futureIncome,
   totalExpense,
+  futureExpense,
   difference,
   plannedBalance,
   previewBalance,
@@ -59,25 +63,63 @@ export function BalancePanel({
         <CardTitle>Resumo do mês</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <dl className="grid grid-cols-2 gap-2 text-sm">
-          <dt className="text-muted-foreground">Saldo inicial</dt>
-          <dd className="text-right">
+        <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 text-sm">
+          <dt>
+            <span className="block font-medium">Saldo Inicial</span>
+            <span className="text-xs text-muted-foreground">
+              Saldo herdado do mês anterior
+            </span>
+          </dt>
+          <dd className="self-center text-right">
             <MoneyText value={openingBalance} />
           </dd>
-          <dt className="text-muted-foreground">Total entrada</dt>
-          <dd className="text-right">
+          <dt>
+            <span className="block font-medium">Total de Entrada</span>
+            <span className="text-xs text-muted-foreground">
+              Todas as entradas combinadas
+            </span>
+          </dt>
+          <dd className="self-center text-right">
             <MoneyText value={totalIncome} />
           </dd>
-          <dt className="text-muted-foreground">Total saída</dt>
-          <dd className="text-right">
+          <dt>
+            <span className="block font-medium">Entradas Futuras</span>
+            <span className="text-xs text-muted-foreground">
+              Entradas do mês ainda não recebidas
+            </span>
+          </dt>
+          <dd className="self-center text-right">
+            <MoneyText value={futureIncome} />
+          </dd>
+          <dt>
+            <span className="block font-medium">Total de Saídas</span>
+            <span className="text-xs text-muted-foreground">
+              Todas as saídas do mês
+            </span>
+          </dt>
+          <dd className="self-center text-right">
             <MoneyText value={-totalExpense} />
           </dd>
-          <dt className="text-muted-foreground">Diferença</dt>
-          <dd className="text-right">
+          <dt>
+            <span className="block font-medium">Saídas Futuras</span>
+            <span className="text-xs text-muted-foreground">
+              Despesas, cartões e assinaturas ainda em aberto
+            </span>
+          </dt>
+          <dd className="self-center text-right">
+            <MoneyText value={-futureExpense} />
+          </dd>
+          <dt>
+            <span className="block font-medium">Diferença</span>
+            <span className="text-xs text-muted-foreground">
+              Entradas combinadas menos saídas combinadas
+            </span>
+          </dt>
+          <dd className="self-center text-right">
             <MoneyText value={difference} />
           </dd>
           <dt className="font-medium">Saldo planejado</dt>
-          <dd className="text-right font-medium">
+          <dd className="text-right font-medium self-center">
             <MoneyText value={plannedBalance} />
           </dd>
         </dl>

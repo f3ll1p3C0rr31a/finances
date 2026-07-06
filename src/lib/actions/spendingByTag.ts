@@ -3,7 +3,7 @@ import { addMonths } from "@/lib/calculations/month"
 
 export type SpendingRow = {
   tagName: string
-  paymentMethod: "CASH" | "PIX" | "TRANSFER" | "CARD" | "OTHER"
+  paymentMethod: "CASH" | "PIX" | "TRANSFER" | "BOLETO" | "CARD" | "OTHER"
   amount: number
 }
 

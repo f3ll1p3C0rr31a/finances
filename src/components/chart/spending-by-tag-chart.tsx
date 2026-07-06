@@ -18,6 +18,7 @@ const FILTER_LABELS = {
   CASH: "Dinheiro",
   PIX: "Pix",
   TRANSFER: "Transferência",
+  BOLETO: "Boleto",
   CARD: "Cartão",
   OTHER: "Outro",
 } as const

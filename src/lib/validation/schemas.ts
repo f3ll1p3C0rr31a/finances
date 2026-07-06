@@ -24,7 +24,7 @@ export const expenseEntrySchema = z.object({
   uncertain: z.boolean(),
   paidBy: z.enum(["SELF", "THIRD_PARTY"]),
   paidByName: z.string().trim().optional().nullable(),
-  paymentMethod: z.enum(["CASH", "PIX", "TRANSFER", "CARD", "OTHER"]),
+  paymentMethod: z.enum(["CASH", "PIX", "TRANSFER", "BOLETO", "CARD", "OTHER"]),
   pixKeyId: z.string().trim().optional().nullable(),
 })
 export type ExpenseEntryFormValues = z.input<typeof expenseEntrySchema>

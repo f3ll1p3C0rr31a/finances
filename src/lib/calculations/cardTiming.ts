@@ -1,14 +1,20 @@
-import { addMonths, dateWithDay, daysInMonth } from "./month"
+import { dateWithDay, daysInMonth } from "./month"
 
 /**
- * The best day to buy on a card is the day right after it closes:
- * a purchase made then rides the next billing cycle, maximizing the
- * time before it's due. Rolls over into the 1st of the next month
- * when the closing day is the last day of the month.
+ * By default, the best day to buy is the day immediately before the
+ * card closes. Some cards do not have a classic closing cycle, so
+ * cards may override this with an explicit bestPurchaseDay.
  */
-export function bestPurchaseDate(closingDay: number, month: Date): Date {
-  if (closingDay >= daysInMonth(month)) {
-    return dateWithDay(addMonths(month, 1), 1)
-  }
-  return dateWithDay(month, closingDay + 1)
+export function defaultBestPurchaseDay(closingDay: number | null, month: Date): number | null {
+  if (closingDay == null) return null
+  if (closingDay <= 1) return daysInMonth(month)
+  return Math.min(closingDay - 1, daysInMonth(month))
+}
+
+export function bestPurchaseDateForCard(
+  card: { closingDay: number | null; bestPurchaseDay: number | null },
+  month: Date
+): Date | null {
+  const day = card.bestPurchaseDay ?? defaultBestPurchaseDay(card.closingDay, month)
+  return day == null ? null : dateWithDay(month, day)
 }

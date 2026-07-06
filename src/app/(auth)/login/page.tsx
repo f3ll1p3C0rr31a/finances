@@ -6,6 +6,7 @@ import { login } from "@/lib/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { FortunaLogo } from "@/components/brand/fortuna-logo"
 import {
   Card,
   CardContent,
@@ -18,11 +19,12 @@ export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, undefined)
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-sm">
+    <div className="flex flex-1 items-center justify-center p-4">
+      <Card className="w-full max-w-sm border-violet-500/20 bg-card/90 shadow-2xl shadow-violet-500/10">
         <CardHeader>
-          <CardTitle>Orçamento residencial</CardTitle>
-          <CardDescription>Entre com suas credenciais.</CardDescription>
+          <FortunaLogo />
+          <CardTitle className="pt-3">Sua sorte, mas com planilha.</CardTitle>
+          <CardDescription>Entre para planejar entradas, saídas e cartões.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={formAction} className="grid gap-4">

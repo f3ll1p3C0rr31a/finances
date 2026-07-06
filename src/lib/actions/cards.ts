@@ -30,6 +30,7 @@ export async function createCard(input: CardInput) {
       userId,
       name: data.name,
       closingDay: data.closingDay ?? null,
+      bestPurchaseDay: data.bestPurchaseDay ?? null,
       creditLimit: data.creditLimit != null ? new Prisma.Decimal(data.creditLimit) : null,
     },
   })
@@ -44,6 +45,7 @@ export async function updateCard(id: string, input: CardInput) {
     data: {
       name: data.name,
       closingDay: data.closingDay ?? null,
+      bestPurchaseDay: data.bestPurchaseDay ?? null,
       creditLimit: data.creditLimit != null ? new Prisma.Decimal(data.creditLimit) : null,
     },
   })
@@ -81,6 +83,11 @@ function resolvePurchaseAmounts(
     totalAmount,
     slices: installmentCount > 1 ? splitIntoInstallments(totalAmount, installmentCount) : [totalAmount],
   }
+}
+
+async function recalcCardAffectedChain(userId: string, earliestAffectedMonth: Date) {
+  await recalcOpeningBalanceChain(userId, addMonths(earliestAffectedMonth, -1))
+  await recalcOpeningBalanceChain(userId, earliestAffectedMonth)
 }
 
 export async function createCardPurchase(cardId: string, input: CardPurchaseInput) {
@@ -126,6 +133,7 @@ export async function createCardPurchase(cardId: string, input: CardPurchaseInpu
   })
 
   revalidateCards()
+  await recalcCardAffectedChain(userId, purchaseMonth)
   revalidatePath(`/cards/${cardId}`)
   return { id: purchaseId }
 }
@@ -143,6 +151,10 @@ export async function updateCardPurchase(purchaseId: string, input: CardPurchase
   const [year, month, day] = data.purchaseDate.split("-").map(Number)
   const purchaseDate = new Date(Date.UTC(year, month - 1, day))
   const purchaseMonth = new Date(Date.UTC(year, month - 1, 1))
+  const existingMonth = new Date(
+    Date.UTC(existing.purchaseDate.getUTCFullYear(), existing.purchaseDate.getUTCMonth(), 1)
+  )
+  const earliestAffectedMonth = existingMonth < purchaseMonth ? existingMonth : purchaseMonth
 
   const { totalAmount, slices } = resolvePurchaseAmounts(
     data.amount,
@@ -177,6 +189,7 @@ export async function updateCardPurchase(purchaseId: string, input: CardPurchase
   })
 
   revalidateCards()
+  await recalcCardAffectedChain(userId, earliestAffectedMonth)
   revalidatePath(`/cards/${existing.cardId}`)
 }
 
@@ -189,7 +202,11 @@ export async function deleteCardPurchase(purchaseId: string) {
   if (purchase.card.userId !== userId) {
     throw new Error("Unauthorized")
   }
+  const purchaseMonth = new Date(
+    Date.UTC(purchase.purchaseDate.getUTCFullYear(), purchase.purchaseDate.getUTCMonth(), 1)
+  )
   await prisma.cardPurchase.delete({ where: { id: purchaseId } })
+  await recalcCardAffectedChain(userId, purchaseMonth)
   revalidateCards()
   revalidatePath(`/cards/${purchase.cardId}`)
 }

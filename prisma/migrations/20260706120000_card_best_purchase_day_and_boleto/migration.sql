@@ -1,0 +1,3 @@
+ALTER TYPE "PaymentMethod" ADD VALUE 'BOLETO';
+
+ALTER TABLE "Card" ADD COLUMN "bestPurchaseDay" INTEGER;

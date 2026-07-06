@@ -49,6 +49,16 @@ function buildRows(data: MonthChartPoint[]): MatrixRow[] {
   }> = [
     { key: "summary:opening", label: "Saldo inicial", value: (month) => month.openingBalance },
     {
+      key: "summary:future-income",
+      label: "Entradas Futuras",
+      value: (month) => month.futureIncome,
+    },
+    {
+      key: "summary:future-expense",
+      label: "Saídas Futuras",
+      value: (month) => -month.futureExpense,
+    },
+    {
       key: "summary:balance",
       label: "Saldo",
       value: (month) => month.balance,
@@ -94,18 +104,18 @@ export function MonthlyMatrix({ data }: { data: MonthChartPoint[] }) {
       <table className="min-w-max border-collapse text-xs">
         <thead className="sticky top-0 z-30">
           <tr>
-            <th className="sticky left-0 z-40 min-w-56 border bg-blue-500 px-3 py-2 text-left text-white">
+            <th className="sticky left-0 z-40 min-w-56 border border-violet-950/20 bg-violet-600 px-3 py-2 text-left text-white">
               Lançamento
             </th>
             {data.map((month) => (
               <th
                 key={month.month}
-                className="min-w-28 border bg-blue-500 px-3 py-2 text-right font-medium text-white"
+                className="min-w-28 border border-violet-950/20 bg-gradient-to-r from-violet-600 to-emerald-500 px-3 py-2 text-right font-medium text-white"
               >
                 {month.label}
               </th>
             ))}
-            <th className="sticky right-0 z-40 min-w-28 border bg-blue-600 px-3 py-2 text-right text-white">
+            <th className="sticky right-0 z-40 min-w-28 border border-violet-950/20 bg-emerald-600 px-3 py-2 text-right text-white">
               Total
             </th>
           </tr>

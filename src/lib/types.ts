@@ -1,6 +1,6 @@
 export type TagRef = { id: string; name: string }
 
-export type PaymentMethod = "CASH" | "PIX" | "TRANSFER" | "CARD" | "OTHER"
+export type PaymentMethod = "CASH" | "PIX" | "TRANSFER" | "BOLETO" | "CARD" | "OTHER"
 
 export type SerializedIncomeEntry = {
   id: string

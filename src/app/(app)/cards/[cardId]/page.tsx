@@ -5,7 +5,7 @@ import { requireUserId } from "@/lib/session"
 import { listTags } from "@/lib/actions/tags"
 import { getCardMonthlyHistory } from "@/lib/actions/chart"
 import { currentMonth } from "@/lib/calculations/month"
-import { bestPurchaseDate } from "@/lib/calculations/cardTiming"
+import { bestPurchaseDateForCard } from "@/lib/calculations/cardTiming"
 import type { SerializedCardPurchase } from "@/lib/types"
 import { MoneyText } from "@/components/ui/money-text"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -78,7 +78,7 @@ export default async function CardDetailPage({
   const creditLimit = card.creditLimit ? card.creditLimit.toNumber() : null
   const availableLimit = creditLimit != null ? creditLimit - remainingDebt : null
 
-  const bestDay = card.closingDay ? bestPurchaseDate(card.closingDay, currentMonth()).getUTCDate() : null
+  const bestDay = bestPurchaseDateForCard(card, currentMonth())?.getUTCDate() ?? null
 
   return (
     <div className="flex flex-col gap-6">
@@ -87,13 +87,19 @@ export default async function CardDetailPage({
           <h1 className="text-2xl font-semibold tracking-tight">{card.name}</h1>
           <p className="text-sm text-muted-foreground">
             {bestDay
-              ? `Fecha dia ${card.closingDay} — melhor dia para comprar: dia ${bestDay}`
-              : "Defina o dia de fechamento para ver o melhor dia de compra"}
+              ? `${card.closingDay ? `Fecha dia ${card.closingDay}` : "Sem fechamento clássico"} — melhor dia para comprar: dia ${bestDay}`
+              : "Defina o fechamento ou informe manualmente o melhor dia de compra"}
           </p>
         </div>
         <div className="flex gap-2">
           <NewCardDialog
-            card={{ id: card.id, name: card.name, closingDay: card.closingDay, creditLimit }}
+            card={{
+              id: card.id,
+              name: card.name,
+              closingDay: card.closingDay,
+              bestPurchaseDay: card.bestPurchaseDay,
+              creditLimit,
+            }}
             triggerLabel="Editar cartão"
             triggerVariant="outline"
           />

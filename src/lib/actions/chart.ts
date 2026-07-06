@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma"
-import { computeMonthTotals, computePlannedBalance } from "@/lib/calculations/balanceChain"
+import {
+  computeMonthTotals,
+  computeOpenCashflow,
+  computePlannedBalance,
+} from "@/lib/calculations/balanceChain"
 import { getCardMonthBudget, getCardMonthTotal } from "@/lib/actions/cardSummary"
 import { getNonCardSubscriptionsForMonth } from "@/lib/actions/subscriptionSummary"
 import { ensureMonthGenerated } from "@/lib/actions/monthly"
@@ -18,6 +22,8 @@ export type MonthChartPoint = {
   label: string
   totalIncome: number
   totalExpense: number
+  futureIncome: number
+  futureExpense: number
   balance: number
   openingBalance: number
   plannedBalance: number
@@ -79,8 +85,16 @@ export async function getBalanceChartRanges(
       ])
 
       const { totalIncome, totalExpense: entriesExpense } = computeMonthTotals(incomes, expenses)
+      const openCashflow = computeOpenCashflow(incomes, expenses)
       const subscriptionsTotal = sumAmounts(nonCardSubscriptions.map((sub) => sub.amount))
       const totalExpense = entriesExpense.add(cards.plannedTotal).add(subscriptionsTotal)
+      const pendingCardInvoices = sumAmounts(
+        cards.summaries.filter((summary) => !summary.paid).map((summary) => summary.total)
+      )
+      const futureExpense = openCashflow.futureExpense
+        .add(pendingCardInvoices)
+        .add(cards.reserve)
+        .add(subscriptionsTotal)
       const plannedBalance = computePlannedBalance(
         balanceRow.openingBalance,
         totalIncome,
@@ -98,7 +112,7 @@ export async function getBalanceChartRanges(
           ? [
               {
                 key: "card:reserve",
-                label: "Disponível para gastar nos cartões",
+                label: "Reserva para próxima fatura dos cartões",
                 group: "card" as const,
                 value: cards.reserve.neg().toNumber(),
               },
@@ -133,6 +147,8 @@ export async function getBalanceChartRanges(
         label: formatChartMonthLabel(balanceRow.month),
         totalIncome: totalIncome.toNumber(),
         totalExpense: totalExpense.toNumber(),
+        futureIncome: openCashflow.futureIncome.toNumber(),
+        futureExpense: futureExpense.toNumber(),
         balance: balance.toNumber(),
         openingBalance: balanceRow.openingBalance.toNumber(),
         plannedBalance: plannedBalance.toNumber(),

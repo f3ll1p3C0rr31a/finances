@@ -25,9 +25,11 @@ export function CardList({ cards }: { cards: SerializedCardSummary[] }) {
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
+                {card.closingDay ? `Fecha dia ${card.closingDay}` : "Sem fechamento clássico"}
+                {" · "}
                 {card.bestPurchaseDay
-                  ? `Melhor dia para comprar: dia ${card.bestPurchaseDay}`
-                  : "Defina o dia de fechamento para ver o melhor dia de compra"}
+                  ? `melhor compra dia ${card.bestPurchaseDay}`
+                  : "melhor dia não definido"}
               </p>
             </CardContent>
           </Card>

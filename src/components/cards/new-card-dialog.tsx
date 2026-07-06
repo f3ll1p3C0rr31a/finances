@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 
 import { cardSchema, type CardFormValues, type CardInput } from "@/lib/validation/cardSchemas"
 import { createCard, updateCard } from "@/lib/actions/cards"
+import { defaultBestPurchaseDay } from "@/lib/calculations/cardTiming"
+import { currentMonth } from "@/lib/calculations/month"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CurrencyInput } from "@/components/ui/currency-input"
@@ -29,7 +31,13 @@ import {
 } from "@/components/ui/form"
 
 type Props = {
-  card?: { id: string; name: string; closingDay: number | null; creditLimit: number | null }
+  card?: {
+    id: string
+    name: string
+    closingDay: number | null
+    bestPurchaseDay: number | null
+    creditLimit: number | null
+  }
   triggerLabel?: string
   triggerVariant?: "default" | "outline" | "ghost" | "secondary"
   triggerSize?: "default" | "sm" | "xs" | "icon-sm"
@@ -49,9 +57,14 @@ export function NewCardDialog({
     defaultValues: {
       name: card?.name ?? "",
       closingDay: card?.closingDay ?? undefined,
+      bestPurchaseDay: card?.bestPurchaseDay ?? undefined,
       creditLimit: card?.creditLimit ?? undefined,
     },
   })
+  const closingDay = useWatch({ control: form.control, name: "closingDay" })
+  const bestPurchaseDay = useWatch({ control: form.control, name: "bestPurchaseDay" })
+  const automaticBestDay = defaultBestPurchaseDay(Number(closingDay) || null, currentMonth())
+  const effectiveBestDay = Number(bestPurchaseDay) || automaticBestDay
 
   function onSubmit(values: CardInput) {
     startTransition(async () => {
@@ -79,7 +92,7 @@ export function NewCardDialog({
         <DialogHeader>
           <DialogTitle>{card ? "Editar cartão" : "Novo cartão"}</DialogTitle>
           <DialogDescription>
-            O dia de fechamento define o &quot;melhor dia de compra&quot; (dia seguinte ao fechamento).
+            Informe o fechamento e, se precisar, sobrescreva o melhor dia de compra.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -112,6 +125,32 @@ export function NewCardDialog({
                       value={String(field.value ?? "")}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="bestPurchaseDay"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Melhor dia de compra (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={31}
+                      placeholder={
+                        automaticBestDay ? `Automático: dia ${automaticBestDay}` : "ex: 30"
+                      }
+                      {...field}
+                      value={String(field.value ?? "")}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Vazio usa 1 dia antes do fechamento. Melhor dia atual:{" "}
+                    {effectiveBestDay ? `dia ${effectiveBestDay}` : "não definido"}.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

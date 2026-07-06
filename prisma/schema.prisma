@@ -46,6 +46,7 @@ enum PaymentMethod {
   CASH
   PIX
   TRANSFER
+  BOLETO
   CARD
   OTHER
 }
@@ -186,6 +187,7 @@ model Card {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
   closingDay  Int?
+  bestPurchaseDay Int?
   creditLimit Decimal? @db.Decimal(12, 2)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())

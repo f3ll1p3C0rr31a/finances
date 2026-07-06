@@ -7,8 +7,8 @@ import { getCardGoalData } from "@/lib/actions/cardSummary"
 import { listTags } from "@/lib/actions/tags"
 import { listPixKeys } from "@/lib/actions/pixKeys"
 import { getSpendingByTagRows } from "@/lib/actions/spendingByTag"
-import { monthFromKey } from "@/lib/calculations/month"
-import { bestPurchaseDate } from "@/lib/calculations/cardTiming"
+import { monthFromKey, monthKeyFromDate } from "@/lib/calculations/month"
+import { bestPurchaseDateForCard } from "@/lib/calculations/cardTiming"
 import type {
   SerializedIncomeEntry,
   SerializedExpenseEntry,
@@ -88,9 +88,7 @@ export default async function DashboardMonthPage({
     total: s.total.toNumber(),
     paid: s.paid,
     closingDay: s.card.closingDay,
-    bestPurchaseDay: s.card.closingDay
-      ? bestPurchaseDate(s.card.closingDay, month).getUTCDate()
-      : null,
+    bestPurchaseDay: bestPurchaseDateForCard(s.card, month)?.getUTCDate() ?? null,
   }))
 
   return (
@@ -98,8 +96,10 @@ export default async function DashboardMonthPage({
       <MonthNav month={month} />
       <CardGoalPanel
         month={monthKey}
+        projectionMonth={monthKeyFromDate(goalData.projectionMonth)}
         goal={goalData.goal?.toNumber() ?? null}
-        spent={goalData.combinedTotal.toNumber()}
+        invoiceSpent={goalData.combinedTotal.toNumber()}
+        projectedSpent={goalData.projectedCombinedTotal.toNumber()}
         reserve={goalData.reserve.toNumber()}
         remaining={goalData.progress.remaining.toNumber()}
         perDay={goalData.progress.perDay.toNumber()}
@@ -111,7 +111,9 @@ export default async function DashboardMonthPage({
           month={monthKey}
           openingBalance={data.balance.openingBalance.toNumber()}
           totalIncome={data.totalIncome.toNumber()}
+          futureIncome={data.futureIncome.toNumber()}
           totalExpense={data.totalExpense.toNumber()}
+          futureExpense={data.futureExpense.toNumber()}
           difference={data.difference.toNumber()}
           plannedBalance={data.plannedBalance.toNumber()}
           previewBalance={data.previewBalance.toNumber()}

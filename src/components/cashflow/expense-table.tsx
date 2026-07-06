@@ -34,6 +34,7 @@ const PAYMENT_METHOD_LABELS = {
   CASH: "Dinheiro",
   PIX: "Pix",
   TRANSFER: "Transferência",
+  BOLETO: "Boleto",
   CARD: "Cartão",
   OTHER: "Outro",
 }
@@ -124,7 +125,7 @@ export function ExpenseTable({
                   <Link href={`/cards/${card.id}`} className="hover:underline">
                     {card.name}
                   </Link>
-                  <Badge variant="outline">Calculado automaticamente</Badge>
+                  <Badge variant="outline">Fatura do mês</Badge>
                 </div>
               </TableCell>
               <TableCell>
@@ -157,8 +158,8 @@ export function ExpenseTable({
             <TableRow className="bg-muted/20">
               <TableCell className="font-medium">
                 <div className="flex flex-wrap items-center gap-2">
-                  Disponível para gastar nos cartões
-                  <Badge variant="outline">Despesa prevista pela meta</Badge>
+                  Reserva para próxima fatura dos cartões
+                  <Badge variant="outline">Prevista pela meta</Badge>
                 </div>
               </TableCell>
               <TableCell>
@@ -168,7 +169,7 @@ export function ExpenseTable({
               <TableCell>Eu</TableCell>
               <TableCell className="text-sm text-muted-foreground">Cartão</TableCell>
               <TableCell>
-                <Badge variant="outline">Meta dos cartões</Badge>
+                <Badge variant="outline">Meta · próxima fatura</Badge>
               </TableCell>
               <TableCell className="text-right">
                 <MoneyText value={-cardReserve} />

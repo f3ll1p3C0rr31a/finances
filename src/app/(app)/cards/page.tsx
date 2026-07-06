@@ -1,7 +1,7 @@
 import { requireUserId } from "@/lib/session"
 import { getCardGoalData } from "@/lib/actions/cardSummary"
 import { currentMonth, monthFromKey, monthKeyFromDate } from "@/lib/calculations/month"
-import { bestPurchaseDate } from "@/lib/calculations/cardTiming"
+import { bestPurchaseDateForCard } from "@/lib/calculations/cardTiming"
 import type { SerializedCardSummary } from "@/lib/types"
 import { CardList } from "@/components/cards/card-list"
 import { CardGoalPanel } from "@/components/cards/card-goal-panel"
@@ -21,7 +21,8 @@ export default async function CardsPage({
     typeof queryMonth === "string" && MONTH_KEY_PATTERN.test(queryMonth)
       ? monthFromKey(queryMonth)
       : currentMonth()
-  const { summaries, combinedTotal, goal, reserve, progress } = await getCardGoalData(userId, month)
+  const { summaries, combinedTotal, projectedCombinedTotal, projectionMonth, goal, reserve, progress } =
+    await getCardGoalData(userId, month)
 
   const cards: SerializedCardSummary[] = summaries.map((s) => ({
     id: s.card.id,
@@ -29,9 +30,7 @@ export default async function CardsPage({
     total: s.total.toNumber(),
     paid: s.paid,
     closingDay: s.card.closingDay,
-    bestPurchaseDay: s.card.closingDay
-      ? bestPurchaseDate(s.card.closingDay, month).getUTCDate()
-      : null,
+    bestPurchaseDay: bestPurchaseDateForCard(s.card, month)?.getUTCDate() ?? null,
   }))
 
   return (
@@ -43,8 +42,10 @@ export default async function CardsPage({
       <CardMonthNav month={month} />
       <CardGoalPanel
         month={monthKeyFromDate(month)}
+        projectionMonth={monthKeyFromDate(projectionMonth)}
         goal={goal?.toNumber() ?? null}
-        spent={combinedTotal.toNumber()}
+        invoiceSpent={combinedTotal.toNumber()}
+        projectedSpent={projectedCombinedTotal.toNumber()}
         reserve={reserve.toNumber()}
         remaining={progress.remaining.toNumber()}
         perDay={progress.perDay.toNumber()}

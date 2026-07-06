@@ -49,6 +49,21 @@ export function computeUncertainPreview(incomes: IncomeLike[], expenses: Expense
   }
 }
 
+export function computeOpenCashflow(incomes: IncomeLike[], expenses: ExpenseLike[]) {
+  const futureIncome = sumAmounts(
+    incomes
+      .filter((income) => !income.received)
+      .map((income) => income.amount)
+  )
+  const futureExpense = sumAmounts(
+    expenses
+      .filter((expense) => !expense.paid)
+      .map((expense) => expense.amount)
+  )
+
+  return { futureIncome, futureExpense }
+}
+
 export function computePlannedBalance(
   opening: Prisma.Decimal,
   totalIncome: Prisma.Decimal,
