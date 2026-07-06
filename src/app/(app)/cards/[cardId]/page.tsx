@@ -79,17 +79,18 @@ export default async function CardDetailPage({
   const availableLimit = creditLimit != null ? creditLimit - remainingDebt : null
 
   const bestDay = bestPurchaseDateForCard(card, currentMonth())?.getUTCDate() ?? null
+  const cardTimingLabel = bestDay
+    ? `${
+        card.closingDay ? `Fecha dia ${card.closingDay}` : "Sem fechamento clássico"
+      } — melhor dia para comprar: dia ${bestDay}`
+    : "Defina o fechamento ou informe manualmente o melhor dia de compra"
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{card.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {bestDay
-              ? `${card.closingDay ? `Fecha dia ${card.closingDay}` : "Sem fechamento clássico"} — melhor dia para comprar: dia ${bestDay}`
-              : "Defina o fechamento ou informe manualmente o melhor dia de compra"}
-          </p>
+          <p className="text-sm text-muted-foreground">{cardTimingLabel}</p>
         </div>
         <div className="flex gap-2">
           <NewCardDialog

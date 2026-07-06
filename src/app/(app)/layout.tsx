@@ -33,15 +33,15 @@ export default async function AppLayout({
               <FortunaLogo />
             </Link>
             <nav className="flex items-center gap-1">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(buttonVariants({ variant: "ghost" }))}
-              >
-                {link.label}
-              </Link>
-            ))}
+              {NAV_LINKS.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(buttonVariants({ variant: "ghost" }))}
+                >
+                  {link.label}
+                </Link>
+              ))}
             </nav>
           </div>
           <form action={logout}>

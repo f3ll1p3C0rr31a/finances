@@ -21,8 +21,15 @@ export default async function CardsPage({
     typeof queryMonth === "string" && MONTH_KEY_PATTERN.test(queryMonth)
       ? monthFromKey(queryMonth)
       : currentMonth()
-  const { summaries, combinedTotal, projectedCombinedTotal, projectionMonth, goal, reserve, progress } =
-    await getCardGoalData(userId, month)
+  const {
+    summaries,
+    combinedTotal,
+    projectedCombinedTotal,
+    projectionMonth,
+    goal,
+    reserve,
+    progress,
+  } = await getCardGoalData(userId, month)
 
   const cards: SerializedCardSummary[] = summaries.map((s) => ({
     id: s.card.id,

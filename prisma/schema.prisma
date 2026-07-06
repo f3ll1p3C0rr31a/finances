@@ -182,15 +182,15 @@ model MonthlyBalance {
 /// independently of the other cards; only the monthly spending goal
 /// compares their combined total.
 model Card {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  closingDay  Int?
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  closingDay      Int?
   bestPurchaseDay Int?
-  creditLimit Decimal? @db.Decimal(12, 2)
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  creditLimit     Decimal? @db.Decimal(12, 2)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
 
   purchases       CardPurchase[]
   subscriptions   Subscription[]

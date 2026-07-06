@@ -50,6 +50,8 @@ O alias `@/*` aponta para `src/*`.
 - `Tag` se relaciona N:N com entradas, despesas e compras.
 - `Account` e `PixKey` são cadastros auxiliares; uma despesa pode referenciar
   uma chave Pix de favorecido.
+- `PaymentMethod` aceita `CASH`, `PIX`, `TRANSFER`, `BOLETO`, `CARD` e
+  `OTHER`.
 
 ## Invariantes financeiras
 
@@ -96,6 +98,9 @@ O alias `@/*` aponta para `src/*`.
 - Sem saldo real, o fechamento planejado é
   `abertura + entradas - despesas`.
 - Despesas totais incluem lançamentos, cartões e assinaturas fora de cartão.
+- A interface também mostra valores futuros/em aberto: entradas ainda não
+  recebidas e saídas ainda não pagas. Saídas futuras somam despesas em aberto,
+  faturas de cartões não pagas, reserva da meta e assinaturas fora de cartão.
 - Alterações que afetam um mês materializado podem exigir
   `recalcOpeningBalanceChain()`.
 - Marcar uma entrada recebida ou despesa paga ajusta o Saldo Atual.
@@ -113,11 +118,16 @@ O alias `@/*` aponta para `src/*`.
 - No modo `INSTALLMENT`, o valor digitado é o de cada parcela; o total é a
   multiplicação pela quantidade.
 - Assinatura com `paymentMethod=CARD` entra no total mensal daquele cartão.
-- A meta de cartões compara o total combinado dos cartões ativos.
-- Enquanto as faturas somadas estiverem abaixo da meta mensal, a diferença é
-  tratada como reserva de despesa prevista. Portanto, o planejamento usa
-  `max(total das faturas, meta)`; ao gastar no cartão, a fatura cresce e a
-  reserva cai na mesma proporção.
+- Cada cartão pode ter `closingDay` e `bestPurchaseDay`. Se
+  `bestPurchaseDay` ficar vazio, o melhor dia é calculado como 1 dia antes do
+  fechamento; se preenchido, o valor manual prevalece para cartões com ciclos
+  atípicos.
+- A meta de cartões do mês compara o valor já previsto na próxima fatura
+  (`month + 1`) com a meta cadastrada no mês aberto.
+- Enquanto a próxima fatura projetada estiver abaixo da meta mensal, a diferença
+  é tratada como reserva de despesa prevista do mês aberto. Portanto, o
+  planejamento de cartões do mês usa `fatura do mês + max(meta - próxima fatura,
+  0)`.
 - No dashboard, cada cartão ativo aparece no topo de Despesas como uma linha
   variável calculada. Essa linha é apenas uma representação da fatura já
   incluída nos totais, não um `ExpenseEntry` duplicado.
@@ -126,6 +136,9 @@ O alias `@/*` aponta para `src/*`.
   `paidAmount`; desmarcar reverte exatamente esse valor.
 - A página `/cards` seleciona o mês por `searchParams.month`; totais, meta,
   reserva e estado pago devem sempre usar esse mês, não implicitamente o atual.
+- Compras de cartão podem alterar a abertura de meses futuros; criação, edição e
+  exclusão recalculam a cadeia a partir do mês afetado e do mês anterior, pois a
+  reserva da meta depende da próxima fatura.
 
 ### Visão mensal matricial
 

@@ -2,7 +2,7 @@
 
 ## O que é
 
-`Finances` é uma aplicação web pessoal de planejamento financeiro mensal. Ela
+`Fortuna` é uma aplicação web pessoal de planejamento financeiro mensal. Ela
 centraliza entradas, despesas, saldos, cartões de crédito, compras parceladas,
 metas, assinaturas, etiquetas, contas e chaves Pix.
 
@@ -32,6 +32,7 @@ As versões exatas estão em `package.json` e `package-lock.json`.
 - Vencimento por dia corrido ou por enésimo dia útil brasileiro.
 - Marcação de recebido/pago com ajuste do saldo real.
 - Saldo inicial, saldo planejado e saldo real com propagação entre meses.
+- Saldo mensal com entradas/saídas combinadas e valores futuros em aberto.
 - Prévia de saldo que inclui pendências incertas sem alterar o saldo oficial.
 - Cartões, limite, fechamento, melhor dia de compra e compras parceladas.
 - Meta mensal combinada para gastos de cartões.
@@ -41,6 +42,7 @@ As versões exatas estão em `package.json` e `package-lock.json`.
 - Matriz financeira anual/12 meses com lançamentos nas linhas e meses nas
   colunas, inspirada na planilha original.
 - Cadastro informativo de contas e chaves Pix próprias/de favorecidos.
+- Formas de pagamento: dinheiro, Pix, transferência, boleto, cartão e outro.
 - Deploy automático da branch `main` em runner self-hosted.
 
 ## Rotas principais

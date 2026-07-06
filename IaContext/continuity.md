@@ -1,6 +1,6 @@
 # Continuidade
 
-Atualizado em: 2026-07-05
+Atualizado em: 2026-07-06
 
 ## Estado atual
 
@@ -30,6 +30,22 @@ Foram ajustados o dashboard e a exclusão de despesas:
   lançamentos por linha, meses por coluna, total lateral e resumos no rodapé;
 - a guia Cartões ganhou navegação Anterior/Próximo via `?month=AAAA-MM`, e
   todos os cálculos da página respeitam o mês escolhido;
+- o resumo mensal mostra Saldo Inicial, Total de Entrada, Entradas Futuras,
+  Total de Saídas, Saídas Futuras, Diferença, Saldo Planejado e Saldo Atual;
+- entradas futuras representam valores ainda não recebidos; saídas futuras
+  representam despesas em aberto, cartões não pagos, reserva da meta e
+  assinaturas fora do cartão;
+- `PaymentMethod` ganhou `BOLETO`, disponível em despesas, assinaturas e filtros
+  de gastos por etiqueta;
+- cartões ganharam `bestPurchaseDay` opcional; quando vazio, o melhor dia é 1
+  dia antes do fechamento; quando preenchido, o valor manual prevalece;
+- a meta dos cartões do mês agora compara a meta com a próxima fatura projetada
+  (`month + 1`), e a despesa planejada de cartões usa a fatura do mês somada à
+  reserva restante dessa próxima fatura;
+- criação, edição e exclusão de compras de cartão recalculam a cadeia de saldos
+  do mês afetado e do anterior;
+- o app foi renomeado visualmente para Fortuna, com logo SVG próprio e paleta
+  mais viva em verde/roxo;
 - o bloco separado de cartões foi removido do dashboard;
 - os gráficos oferecem as visões “Ano completo” e “Próximos 12 meses”, ambas
   com 12 meses completos relativos ao mês aberto.
@@ -54,6 +70,11 @@ Foram ajustados o dashboard e a exclusão de despesas:
   para R$ 150 e reversão para R$ 100.
 - Teste da matriz: confirmou 12 meses em ambas as visões e detalhamento correto
   de cartão e receita.
+- `npm run lint`: passou em 2026-07-06.
+- `npm run build`: passou em 2026-07-06 com Next.js 16.2.9.
+- Teste local de domínio: confirmou entrada futura R$ 1.000, saída futura
+  R$ 300, fechamento dia 10 gerando melhor compra dia 9 e override manual sendo
+  respeitado.
 - Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
   2026-07-05.
 - Testes automatizados: não existem no projeto.
