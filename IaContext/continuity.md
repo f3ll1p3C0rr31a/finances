@@ -77,6 +77,9 @@ Foram ajustados o dashboard e a exclusão de despesas:
   respeitado.
 - Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
   2026-07-05.
+- Produção: deploy do commit `e3175f4` validado em 2026-07-06; `/api/version`
+  retornou o SHA esperado, `/login` retornou 200 com a marca Fortuna e
+  `/dashboard` retornou 307 sem sessão autenticada, como esperado.
 - Testes automatizados: não existem no projeto.
 
 ## Débitos documentais confirmados
