@@ -36,7 +36,7 @@ export default async function InformacoesPage() {
           <NewPixKeyDialog kind="OWN" accounts={accountOptions} />
         </CardHeader>
         <CardContent>
-          <PixKeyList pixKeys={ownKeys} />
+          <PixKeyList pixKeys={ownKeys} accounts={accountOptions} kind="OWN" />
         </CardContent>
       </Card>
 
@@ -46,7 +46,7 @@ export default async function InformacoesPage() {
           <NewPixKeyDialog kind="PAYEE" accounts={accountOptions} />
         </CardHeader>
         <CardContent>
-          <PixKeyList pixKeys={payeeKeys} />
+          <PixKeyList pixKeys={payeeKeys} accounts={accountOptions} kind="PAYEE" />
         </CardContent>
       </Card>
     </div>

@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { setAccountActive, deleteAccount } from "@/lib/actions/accounts"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
+import { NewAccountDialog } from "@/components/informacoes/new-account-dialog"
 import {
   Table,
   TableBody,
@@ -101,6 +102,12 @@ export function AccountList({ accounts }: { accounts: AccountRow[] }) {
                 />
               </TableCell>
               <TableCell className="text-right">
+                <NewAccountDialog
+                  account={account}
+                  triggerLabel="Editar"
+                  triggerVariant="ghost"
+                  triggerSize="xs"
+                />
                 <Button
                   variant="ghost"
                   size="xs"

@@ -5,6 +5,7 @@ import { toast } from "sonner"
 
 import { deletePixKey } from "@/lib/actions/pixKeys"
 import { Button } from "@/components/ui/button"
+import { NewPixKeyDialog } from "@/components/informacoes/new-pix-key-dialog"
 import {
   Table,
   TableBody,
@@ -16,13 +17,23 @@ import {
 
 type PixKeyRow = {
   id: string
+  kind: "OWN" | "PAYEE"
   label: string
   keyValue: string
+  accountId: string | null
   account: { name: string } | null
   notes: string | null
 }
 
-export function PixKeyList({ pixKeys }: { pixKeys: PixKeyRow[] }) {
+export function PixKeyList({
+  pixKeys,
+  accounts,
+  kind,
+}: {
+  pixKeys: PixKeyRow[]
+  accounts: { id: string; name: string }[]
+  kind: "OWN" | "PAYEE"
+}) {
   const [pending, startTransition] = useTransition()
 
   function remove(id: string) {
@@ -64,6 +75,14 @@ export function PixKeyList({ pixKeys }: { pixKeys: PixKeyRow[] }) {
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">{key.notes ?? "—"}</TableCell>
               <TableCell className="text-right">
+                <NewPixKeyDialog
+                  kind={kind}
+                  accounts={accounts}
+                  pixKey={key}
+                  triggerLabel="Editar"
+                  triggerVariant="ghost"
+                  triggerSize="xs"
+                />
                 <Button variant="ghost" size="xs" disabled={pending} onClick={() => remove(key.id)}>
                   Excluir
                 </Button>

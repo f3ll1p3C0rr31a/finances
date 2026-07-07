@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
-import { createAccount } from "@/lib/actions/accounts"
+import { createAccount, updateAccount } from "@/lib/actions/accounts"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,23 +16,60 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
-export function NewAccountDialog() {
+type AccountDialogRow = {
+  id: string
+  name: string
+  bankName: string | null
+  bankCode: string | null
+  agency: string | null
+  accountNumber: string | null
+  accountDigit: string | null
+  accountType: string | null
+  holderName: string | null
+  notes: string | null
+}
+
+export function NewAccountDialog({
+  account,
+  triggerLabel = "Nova conta",
+  triggerVariant,
+  triggerSize = "sm",
+}: {
+  account?: AccountDialogRow
+  triggerLabel?: string
+  triggerVariant?: "default" | "ghost"
+  triggerSize?: "sm" | "xs"
+}) {
   const [open, setOpen] = useState(false)
-  const [name, setName] = useState("")
-  const [bankName, setBankName] = useState("")
-  const [bankCode, setBankCode] = useState("")
-  const [agency, setAgency] = useState("")
-  const [accountNumber, setAccountNumber] = useState("")
-  const [accountDigit, setAccountDigit] = useState("")
-  const [accountType, setAccountType] = useState("")
-  const [holderName, setHolderName] = useState("")
-  const [notes, setNotes] = useState("")
+  const [name, setName] = useState(account?.name ?? "")
+  const [bankName, setBankName] = useState(account?.bankName ?? "")
+  const [bankCode, setBankCode] = useState(account?.bankCode ?? "")
+  const [agency, setAgency] = useState(account?.agency ?? "")
+  const [accountNumber, setAccountNumber] = useState(account?.accountNumber ?? "")
+  const [accountDigit, setAccountDigit] = useState(account?.accountDigit ?? "")
+  const [accountType, setAccountType] = useState(account?.accountType ?? "")
+  const [holderName, setHolderName] = useState(account?.holderName ?? "")
+  const [notes, setNotes] = useState(account?.notes ?? "")
   const [pending, startTransition] = useTransition()
+
+  const isEditing = Boolean(account)
+
+  function resetForm() {
+    setName(account?.name ?? "")
+    setBankName(account?.bankName ?? "")
+    setBankCode(account?.bankCode ?? "")
+    setAgency(account?.agency ?? "")
+    setAccountNumber(account?.accountNumber ?? "")
+    setAccountDigit(account?.accountDigit ?? "")
+    setAccountType(account?.accountType ?? "")
+    setHolderName(account?.holderName ?? "")
+    setNotes(account?.notes ?? "")
+  }
 
   function save() {
     startTransition(async () => {
       try {
-        await createAccount({
+        const payload = {
           name,
           bankName,
           bankCode,
@@ -42,18 +79,15 @@ export function NewAccountDialog() {
           accountType,
           holderName,
           notes,
-        })
+        }
+        if (account) {
+          await updateAccount(account.id, payload)
+        } else {
+          await createAccount(payload)
+        }
         toast.success("Conta salva.")
         setOpen(false)
-        setName("")
-        setBankName("")
-        setBankCode("")
-        setAgency("")
-        setAccountNumber("")
-        setAccountDigit("")
-        setAccountType("")
-        setHolderName("")
-        setNotes("")
+        if (!account) resetForm()
       } catch {
         toast.error("Não foi possível salvar a conta.")
       }
@@ -61,11 +95,19 @@ export function NewAccountDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" />}>Nova conta</DialogTrigger>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        if (nextOpen) resetForm()
+      }}
+    >
+      <DialogTrigger render={<Button size={triggerSize} variant={triggerVariant} />}>
+        {triggerLabel}
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nova conta</DialogTitle>
+          <DialogTitle>{isEditing ? "Editar conta" : "Nova conta"}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4">
           <div className="grid gap-2">

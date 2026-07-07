@@ -271,11 +271,17 @@ export async function deleteCardPurchase(purchaseId: string) {
 export async function setCardGoal(month: Date, input: CardGoalInput) {
   const userId = await requireUserId()
   const data = cardGoalSchema.parse(input)
+  const amount = new Prisma.Decimal(data.amount)
 
-  await prisma.cardSpendingGoal.upsert({
-    where: { userId_month: { userId, month } },
-    update: { amount: data.amount },
-    create: { userId, month, amount: data.amount },
+  await prisma.$transaction(async (tx) => {
+    await tx.cardSpendingGoal.upsert({
+      where: { userId_month: { userId, month } },
+      update: { amount },
+      create: { userId, month, amount },
+    })
+    await tx.cardSpendingGoal.deleteMany({
+      where: { userId, month: { gt: month } },
+    })
   })
 
   await recalcOpeningBalanceChain(userId, month)

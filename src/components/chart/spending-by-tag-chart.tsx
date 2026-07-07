@@ -1,7 +1,15 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts"
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  type PieLabelRenderProps,
+} from "recharts"
 
 import type { SpendingRow } from "@/lib/actions/spendingByTag"
 import { formatCurrency } from "@/lib/calculations/format"
@@ -34,6 +42,10 @@ const COLORS = [
   "var(--primary)",
   "var(--destructive)",
 ]
+
+function currencyLabel(props: PieLabelRenderProps) {
+  return formatCurrency(Number(props.value ?? 0))
+}
 
 export function SpendingByTagChart({ rows }: { rows: SpendingRow[] }) {
   const [filter, setFilter] = useState<FilterKey>("ALL")
@@ -72,7 +84,7 @@ export function SpendingByTagChart({ rows }: { rows: SpendingRow[] }) {
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={data} dataKey="value" nameKey="name" outerRadius={100} label>
+              <Pie data={data} dataKey="value" nameKey="name" outerRadius={100} label={currencyLabel}>
                 {data.map((entry, index) => (
                   <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
                 ))}

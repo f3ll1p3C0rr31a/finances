@@ -65,6 +65,16 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - o bloco separado de cartões foi removido do dashboard;
 - os gráficos oferecem as visões “Ano completo” e “Próximos 12 meses”, ambas
   com 12 meses completos relativos ao mês aberto.
+- a navegação mensal do dashboard e da guia Cartões ganhou o botão “Mês atual”
+  para voltar diretamente ao mês vigente.
+- a meta de cartões passou a funcionar por herança: salvar em um mês cria a
+  nova meta daquele mês em diante, removendo metas futuras explícitas e sem
+  alterar meses anteriores.
+- o gráfico de gastos por etiqueta agora formata rótulos em `R$` com centavos,
+  ignora lançamentos sem etiqueta e representa cartões pela etiqueta fixa
+  `Fatura do Cartão`.
+- contas bancárias e chaves Pix podem ser editadas depois de criadas na tela
+  Informações.
 - o deploy expõe `/api/version` e só passa no health check quando o SHA servido
   corresponde ao commit disparado pelo GitHub Actions.
 - Em produção, a duplicidade “Nubank” foi removida pelo serviço de domínio em
@@ -100,6 +110,12 @@ Foram ajustados o dashboard e a exclusão de despesas:
   por etiqueta como método `CARD`.
 - Teste local de domínio em 2026-07-07: uma conta com banco/agência/conta foi
   criada e vinculada a uma chave Pix e a um cartão temporários.
+- `npm run lint`: passou em 2026-07-07.
+- `npm run build`: passou em 2026-07-07 com Next.js 16.2.9.
+- Teste local de domínio em 2026-07-07: confirmou herança da meta de cartões,
+  remoção de metas futuras explícitas, `Fatura do Cartão` nos gastos por
+  etiqueta, ausência de `Sem etiqueta`, e edição de conta/Pix com dados
+  temporários.
 - Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
   2026-07-05.
 - Produção: deploy do commit `e3175f4` validado em 2026-07-06; `/api/version`

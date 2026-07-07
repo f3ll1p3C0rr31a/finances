@@ -44,6 +44,40 @@ export async function createPixKey(input: {
   revalidatePath("/dashboard", "layout")
 }
 
+export async function updatePixKey(
+  id: string,
+  input: {
+    kind: "OWN" | "PAYEE"
+    label: string
+    keyValue: string
+    accountId?: string | null
+    notes?: string | null
+  }
+) {
+  const userId = await requireUserId()
+  const label = input.label.trim()
+  const keyValue = input.keyValue.trim()
+  if (!label || !keyValue) throw new Error("Preencha rótulo e chave")
+  const accountId = input.accountId?.trim() || null
+
+  if (accountId) {
+    await prisma.account.findUniqueOrThrow({ where: { id: accountId, userId } })
+  }
+
+  await prisma.pixKey.update({
+    where: { id, userId },
+    data: {
+      accountId,
+      kind: input.kind,
+      label,
+      keyValue,
+      notes: input.notes?.trim() || null,
+    },
+  })
+  revalidatePath("/informacoes")
+  revalidatePath("/dashboard", "layout")
+}
+
 export async function deletePixKey(id: string) {
   const userId = await requireUserId()
   await prisma.pixKey.delete({ where: { id, userId } })

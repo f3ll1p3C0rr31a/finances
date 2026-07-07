@@ -47,6 +47,10 @@ O alias `@/*` aponta para `src/*`.
   `CardInstallment`. `CardPurchase.billingMonth` representa a fatura em que a
   compra começa a ser cobrada.
 - `CardSpendingGoal` é uma meta mensal somando todos os cartões.
+- A meta efetiva de cartões de um mês é a última `CardSpendingGoal` cadastrada
+  naquele mês ou antes dele. Ao salvar uma meta em M, metas futuras explícitas
+  são removidas para que M passe a valer para M e todos os meses seguintes,
+  sem alterar meses anteriores.
 - `Subscription` é uma cobrança recorrente sem fim predefinido.
 - `Tag` se relaciona N:N com entradas, despesas, compras e assinaturas.
 - `Account` representa banco/conta com dados como banco, agência, número, tipo
@@ -151,6 +155,10 @@ O alias `@/*` aponta para `src/*`.
 - Compras de cartão podem alterar a abertura de meses futuros; criação, edição e
   exclusão recalculam a cadeia a partir do mês afetado e do mês anterior, pois a
   reserva da meta depende da próxima fatura.
+- Nos gastos por etiqueta do dashboard, a fatura de cartão é representada
+  sempre pela etiqueta `Fatura do Cartão`; compras individuais de cartão não
+  entram separadas nesse gráfico. Despesas e assinaturas sem etiqueta são
+  ignoradas nesse gráfico.
 
 ### Visão mensal matricial
 
@@ -166,9 +174,19 @@ O alias `@/*` aponta para `src/*`.
 - Uma assinatura vale desde `startMonth`.
 - Cancelamento no mês X ainda cobra X; deixa de contar depois de X.
 - Reativar remove `cancelledMonth`.
-- Assinaturas possuem etiquetas via `SubscriptionTag`; elas entram nos gastos
-  por etiqueta do mês em que a assinatura está ativa. Assinaturas pagas por
-  cartão contam como método `CARD`; as demais usam seu `paymentMethod`.
+- Assinaturas possuem etiquetas via `SubscriptionTag`; assinaturas fora de
+  cartão entram nos gastos por etiqueta do mês em que estão ativas usando seu
+  `paymentMethod`. Assinaturas pagas por cartão entram no total da fatura e,
+  no gráfico do dashboard, são representadas pela etiqueta `Fatura do Cartão`.
+
+### Informações bancárias
+
+- Contas bancárias e chaves Pix podem ser criadas, editadas e excluídas na tela
+  Informações.
+- Chaves Pix podem ser próprias (`OWN`) ou de pagamentos frequentes
+  (`PAYEE`) e podem se vincular a uma conta do mesmo usuário.
+- Ações de edição devem verificar propriedade por `userId`, inclusive para a
+  conta vinculada informada no payload.
 
 ## Convenções Next.js 16 deste projeto
 

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
-import { createPixKey } from "@/lib/actions/pixKeys"
+import { createPixKey, updatePixKey } from "@/lib/actions/pixKeys"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,30 +23,58 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
+type PixKeyDialogRow = {
+  id: string
+  kind: "OWN" | "PAYEE"
+  label: string
+  keyValue: string
+  accountId: string | null
+  notes: string | null
+}
+
 export function NewPixKeyDialog({
   kind,
   accounts = [],
+  pixKey,
+  triggerLabel,
+  triggerVariant,
+  triggerSize = "sm",
 }: {
   kind: "OWN" | "PAYEE"
   accounts?: { id: string; name: string }[]
+  pixKey?: PixKeyDialogRow
+  triggerLabel?: string
+  triggerVariant?: "default" | "ghost"
+  triggerSize?: "sm" | "xs"
 }) {
   const [open, setOpen] = useState(false)
-  const [label, setLabel] = useState("")
-  const [keyValue, setKeyValue] = useState("")
-  const [accountId, setAccountId] = useState<string | null>(null)
-  const [notes, setNotes] = useState("")
+  const [label, setLabel] = useState(pixKey?.label ?? "")
+  const [keyValue, setKeyValue] = useState(pixKey?.keyValue ?? "")
+  const [accountId, setAccountId] = useState<string | null>(pixKey?.accountId ?? null)
+  const [notes, setNotes] = useState(pixKey?.notes ?? "")
   const [pending, startTransition] = useTransition()
+
+  const isEditing = Boolean(pixKey)
+
+  function resetForm() {
+    setLabel(pixKey?.label ?? "")
+    setKeyValue(pixKey?.keyValue ?? "")
+    setAccountId(pixKey?.accountId ?? null)
+    setNotes(pixKey?.notes ?? "")
+  }
 
   function save() {
     startTransition(async () => {
       try {
-        await createPixKey({ kind, label, keyValue, accountId, notes })
+        const payload = { kind, label, keyValue, accountId, notes }
+        if (pixKey) {
+          await updatePixKey(pixKey.id, payload)
+        } else {
+          await createPixKey(payload)
+        }
         toast.success("Chave Pix salva.")
         setOpen(false)
-        setLabel("")
-        setKeyValue("")
-        setAccountId(null)
-        setNotes("")
+        if (!pixKey) resetForm()
       } catch {
         toast.error("Não foi possível salvar a chave.")
       }
@@ -54,13 +82,25 @@ export function NewPixKeyDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" />}>
-        {kind === "OWN" ? "Nova chave minha" : "Novo pagamento frequente"}
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        if (nextOpen) resetForm()
+      }}
+    >
+      <DialogTrigger render={<Button size={triggerSize} variant={triggerVariant} />}>
+        {triggerLabel ?? (kind === "OWN" ? "Nova chave minha" : "Novo pagamento frequente")}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{kind === "OWN" ? "Minha chave Pix" : "Pagamento frequente"}</DialogTitle>
+          <DialogTitle>
+            {isEditing
+              ? "Editar chave Pix"
+              : kind === "OWN"
+                ? "Minha chave Pix"
+                : "Pagamento frequente"}
+          </DialogTitle>
         </DialogHeader>
         <div className="grid gap-4">
           <div className="grid gap-2">
