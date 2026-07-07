@@ -37,7 +37,7 @@ As versões exatas estão em `package.json` e `package-lock.json`.
 - Cartões, limite, fechamento, vencimento, melhor dia de compra e compras
   parceladas.
 - Meta mensal combinada para gastos de cartões.
-- Assinaturas pagas por cartão ou fora do cartão.
+- Assinaturas pagas por cartão ou fora do cartão, com etiquetas de categoria.
 - Etiquetas aplicáveis a entradas, despesas e compras.
 - Gráficos de saldo, entradas/saídas, cartões e gastos por etiqueta.
 - Matriz financeira anual/12 meses com lançamentos nas linhas e meses nas

@@ -22,6 +22,7 @@ export async function createTag(name: string) {
 
   revalidatePath("/dashboard", "layout")
   revalidatePath("/cards", "layout")
+  revalidatePath("/assinaturas")
   return { id: tag.id, name: tag.name }
 }
 
@@ -30,6 +31,7 @@ export async function deleteTag(id: string) {
   await prisma.tag.delete({ where: { id, userId } })
   revalidatePath("/dashboard", "layout")
   revalidatePath("/cards", "layout")
+  revalidatePath("/assinaturas")
 }
 
 export async function setCardPurchaseTags(purchaseId: string, tagIds: string[]) {
@@ -86,4 +88,19 @@ export async function setExpenseEntryTags(entryId: string, tagIds: string[]) {
     prisma.expenseEntryTag.createMany({ data: tagIds.map((tagId) => ({ entryId, tagId })) }),
   ])
   revalidatePath("/dashboard", "layout")
+}
+
+export async function setSubscriptionTags(subscriptionId: string, tagIds: string[]) {
+  const userId = await requireUserId()
+  await prisma.subscription.findUniqueOrThrow({ where: { id: subscriptionId, userId } })
+
+  await prisma.$transaction([
+    prisma.subscriptionTag.deleteMany({ where: { subscriptionId } }),
+    prisma.subscriptionTag.createMany({
+      data: tagIds.map((tagId) => ({ subscriptionId, tagId })),
+    }),
+  ])
+  revalidatePath("/assinaturas")
+  revalidatePath("/dashboard", "layout")
+  revalidatePath("/cards", "layout")
 }

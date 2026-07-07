@@ -38,6 +38,8 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - entradas futuras representam valores ainda não recebidos; saídas futuras
   representam despesas em aberto, cartões não pagos, reserva da meta e
   assinaturas fora do cartão;
+- a reserva da meta de cartões é calculada no mês aberto, mas lançada apenas no
+  mês da fatura projetada (`month + 1`), não no mês vigente;
 - `PaymentMethod` ganhou `BOLETO`, disponível em despesas, assinaturas e filtros
   de gastos por etiqueta;
 - cartões ganharam `bestPurchaseDay` opcional; quando vazio, o melhor dia é 1
@@ -48,6 +50,8 @@ Foram ajustados o dashboard e a exclusão de despesas:
   a primeira parcela de compras parceladas;
 - editar o fechamento de um cartão recalcula o mês de cobrança das compras já
   registradas daquele cartão e rematerializa as parcelas;
+- assinaturas ganharam etiquetas por `SubscriptionTag`; a página Assinaturas
+  permite criar/editar etiquetas e elas entram nos gastos por etiqueta;
 - a meta dos cartões do mês agora compara a meta com a próxima fatura projetada
   (`month + 1`), e a despesa planejada de cartões usa a fatura do mês somada à
   reserva restante dessa próxima fatura;
@@ -87,6 +91,10 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - Teste local de domínio em 2026-07-07: com fechamento dia 5 e vencimento dia
   10, uma compra em 02/07 ficou na fatura de julho; compra parcelada em 08/07
   iniciou em agosto; totais retornaram R$ 12 em julho e R$ 100 em agosto.
+- Teste local de domínio em 2026-07-07: uma meta de julho para fatura de agosto
+  calculou reserva, não lançou a reserva em julho, lançou em agosto e fechou o
+  planejado de agosto na meta; assinatura com tag `Stream` apareceu em gastos
+  por etiqueta como método `CARD`.
 - Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
   2026-07-05.
 - Produção: deploy do commit `e3175f4` validado em 2026-07-06; `/api/version`

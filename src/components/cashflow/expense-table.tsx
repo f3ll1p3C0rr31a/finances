@@ -158,7 +158,7 @@ export function ExpenseTable({
             <TableRow className="bg-muted/20">
               <TableCell className="font-medium">
                 <div className="flex flex-wrap items-center gap-2">
-                  Reserva para próxima fatura dos cartões
+                  Reserva da meta dos cartões
                   <Badge variant="outline">Prevista pela meta</Badge>
                 </div>
               </TableCell>
@@ -169,7 +169,7 @@ export function ExpenseTable({
               <TableCell>Eu</TableCell>
               <TableCell className="text-sm text-muted-foreground">Cartão</TableCell>
               <TableCell>
-                <Badge variant="outline">Meta · próxima fatura</Badge>
+                <Badge variant="outline">Meta · fatura do mês</Badge>
               </TableCell>
               <TableCell className="text-right">
                 <MoneyText value={-cardReserve} />

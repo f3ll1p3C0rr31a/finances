@@ -266,7 +266,7 @@ model CardSpendingGoal {
 }
 
 /// A free-form spending category (e.g. "Entretenimento", "Gasolina").
-/// Applies to card purchases and income/expense entries alike.
+/// Applies to card purchases, subscriptions and income/expense entries alike.
 model Tag {
   id     String @id @default(cuid())
   userId String
@@ -276,6 +276,7 @@ model Tag {
   cardPurchases  CardPurchaseTag[]
   incomeEntries  IncomeEntryTag[]
   expenseEntries ExpenseEntryTag[]
+  subscriptions  SubscriptionTag[]
 
   @@unique([userId, name])
 }
@@ -305,6 +306,15 @@ model ExpenseEntryTag {
   tag     Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([entryId, tagId])
+}
+
+model SubscriptionTag {
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  tagId          String
+  tag            Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([subscriptionId, tagId])
 }
 
 /// A bank account the user tracks for reference (not a source of
@@ -358,6 +368,8 @@ model Subscription {
   startMonth     DateTime      @db.Date
   cancelledMonth DateTime?     @db.Date
   createdAt      DateTime      @default(now())
+
+  tags SubscriptionTag[]
 
   @@index([userId])
   @@index([cardId])

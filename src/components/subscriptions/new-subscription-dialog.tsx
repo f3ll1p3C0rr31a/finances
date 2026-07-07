@@ -11,6 +11,9 @@ import {
   type SubscriptionInput,
 } from "@/lib/validation/subscriptionSchemas"
 import { createSubscription } from "@/lib/actions/subscriptions"
+import { setSubscriptionTags } from "@/lib/actions/tags"
+import type { TagOption } from "@/components/tags/tag-multi-select"
+import { TagMultiSelect } from "@/components/tags/tag-multi-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CurrencyInput } from "@/components/ui/currency-input"
@@ -49,9 +52,16 @@ const PAYMENT_METHOD_LABELS = {
 
 type CardOption = { id: string; name: string }
 
-export function NewSubscriptionDialog({ cards }: { cards: CardOption[] }) {
+export function NewSubscriptionDialog({
+  cards,
+  allTags,
+}: {
+  cards: CardOption[]
+  allTags: TagOption[]
+}) {
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
+  const [tagIds, setTagIds] = useState<string[]>([])
 
   const form = useForm<SubscriptionFormValues, unknown, SubscriptionInput>({
     resolver: zodResolver(subscriptionSchema),
@@ -68,9 +78,11 @@ export function NewSubscriptionDialog({ cards }: { cards: CardOption[] }) {
   function onSubmit(values: SubscriptionInput) {
     startTransition(async () => {
       try {
-        await createSubscription(values)
+        const result = await createSubscription(values)
+        await setSubscriptionTags(result.id, tagIds)
         toast.success("Assinatura criada.")
         setOpen(false)
+        setTagIds([])
         form.reset({ name: "", amount: 0, paymentMethod: "CASH", cardId: null })
       } catch {
         toast.error("Não foi possível criar a assinatura.")
@@ -173,6 +185,10 @@ export function NewSubscriptionDialog({ cards }: { cards: CardOption[] }) {
                 )}
               />
             ) : null}
+            <div className="grid gap-2">
+              <FormLabel>Etiquetas</FormLabel>
+              <TagMultiSelect allTags={allTags} selectedIds={tagIds} onChange={setTagIds} />
+            </div>
             <DialogFooter>
               <Button type="submit" disabled={pending}>
                 {pending ? "Salvando..." : "Salvar"}

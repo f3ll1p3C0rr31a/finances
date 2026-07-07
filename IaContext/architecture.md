@@ -48,7 +48,7 @@ O alias `@/*` aponta para `src/*`.
   compra começa a ser cobrada.
 - `CardSpendingGoal` é uma meta mensal somando todos os cartões.
 - `Subscription` é uma cobrança recorrente sem fim predefinido.
-- `Tag` se relaciona N:N com entradas, despesas e compras.
+- `Tag` se relaciona N:N com entradas, despesas, compras e assinaturas.
 - `Account` e `PixKey` são cadastros auxiliares; uma despesa pode referenciar
   uma chave Pix de favorecido.
 - `PaymentMethod` aceita `CASH`, `PIX`, `TRANSFER`, `BOLETO`, `CARD` e
@@ -132,9 +132,10 @@ O alias `@/*` aponta para `src/*`.
 - A meta de cartões do mês compara o valor já previsto na próxima fatura
   (`month + 1`) com a meta cadastrada no mês aberto.
 - Enquanto a próxima fatura projetada estiver abaixo da meta mensal, a diferença
-  é tratada como reserva de despesa prevista do mês aberto. Portanto, o
-  planejamento de cartões do mês usa `fatura do mês + max(meta - próxima fatura,
-  0)`.
+  é calculada na tela do mês aberto, mas lançada como reserva de despesa
+  prevista no mês da própria fatura. Portanto, a meta cadastrada no mês M gera
+  reserva em M+1, e o planejamento de cartões de M+1 usa
+  `fatura de M+1 + max(meta de M - fatura de M+1, 0)`.
 - No dashboard, cada cartão ativo aparece no topo de Despesas como uma linha
   variável calculada. Essa linha é apenas uma representação da fatura já
   incluída nos totais, não um `ExpenseEntry` duplicado.
@@ -164,6 +165,9 @@ O alias `@/*` aponta para `src/*`.
 - Uma assinatura vale desde `startMonth`.
 - Cancelamento no mês X ainda cobra X; deixa de contar depois de X.
 - Reativar remove `cancelledMonth`.
+- Assinaturas possuem etiquetas via `SubscriptionTag`; elas entram nos gastos
+  por etiqueta do mês em que a assinatura está ativa. Assinaturas pagas por
+  cartão contam como método `CARD`; as demais usam seu `paymentMethod`.
 
 ## Convenções Next.js 16 deste projeto
 

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { addMonths } from "@/lib/calculations/month"
+import { isSubscriptionActiveInMonth } from "@/lib/actions/subscriptionSummary"
 
 export type SpendingRow = {
   tagName: string
@@ -34,7 +35,7 @@ export async function getSpendingByTagRows(userId: string, month: Date): Promise
     }
   }
 
-  const [installments, singlePurchases] = await Promise.all([
+  const [installments, singlePurchases, subscriptions] = await Promise.all([
     prisma.cardInstallment.findMany({
       where: { month, purchase: { card: { userId } } },
       include: { purchase: { include: { tags: { include: { tag: true } } } } },
@@ -42,9 +43,16 @@ export async function getSpendingByTagRows(userId: string, month: Date): Promise
     prisma.cardPurchase.findMany({
       where: {
         installmentCount: 1,
-        purchaseDate: { gte: month, lt: nextMonth },
+        OR: [
+          { billingMonth: month },
+          { billingMonth: null, purchaseDate: { gte: month, lt: nextMonth } },
+        ],
         card: { userId },
       },
+      include: { tags: { include: { tag: true } } },
+    }),
+    prisma.subscription.findMany({
+      where: { userId },
       include: { tags: { include: { tag: true } } },
     }),
   ])
@@ -63,6 +71,16 @@ export async function getSpendingByTagRows(userId: string, month: Date): Promise
     const names = purchase.tags.length > 0 ? purchase.tags.map((t) => t.tag.name) : [NO_TAG]
     for (const tagName of names) {
       rows.push({ tagName, paymentMethod: "CARD", amount })
+    }
+  }
+
+  for (const subscription of subscriptions.filter((sub) => isSubscriptionActiveInMonth(sub, month))) {
+    const amount = subscription.amount.toNumber()
+    const names =
+      subscription.tags.length > 0 ? subscription.tags.map((t) => t.tag.name) : [NO_TAG]
+    const paymentMethod = subscription.cardId ? "CARD" : subscription.paymentMethod
+    for (const tagName of names) {
+      rows.push({ tagName, paymentMethod, amount })
     }
   }
 

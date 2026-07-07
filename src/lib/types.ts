@@ -54,6 +54,7 @@ export type SerializedSubscription = {
   active: boolean
   startMonth: string
   cancelledMonth: string | null
+  tags: TagRef[]
 }
 
 export type SerializedCardPurchase = {

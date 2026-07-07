@@ -93,7 +93,7 @@ export async function getBalanceChartRanges(
       )
       const futureExpense = openCashflow.futureExpense
         .add(pendingCardInvoices)
-        .add(cards.reserve)
+        .add(cards.appliedReserve)
         .add(subscriptionsTotal)
       const plannedBalance = computePlannedBalance(
         balanceRow.openingBalance,
@@ -108,13 +108,13 @@ export async function getBalanceChartRanges(
           group: "card" as const,
           value: summary.total.neg().toNumber(),
         })),
-        ...(cards.reserve.gt(0)
+        ...(cards.appliedReserve.gt(0)
           ? [
               {
                 key: "card:reserve",
-                label: "Reserva para próxima fatura dos cartões",
+                label: "Reserva da meta dos cartões",
                 group: "card" as const,
-                value: cards.reserve.neg().toNumber(),
+                value: cards.appliedReserve.neg().toNumber(),
               },
             ]
           : []),

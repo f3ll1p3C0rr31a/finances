@@ -248,7 +248,7 @@ export async function getMonthData(userId: string, month: Date) {
   )
   const futureExpense = openCashflow.futureExpense
     .add(pendingCardInvoices)
-    .add(cards.reserve)
+    .add(cards.appliedReserve)
     .add(nonCardSubscriptions)
   const difference = totalIncome.sub(totalExpense)
   const plannedBalance = computePlannedBalance(balance.openingBalance, totalIncome, totalExpense)
@@ -260,7 +260,7 @@ export async function getMonthData(userId: string, month: Date) {
     expenseEntries,
     cardSummaries: cards.summaries,
     cardsTotal: cards.combinedTotal,
-    cardReserve: cards.reserve,
+    cardReserve: cards.appliedReserve,
     nonCardSubscriptionsTotal: nonCardSubscriptions,
     balance,
     totalIncome,

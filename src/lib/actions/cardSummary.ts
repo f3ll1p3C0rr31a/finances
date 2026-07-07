@@ -62,17 +62,25 @@ export async function getCardsMonthSummary(userId: string, month: Date) {
 
 export async function getCardMonthBudget(userId: string, month: Date) {
   const projectionMonth = addMonths(month, 1)
-  const [{ summaries, combinedTotal }, projected, goalRow] = await Promise.all([
+  const previousGoalMonth = addMonths(month, -1)
+  const [{ summaries, combinedTotal }, projected, goalRow, previousGoalRow] = await Promise.all([
     getCardsMonthSummary(userId, month),
     getCardsMonthSummary(userId, projectionMonth),
     prisma.cardSpendingGoal.findUnique({ where: { userId_month: { userId, month } } }),
+    prisma.cardSpendingGoal.findUnique({
+      where: { userId_month: { userId, month: previousGoalMonth } },
+    }),
   ])
 
   const goal = goalRow?.amount ?? new Prisma.Decimal(0)
   const reserve = goal.gt(projected.combinedTotal)
     ? goal.sub(projected.combinedTotal)
     : new Prisma.Decimal(0)
-  const plannedTotal = combinedTotal.add(reserve)
+  const previousGoal = previousGoalRow?.amount ?? new Prisma.Decimal(0)
+  const appliedReserve = previousGoal.gt(combinedTotal)
+    ? previousGoal.sub(combinedTotal)
+    : new Prisma.Decimal(0)
+  const plannedTotal = combinedTotal.add(appliedReserve)
 
   return {
     summaries,
@@ -82,6 +90,7 @@ export async function getCardMonthBudget(userId: string, month: Date) {
     projectionMonth,
     goal: goalRow?.amount ?? null,
     reserve,
+    appliedReserve,
     plannedTotal,
   }
 }

@@ -20,7 +20,7 @@ export async function listSubscriptions(userId: string) {
   return prisma.subscription.findMany({
     where: { userId },
     orderBy: { name: "asc" },
-    include: { card: true },
+    include: { card: true, tags: { include: { tag: true } } },
   })
 }
 
@@ -28,7 +28,7 @@ export async function createSubscription(input: SubscriptionInput) {
   const userId = await requireUserId()
   const data = subscriptionSchema.parse(input)
 
-  await prisma.subscription.create({
+  const subscription = await prisma.subscription.create({
     data: {
       userId,
       name: data.name,
@@ -39,6 +39,7 @@ export async function createSubscription(input: SubscriptionInput) {
     },
   })
   revalidateSubscriptions()
+  return { id: subscription.id }
 }
 
 export async function cancelSubscription(id: string) {
