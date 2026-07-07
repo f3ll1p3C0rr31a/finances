@@ -7,7 +7,13 @@ import {
 import { getCardMonthBudget, getCardMonthTotal } from "@/lib/actions/cardSummary"
 import { getNonCardSubscriptionsForMonth } from "@/lib/actions/subscriptionSummary"
 import { ensureMonthGenerated } from "@/lib/actions/monthly"
-import { addMonths, formatMonthLabel, monthKeyFromDate } from "@/lib/calculations/month"
+import {
+  addMonths,
+  dateWithDay,
+  daysInMonth,
+  formatMonthLabel,
+  monthKeyFromDate,
+} from "@/lib/calculations/month"
 import { sumAmounts } from "@/lib/calculations/money"
 
 export type MonthlyBreakdownItem = {
@@ -24,10 +30,21 @@ export type MonthChartPoint = {
   totalExpense: number
   futureIncome: number
   futureExpense: number
+  difference: number
   balance: number
   openingBalance: number
   plannedBalance: number
   breakdown: MonthlyBreakdownItem[]
+}
+
+export type DailyCashflowPoint = {
+  day: number
+  label: string
+  income: number
+  expense: number
+  cumulativeIncome: number
+  cumulativeExpense: number
+  difference: number
 }
 
 export type BalanceChartRanges = {
@@ -149,6 +166,7 @@ export async function getBalanceChartRanges(
         totalExpense: totalExpense.toNumber(),
         futureIncome: openCashflow.futureIncome.toNumber(),
         futureExpense: futureExpense.toNumber(),
+        difference: totalIncome.sub(totalExpense).toNumber(),
         balance: balance.toNumber(),
         openingBalance: balanceRow.openingBalance.toNumber(),
         plannedBalance: plannedBalance.toNumber(),
@@ -167,6 +185,84 @@ export async function getBalanceChartRanges(
         point.month <= monthKeyFromDate(rollingEnd)
     ),
   }
+}
+
+function dayFromDateOrFallback(date: Date | null, fallbackMonth: Date, fallbackDay = 1): number {
+  if (date) return date.getUTCDate()
+  return dateWithDay(fallbackMonth, fallbackDay).getUTCDate()
+}
+
+function addToDay(days: Map<number, { income: number; expense: number }>, day: number, field: "income" | "expense", value: number) {
+  const current = days.get(day) ?? { income: 0, expense: 0 }
+  current[field] += value
+  days.set(day, current)
+}
+
+export async function getMonthlyCashflowPoints(
+  userId: string,
+  month: Date
+): Promise<DailyCashflowPoint[]> {
+  await ensureMonthGenerated(userId, month)
+  const [incomes, expenses, cards, subscriptions] = await Promise.all([
+    prisma.incomeEntry.findMany({ where: { userId, month } }),
+    prisma.expenseEntry.findMany({ where: { userId, month } }),
+    getCardMonthBudget(userId, month),
+    getNonCardSubscriptionsForMonth(userId, month),
+  ])
+
+  const dayTotals = new Map<number, { income: number; expense: number }>()
+
+  for (const income of incomes.filter((entry) => !entry.uncertain || entry.received)) {
+    addToDay(
+      dayTotals,
+      dayFromDateOrFallback(income.dueDate, month),
+      "income",
+      (income.receivedAmount ?? income.amount).toNumber()
+    )
+  }
+
+  for (const expense of expenses.filter((entry) => !entry.uncertain || entry.paid)) {
+    addToDay(
+      dayTotals,
+      dayFromDateOrFallback(expense.dueDate, month),
+      "expense",
+      (expense.paidAmount ?? expense.amount).toNumber()
+    )
+  }
+
+  for (const summary of cards.summaries) {
+    if (summary.total.lte(0)) continue
+    const paymentDay = summary.card.paymentDay ?? 1
+    addToDay(dayTotals, dateWithDay(month, paymentDay).getUTCDate(), "expense", summary.total.toNumber())
+  }
+
+  if (cards.appliedReserve.gt(0)) {
+    addToDay(dayTotals, 1, "expense", cards.appliedReserve.toNumber())
+  }
+
+  for (const subscription of subscriptions) {
+    addToDay(dayTotals, 1, "expense", subscription.amount.toNumber())
+  }
+
+  const points: DailyCashflowPoint[] = []
+  let cumulativeIncome = 0
+  let cumulativeExpense = 0
+  for (let day = 1; day <= daysInMonth(month); day++) {
+    const daily = dayTotals.get(day) ?? { income: 0, expense: 0 }
+    cumulativeIncome += daily.income
+    cumulativeExpense += daily.expense
+    points.push({
+      day,
+      label: String(day).padStart(2, "0"),
+      income: daily.income,
+      expense: daily.expense,
+      cumulativeIncome,
+      cumulativeExpense,
+      difference: cumulativeIncome - cumulativeExpense,
+    })
+  }
+
+  return points
 }
 
 export type CardMonthChartPoint = {

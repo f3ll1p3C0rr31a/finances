@@ -123,20 +123,23 @@ O alias `@/*` aponta para `src/*`.
 ### Cartões
 
 - Compra à vista conta no `billingMonth`, não necessariamente no mês civil de
-  `purchaseDate`.
+  `purchaseDate`. `billingMonth` representa o mês em que a fatura é paga no
+  dashboard, não o mês em que a fatura fecha.
 - Compra parcelada cria todas as parcelas antecipadamente a partir do
   `billingMonth`.
-- `billingMonth` é calculado por `invoiceMonthForPurchase()`: sem
-  `closingDay`, usa o mês da compra; com fechamento, compras no dia de
-  fechamento ou antes ficam na fatura do próprio mês, e compras depois do
-  fechamento começam na fatura do mês seguinte.
+- `billingMonth` é calculado por `invoiceMonthForPurchase()` usando o cartão da
+  própria compra. Sem `closingDay`, usa o mês da compra. Com fechamento,
+  compras no dia de fechamento ou antes entram na fatura paga no mês seguinte;
+  compras depois do fechamento entram na fatura paga dois meses à frente.
+  Exemplo: cartão que fecha dia 23 e vence dia 1; compra em 20/07 entra nos
+  débitos de agosto e vence em 01/08, compra em 24/07 entra em setembro.
 - No modo `TOTAL`, o valor é dividido e eventual centavo residual vai para a
   última parcela.
 - No modo `INSTALLMENT`, o valor digitado é o de cada parcela; o total é a
   multiplicação pela quantidade.
 - Assinatura com `paymentMethod=CARD` entra no total mensal daquele cartão.
 - Cada cartão pode ter `closingDay`, `bestPurchaseDay` e `paymentDay`. Se
-  `bestPurchaseDay` ficar vazio, o melhor dia é calculado como 1 dia antes do
+  `bestPurchaseDay` ficar vazio, o melhor dia é calculado como 1 dia depois do
   fechamento; se preenchido, o valor manual prevalece para cartões com ciclos
   atípicos.
 - A meta de cartões do mês compara o valor já previsto na próxima fatura
@@ -173,6 +176,10 @@ O alias `@/*` aponta para `src/*`.
   escolhido e calcula a coluna Total no cliente.
 - Linhas finais mostram saldo inicial, saldo, total de entradas, total de
   saídas e diferença. Os gráficos permanecem como complemento visual.
+- O gráfico de saldo ao longo do tempo também mostra saídas e diferença.
+- O dashboard possui um gráfico diário de fluxo de caixa do mês: entradas e
+  saídas acumuladas por dia, com faturas de cartão alocadas no `paymentDay` do
+  cartão e lançamentos manuais na sua data de vencimento.
 
 ### Assinaturas
 

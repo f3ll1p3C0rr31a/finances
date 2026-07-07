@@ -85,6 +85,14 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - assinaturas podem ser BRL ou USD; em USD, a UI pede valor em dólar e cotação
   média do mês, guarda o valor convertido em reais e mostra a memória da
   conversão na lista.
+- a regra de fatura de cartão passou a considerar `billingMonth` como mês de
+  pagamento/vencimento: no cartão específico da compra, compras até o
+  `closingDay` entram no mês seguinte; compras depois do fechamento entram dois
+  meses à frente. O melhor dia automático passou a ser o dia posterior ao
+  fechamento.
+- o gráfico “Saldo ao longo do tempo” passou a exibir também Saídas e
+  Diferença; o dashboard ganhou o gráfico “Fluxo de caixa do mês”, com
+  entradas e saídas acumuladas por dia.
 - o deploy expõe `/api/version` e só passa no health check quando o SHA servido
   corresponde ao commit disparado pelo GitHub Actions.
 - Em produção, a duplicidade “Nubank” foi removida pelo serviço de domínio em
@@ -134,6 +142,14 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - Teste local de domínio em 2026-07-07: confirmou Pix próprio com tipo e conta,
   Pix terceiro com tipo e banco de destino, despesa com link/PDF e assinatura
   USD convertida por cotação.
+- `npm run lint`: passou em 2026-07-07 após ajuste da regra de fatura e
+  gráficos.
+- `npm run build`: passou em 2026-07-07 com Next.js 16.2.9 após ajuste da regra
+  de fatura e gráficos.
+- Teste local de domínio em 2026-07-07: cartão com fechamento dia 23 e
+  vencimento dia 1 moveu compra antiga em 20/07 de julho para agosto; julho
+  zerou, agosto recebeu R$ 2.476,03 e o fluxo de caixa colocou a fatura no dia
+  1.
 - Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
   2026-07-05.
 - Produção: deploy do commit `e3175f4` validado em 2026-07-06; `/api/version`

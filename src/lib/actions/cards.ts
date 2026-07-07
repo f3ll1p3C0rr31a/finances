@@ -9,6 +9,7 @@ import { addMonths } from "@/lib/calculations/month"
 import { invoiceMonthForPurchase } from "@/lib/calculations/cardTiming"
 import { splitIntoInstallments } from "@/lib/calculations/installments"
 import { recalcOpeningBalanceChain } from "@/lib/actions/monthly"
+import { rematerializeCardPurchaseSchedules } from "@/lib/services/cardSchedule"
 import {
   cardSchema,
   cardPurchaseSchema,
@@ -62,42 +63,7 @@ export async function updateCard(id: string, input: CardInput) {
       },
     })
 
-    const purchases = await tx.cardPurchase.findMany({
-      where: { cardId: id },
-      include: { installments: { orderBy: { installmentNo: "asc" } } },
-    })
-
-    const changedMonths: Date[] = []
-    for (const purchase of purchases) {
-      const previousBillingMonth = purchase.billingMonth ?? monthFromDate(purchase.purchaseDate)
-      const nextBillingMonth = invoiceMonthForPurchase(card, purchase.purchaseDate)
-      changedMonths.push(previousBillingMonth, nextBillingMonth)
-
-      const fallbackSlices = splitIntoInstallments(purchase.totalAmount, purchase.installmentCount)
-      const slices =
-        purchase.installments.length === purchase.installmentCount
-          ? purchase.installments.map((installment) => installment.amount)
-          : fallbackSlices
-
-      await tx.cardPurchase.update({
-        where: { id: purchase.id },
-        data: { billingMonth: nextBillingMonth },
-      })
-
-      if (purchase.installmentCount > 1) {
-        await tx.cardInstallment.deleteMany({ where: { purchaseId: purchase.id } })
-        await tx.cardInstallment.createMany({
-          data: slices.map((amount, index) => ({
-            purchaseId: purchase.id,
-            installmentNo: index + 1,
-            month: addMonths(nextBillingMonth, index),
-            amount,
-          })),
-        })
-      }
-    }
-
-    return changedMonths
+    return rematerializeCardPurchaseSchedules(tx, id, card)
   })
   revalidateCards()
   if (affectedMonths.length > 0) {
