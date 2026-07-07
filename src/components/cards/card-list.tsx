@@ -25,6 +25,7 @@ export function CardList({ cards }: { cards: SerializedCardSummary[] }) {
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
+                {card.accountName ? `${card.accountName} · ` : ""}
                 {card.closingDay ? `Fecha dia ${card.closingDay}` : "Sem fechamento clássico"}
                 {" · "}
                 {card.bestPurchaseDay

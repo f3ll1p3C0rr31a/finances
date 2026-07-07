@@ -38,11 +38,12 @@ As versões exatas estão em `package.json` e `package-lock.json`.
   parceladas.
 - Meta mensal combinada para gastos de cartões.
 - Assinaturas pagas por cartão ou fora do cartão, com etiquetas de categoria.
-- Etiquetas aplicáveis a entradas, despesas e compras.
+- Etiquetas aplicáveis a entradas, despesas, compras e assinaturas.
 - Gráficos de saldo, entradas/saídas, cartões e gastos por etiqueta.
 - Matriz financeira anual/12 meses com lançamentos nas linhas e meses nas
   colunas, inspirada na planilha original.
-- Cadastro informativo de contas e chaves Pix próprias/de favorecidos.
+- Cadastro informativo de bancos/contas com agência, número, tipo, titular,
+  vínculo com cartões e vínculo com chaves Pix próprias/de favorecidos.
 - Formas de pagamento: dinheiro, Pix, transferência, boleto, cartão e outro.
 - Deploy automático da branch `main` em runner self-hosted.
 

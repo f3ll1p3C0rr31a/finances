@@ -85,6 +85,8 @@ export default async function DashboardMonthPage({
   const cardSummaries: SerializedCardSummary[] = data.cardSummaries.map((s) => ({
     id: s.card.id,
     name: s.card.name,
+    accountId: s.card.accountId,
+    accountName: s.card.account?.name ?? null,
     total: s.total.toNumber(),
     paid: s.paid,
     closingDay: s.card.closingDay,

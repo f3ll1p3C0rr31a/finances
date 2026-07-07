@@ -49,8 +49,9 @@ O alias `@/*` aponta para `src/*`.
 - `CardSpendingGoal` é uma meta mensal somando todos os cartões.
 - `Subscription` é uma cobrança recorrente sem fim predefinido.
 - `Tag` se relaciona N:N com entradas, despesas, compras e assinaturas.
-- `Account` e `PixKey` são cadastros auxiliares; uma despesa pode referenciar
-  uma chave Pix de favorecido.
+- `Account` representa banco/conta com dados como banco, agência, número, tipo
+  e titular. `PixKey` e `Card` podem se vincular a uma `Account`; uma despesa
+  pode referenciar uma chave Pix de favorecido.
 - `PaymentMethod` aceita `CASH`, `PIX`, `TRANSFER`, `BOLETO`, `CARD` e
   `OTHER`.
 

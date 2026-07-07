@@ -14,6 +14,7 @@ export default async function InformacoesPage() {
     listPixKeys(userId, "OWN"),
     listPixKeys(userId, "PAYEE"),
   ])
+  const accountOptions = accounts.map((account) => ({ id: account.id, name: account.name }))
 
   return (
     <div className="flex flex-col gap-6">
@@ -32,7 +33,7 @@ export default async function InformacoesPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Minhas chaves Pix</CardTitle>
-          <NewPixKeyDialog kind="OWN" />
+          <NewPixKeyDialog kind="OWN" accounts={accountOptions} />
         </CardHeader>
         <CardContent>
           <PixKeyList pixKeys={ownKeys} />
@@ -42,7 +43,7 @@ export default async function InformacoesPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Pagamentos frequentes (Pix de terceiros)</CardTitle>
-          <NewPixKeyDialog kind="PAYEE" />
+          <NewPixKeyDialog kind="PAYEE" accounts={accountOptions} />
         </CardHeader>
         <CardContent>
           <PixKeyList pixKeys={payeeKeys} />

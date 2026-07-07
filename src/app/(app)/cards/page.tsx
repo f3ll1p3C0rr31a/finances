@@ -1,5 +1,6 @@
 import { requireUserId } from "@/lib/session"
 import { getCardGoalData } from "@/lib/actions/cardSummary"
+import { listAccounts } from "@/lib/actions/accounts"
 import { currentMonth, monthFromKey, monthKeyFromDate } from "@/lib/calculations/month"
 import { bestPurchaseDateForCard } from "@/lib/calculations/cardTiming"
 import type { SerializedCardSummary } from "@/lib/types"
@@ -21,6 +22,10 @@ export default async function CardsPage({
     typeof queryMonth === "string" && MONTH_KEY_PATTERN.test(queryMonth)
       ? monthFromKey(queryMonth)
       : currentMonth()
+  const [goalData, accounts] = await Promise.all([
+    getCardGoalData(userId, month),
+    listAccounts(userId),
+  ])
   const {
     summaries,
     combinedTotal,
@@ -29,11 +34,14 @@ export default async function CardsPage({
     goal,
     reserve,
     progress,
-  } = await getCardGoalData(userId, month)
+  } = goalData
+  const accountOptions = accounts.map((account) => ({ id: account.id, name: account.name }))
 
   const cards: SerializedCardSummary[] = summaries.map((s) => ({
     id: s.card.id,
     name: s.card.name,
+    accountId: s.card.accountId,
+    accountName: s.card.account?.name ?? null,
     total: s.total.toNumber(),
     paid: s.paid,
     closingDay: s.card.closingDay,
@@ -45,7 +53,7 @@ export default async function CardsPage({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Cartões</h1>
-        <NewCardDialog />
+        <NewCardDialog accounts={accountOptions} />
       </div>
       <CardMonthNav month={month} />
       <CardGoalPanel

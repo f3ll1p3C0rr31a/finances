@@ -185,6 +185,8 @@ model Card {
   id              String   @id @default(cuid())
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId       String?
+  account         Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
   name            String
   closingDay      Int?
   bestPurchaseDay Int?
@@ -198,6 +200,7 @@ model Card {
   invoicePayments CardInvoicePayment[]
 
   @@index([userId])
+  @@index([accountId])
 }
 
 /// Payment state for one card invoice in one month. paidAmount stores the
@@ -321,13 +324,23 @@ model SubscriptionTag {
 /// automated data — just a note of which accounts exist and whether
 /// they're still in use).
 model Account {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String
-  active    Boolean  @default(true)
-  notes     String?
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  bankName      String?
+  bankCode      String?
+  agency        String?
+  accountNumber String?
+  accountDigit  String?
+  accountType   String?
+  holderName    String?
+  active        Boolean  @default(true)
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  cards   Card[]
+  pixKeys PixKey[]
 
   @@index([userId])
 }
@@ -339,6 +352,8 @@ model PixKey {
   id        String     @id @default(cuid())
   userId    String
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId String?
+  account   Account?   @relation(fields: [accountId], references: [id], onDelete: SetNull)
   kind      PixKeyKind
   label     String
   keyValue  String
@@ -348,6 +363,7 @@ model PixKey {
   expenseEntries ExpenseEntry[]
 
   @@index([userId])
+  @@index([accountId])
 }
 
 /// A recurring charge with no fixed end (unlike a CardPurchase

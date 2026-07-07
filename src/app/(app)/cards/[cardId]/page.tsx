@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { requireUserId } from "@/lib/session"
 import { listTags } from "@/lib/actions/tags"
+import { listAccounts } from "@/lib/actions/accounts"
 import { getCardMonthlyHistory, getCardMonthlyWindow } from "@/lib/actions/chart"
 import { currentMonth, monthFromKey } from "@/lib/calculations/month"
 import { bestPurchaseDateForCard } from "@/lib/calculations/cardTiming"
@@ -32,23 +33,25 @@ export default async function CardDetailPage({
       : currentMonth()
   const userId = await requireUserId()
 
-  const card = await prisma.card.findUnique({ where: { id: cardId, userId } })
+  const card = await prisma.card.findUnique({ where: { id: cardId, userId }, include: { account: true } })
   if (!card) {
     notFound()
   }
 
-  const [purchases, allTags, monthlyHistory, upcomingMonths] = await Promise.all([
+  const [purchases, allTags, accounts, monthlyHistory, upcomingMonths] = await Promise.all([
     prisma.cardPurchase.findMany({
       where: { cardId },
       orderBy: { purchaseDate: "desc" },
       include: { tags: { include: { tag: true } }, installments: { orderBy: { installmentNo: "asc" } } },
     }),
     listTags(userId),
+    listAccounts(userId),
     getCardMonthlyHistory(userId, cardId),
     getCardMonthlyWindow(userId, cardId, selectedMonth, 12),
   ])
 
   const tagRefs = allTags.map((t) => ({ id: t.id, name: t.name }))
+  const accountOptions = accounts.map((account) => ({ id: account.id, name: account.name }))
   const nowMonth = currentMonth()
 
   const remainingDebt = purchases.reduce((sum, p) => {
@@ -122,24 +125,30 @@ export default async function CardDetailPage({
         card.closingDay ? `Fecha dia ${card.closingDay}` : "Sem fechamento clássico"
       }${card.paymentDay ? ` · vence dia ${card.paymentDay}` : ""} — melhor dia para comprar: dia ${bestDay}`
     : "Defina o fechamento ou informe manualmente o melhor dia de compra"
+  const cardAccountLabel = card.account ? ` · conta: ${card.account.name}` : ""
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{card.name}</h1>
-          <p className="text-sm text-muted-foreground">{cardTimingLabel}</p>
+          <p className="text-sm text-muted-foreground">
+            {cardTimingLabel}
+            {cardAccountLabel}
+          </p>
         </div>
         <div className="flex gap-2">
           <NewCardDialog
             card={{
               id: card.id,
               name: card.name,
+              accountId: card.accountId,
               closingDay: card.closingDay,
               bestPurchaseDay: card.bestPurchaseDay,
               paymentDay: card.paymentDay,
               creditLimit,
             }}
+            accounts={accountOptions}
             triggerLabel="Editar cartão"
             triggerVariant="outline"
           />

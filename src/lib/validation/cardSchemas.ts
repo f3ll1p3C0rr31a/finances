@@ -8,6 +8,7 @@ const optionalDaySchema = z
 
 export const cardSchema = z.object({
   name: z.string().trim().min(1, "Informe um nome"),
+  accountId: z.string().trim().optional().nullable().transform((value) => value || null),
   closingDay: optionalDaySchema,
   bestPurchaseDay: optionalDaySchema,
   paymentDay: optionalDaySchema,

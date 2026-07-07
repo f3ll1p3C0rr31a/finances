@@ -9,13 +9,38 @@ export async function listAccounts(userId: string) {
   return prisma.account.findMany({ where: { userId }, orderBy: { name: "asc" } })
 }
 
-export async function createAccount(input: { name: string; notes?: string | null }) {
+function clean(value: string | null | undefined) {
+  return value?.trim() || null
+}
+
+export async function createAccount(input: {
+  name: string
+  bankName?: string | null
+  bankCode?: string | null
+  agency?: string | null
+  accountNumber?: string | null
+  accountDigit?: string | null
+  accountType?: string | null
+  holderName?: string | null
+  notes?: string | null
+}) {
   const userId = await requireUserId()
   const name = input.name.trim()
   if (!name) throw new Error("Informe um nome")
 
   await prisma.account.create({
-    data: { userId, name, notes: input.notes?.trim() || null },
+    data: {
+      userId,
+      name,
+      bankName: clean(input.bankName),
+      bankCode: clean(input.bankCode),
+      agency: clean(input.agency),
+      accountNumber: clean(input.accountNumber),
+      accountDigit: clean(input.accountDigit),
+      accountType: clean(input.accountType),
+      holderName: clean(input.holderName),
+      notes: clean(input.notes),
+    },
   })
   revalidatePath("/informacoes")
 }

@@ -40,6 +40,7 @@ export async function getCardsMonthSummary(userId: string, month: Date) {
     where: { userId, active: true },
     orderBy: { name: "asc" },
     include: {
+      account: true,
       invoicePayments: {
         where: { month },
         take: 1,

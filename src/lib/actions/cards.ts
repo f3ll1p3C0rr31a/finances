@@ -26,9 +26,13 @@ function revalidateCards() {
 export async function createCard(input: CardInput) {
   const userId = await requireUserId()
   const data = cardSchema.parse(input)
+  if (data.accountId) {
+    await prisma.account.findUniqueOrThrow({ where: { id: data.accountId, userId } })
+  }
   await prisma.card.create({
     data: {
       userId,
+      accountId: data.accountId,
       name: data.name,
       closingDay: data.closingDay ?? null,
       bestPurchaseDay: data.bestPurchaseDay ?? null,
@@ -42,11 +46,15 @@ export async function createCard(input: CardInput) {
 export async function updateCard(id: string, input: CardInput) {
   const userId = await requireUserId()
   const data = cardSchema.parse(input)
+  if (data.accountId) {
+    await prisma.account.findUniqueOrThrow({ where: { id: data.accountId, userId } })
+  }
   const affectedMonths = await prisma.$transaction(async (tx) => {
     const card = await tx.card.update({
       where: { id, userId },
       data: {
         name: data.name,
+        accountId: data.accountId,
         closingDay: data.closingDay ?? null,
         bestPurchaseDay: data.bestPurchaseDay ?? null,
         paymentDay: data.paymentDay ?? null,

@@ -37,6 +37,8 @@ export type SerializedExpenseEntry = {
 export type SerializedCardSummary = {
   id: string
   name: string
+  accountId: string | null
+  accountName: string | null
   total: number
   paid: boolean
   closingDay: number | null

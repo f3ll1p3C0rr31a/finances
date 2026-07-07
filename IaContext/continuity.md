@@ -52,6 +52,9 @@ Foram ajustados o dashboard e a exclusão de despesas:
   registradas daquele cartão e rematerializa as parcelas;
 - assinaturas ganharam etiquetas por `SubscriptionTag`; a página Assinaturas
   permite criar/editar etiquetas e elas entram nos gastos por etiqueta;
+- contas passaram a registrar banco, código, agência, número, dígito, tipo e
+  titular; cartões e chaves Pix podem ser vinculados a uma conta;
+- a visão padrão dos gráficos do dashboard agora é “Próximos 12 meses”;
 - a meta dos cartões do mês agora compara a meta com a próxima fatura projetada
   (`month + 1`), e a despesa planejada de cartões usa a fatura do mês somada à
   reserva restante dessa próxima fatura;
@@ -95,6 +98,8 @@ Foram ajustados o dashboard e a exclusão de despesas:
   calculou reserva, não lançou a reserva em julho, lançou em agosto e fechou o
   planejado de agosto na meta; assinatura com tag `Stream` apareceu em gastos
   por etiqueta como método `CARD`.
+- Teste local de domínio em 2026-07-07: uma conta com banco/agência/conta foi
+  criada e vinculada a uma chave Pix e a um cartão temporários.
 - Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
   2026-07-05.
 - Produção: deploy do commit `e3175f4` validado em 2026-07-06; `/api/version`

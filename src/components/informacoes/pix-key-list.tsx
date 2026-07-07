@@ -14,7 +14,13 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-type PixKeyRow = { id: string; label: string; keyValue: string; notes: string | null }
+type PixKeyRow = {
+  id: string
+  label: string
+  keyValue: string
+  account: { name: string } | null
+  notes: string | null
+}
 
 export function PixKeyList({ pixKeys }: { pixKeys: PixKeyRow[] }) {
   const [pending, startTransition] = useTransition()
@@ -33,17 +39,18 @@ export function PixKeyList({ pixKeys }: { pixKeys: PixKeyRow[] }) {
   return (
     <Table>
       <TableHeader>
-        <TableRow>
-          <TableHead>Nome</TableHead>
-          <TableHead>Chave</TableHead>
-          <TableHead>Notas</TableHead>
-          <TableHead className="w-0" />
+          <TableRow>
+            <TableHead>Nome</TableHead>
+            <TableHead>Chave</TableHead>
+            <TableHead>Conta vinculada</TableHead>
+            <TableHead>Notas</TableHead>
+            <TableHead className="w-0" />
         </TableRow>
       </TableHeader>
       <TableBody>
         {pixKeys.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={4} className="text-center text-muted-foreground">
+            <TableCell colSpan={5} className="text-center text-muted-foreground">
               Nenhuma chave cadastrada.
             </TableCell>
           </TableRow>
@@ -52,6 +59,9 @@ export function PixKeyList({ pixKeys }: { pixKeys: PixKeyRow[] }) {
             <TableRow key={key.id}>
               <TableCell className="font-medium">{key.label}</TableCell>
               <TableCell className="font-mono text-sm">{key.keyValue}</TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {key.account?.name ?? "—"}
+              </TableCell>
               <TableCell className="text-sm text-muted-foreground">{key.notes ?? "—"}</TableCell>
               <TableCell className="text-right">
                 <Button variant="ghost" size="xs" disabled={pending} onClick={() => remove(key.id)}>

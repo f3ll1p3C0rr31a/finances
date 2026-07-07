@@ -13,6 +13,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -34,11 +41,13 @@ type Props = {
   card?: {
     id: string
     name: string
+    accountId: string | null
     closingDay: number | null
     bestPurchaseDay: number | null
     paymentDay: number | null
     creditLimit: number | null
   }
+  accounts?: { id: string; name: string }[]
   triggerLabel?: string
   triggerVariant?: "default" | "outline" | "ghost" | "secondary"
   triggerSize?: "default" | "sm" | "xs" | "icon-sm"
@@ -46,6 +55,7 @@ type Props = {
 
 export function NewCardDialog({
   card,
+  accounts = [],
   triggerLabel,
   triggerVariant = "default",
   triggerSize = "default",
@@ -57,6 +67,7 @@ export function NewCardDialog({
     resolver: zodResolver(cardSchema),
     defaultValues: {
       name: card?.name ?? "",
+      accountId: card?.accountId ?? null,
       closingDay: card?.closingDay ?? undefined,
       bestPurchaseDay: card?.bestPurchaseDay ?? undefined,
       paymentDay: card?.paymentDay ?? undefined,
@@ -108,6 +119,37 @@ export function NewCardDialog({
                   <FormControl>
                     <Input {...field} placeholder="ex: Nubank" />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="accountId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Conta / banco vinculado (opcional)</FormLabel>
+                  <Select value={field.value ?? "NONE"} onValueChange={(value) => field.onChange(value === "NONE" ? null : value)}>
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue>
+                          {(value: string) =>
+                            value === "NONE"
+                              ? "Nenhuma"
+                              : accounts.find((account) => account.id === value)?.name ?? "Nenhuma"
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="NONE">Nenhuma</SelectItem>
+                      {accounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

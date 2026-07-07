@@ -19,7 +19,7 @@ export function DashboardCharts({
   nextTwelveMonths: MonthChartPoint[]
   referenceYear: number
 }) {
-  const [range, setRange] = useState<ChartRange>("year")
+  const [range, setRange] = useState<ChartRange>("nextTwelveMonths")
   const data = range === "year" ? year : nextTwelveMonths
 
   return (
