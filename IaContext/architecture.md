@@ -44,7 +44,8 @@ O alias `@/*` aponta para `src/*`.
 - `IncomeEntry` e `ExpenseEntry` são ocorrências concretas de um mês.
 - `MonthlyBalance` forma uma cadeia de saldos mensais.
 - `Card` contém `CardPurchase`; compras parceladas materializam
-  `CardInstallment`.
+  `CardInstallment`. `CardPurchase.billingMonth` representa a fatura em que a
+  compra começa a ser cobrada.
 - `CardSpendingGoal` é uma meta mensal somando todos os cartões.
 - `Subscription` é uma cobrança recorrente sem fim predefinido.
 - `Tag` se relaciona N:N com entradas, despesas e compras.
@@ -111,14 +112,20 @@ O alias `@/*` aponta para `src/*`.
 
 ### Cartões
 
-- Compra à vista conta no mês de `purchaseDate`.
-- Compra parcelada cria todas as parcelas antecipadamente.
+- Compra à vista conta no `billingMonth`, não necessariamente no mês civil de
+  `purchaseDate`.
+- Compra parcelada cria todas as parcelas antecipadamente a partir do
+  `billingMonth`.
+- `billingMonth` é calculado por `invoiceMonthForPurchase()`: sem
+  `closingDay`, usa o mês da compra; com fechamento, compras no dia de
+  fechamento ou antes ficam na fatura do próprio mês, e compras depois do
+  fechamento começam na fatura do mês seguinte.
 - No modo `TOTAL`, o valor é dividido e eventual centavo residual vai para a
   última parcela.
 - No modo `INSTALLMENT`, o valor digitado é o de cada parcela; o total é a
   multiplicação pela quantidade.
 - Assinatura com `paymentMethod=CARD` entra no total mensal daquele cartão.
-- Cada cartão pode ter `closingDay` e `bestPurchaseDay`. Se
+- Cada cartão pode ter `closingDay`, `bestPurchaseDay` e `paymentDay`. Se
   `bestPurchaseDay` ficar vazio, o melhor dia é calculado como 1 dia antes do
   fechamento; se preenchido, o valor manual prevalece para cartões com ciclos
   atípicos.
@@ -136,6 +143,9 @@ O alias `@/*` aponta para `src/*`.
   `paidAmount`; desmarcar reverte exatamente esse valor.
 - A página `/cards` seleciona o mês por `searchParams.month`; totais, meta,
   reserva e estado pago devem sempre usar esse mês, não implicitamente o atual.
+- A página `/cards/[cardId]` também seleciona uma fatura por
+  `searchParams.month`; a tabela lista somente compras/parcelas que caem nesse
+  mês, mantendo a data real da compra apenas como informação.
 - Compras de cartão podem alterar a abertura de meses futuros; criação, edição e
   exclusão recalculam a cadeia a partir do mês afetado e do mês anterior, pois a
   reserva da meta depende da próxima fatura.

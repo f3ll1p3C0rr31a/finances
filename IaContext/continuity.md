@@ -1,6 +1,6 @@
 # Continuidade
 
-Atualizado em: 2026-07-06
+Atualizado em: 2026-07-07
 
 ## Estado atual
 
@@ -30,6 +30,9 @@ Foram ajustados o dashboard e a exclusão de despesas:
   lançamentos por linha, meses por coluna, total lateral e resumos no rodapé;
 - a guia Cartões ganhou navegação Anterior/Próximo via `?month=AAAA-MM`, e
   todos os cálculos da página respeitam o mês escolhido;
+- a tela de detalhe de um cartão também ganhou navegação mensal via
+  `?month=AAAA-MM`, lista apenas a fatura do mês escolhido e mantém gráficos de
+  histórico e próximos 12 meses;
 - o resumo mensal mostra Saldo Inicial, Total de Entrada, Entradas Futuras,
   Total de Saídas, Saídas Futuras, Diferença, Saldo Planejado e Saldo Atual;
 - entradas futuras representam valores ainda não recebidos; saídas futuras
@@ -39,6 +42,12 @@ Foram ajustados o dashboard e a exclusão de despesas:
   de gastos por etiqueta;
 - cartões ganharam `bestPurchaseDay` opcional; quando vazio, o melhor dia é 1
   dia antes do fechamento; quando preenchido, o valor manual prevalece;
+- cartões ganharam `paymentDay`, exibido como vencimento da fatura;
+- compras de cartão ganharam `billingMonth`; compras feitas após o
+  `closingDay` passam a iniciar cobrança na fatura do mês seguinte, inclusive
+  a primeira parcela de compras parceladas;
+- editar o fechamento de um cartão recalcula o mês de cobrança das compras já
+  registradas daquele cartão e rematerializa as parcelas;
 - a meta dos cartões do mês agora compara a meta com a próxima fatura projetada
   (`month + 1`), e a despesa planejada de cartões usa a fatura do mês somada à
   reserva restante dessa próxima fatura;
@@ -75,6 +84,9 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - Teste local de domínio: confirmou entrada futura R$ 1.000, saída futura
   R$ 300, fechamento dia 10 gerando melhor compra dia 9 e override manual sendo
   respeitado.
+- Teste local de domínio em 2026-07-07: com fechamento dia 5 e vencimento dia
+  10, uma compra em 02/07 ficou na fatura de julho; compra parcelada em 08/07
+  iniciou em agosto; totais retornaram R$ 12 em julho e R$ 100 em agosto.
 - Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
   2026-07-05.
 - Produção: deploy do commit `e3175f4` validado em 2026-07-06; `/api/version`

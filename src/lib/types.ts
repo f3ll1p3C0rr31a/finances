@@ -41,6 +41,7 @@ export type SerializedCardSummary = {
   paid: boolean
   closingDay: number | null
   bestPurchaseDay: number | null
+  paymentDay: number | null
 }
 
 export type SerializedSubscription = {
@@ -62,7 +63,9 @@ export type SerializedCardPurchase = {
   installmentAmount: number
   remainingAmount: number
   purchaseDate: string
+  billingMonth: string
   installmentCount: number
+  currentInstallmentNo: number | null
   hasInterest: boolean
   paidInstallments: number
   remainingInstallments: number

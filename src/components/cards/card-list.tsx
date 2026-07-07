@@ -30,6 +30,7 @@ export function CardList({ cards }: { cards: SerializedCardSummary[] }) {
                 {card.bestPurchaseDay
                   ? `melhor compra dia ${card.bestPurchaseDay}`
                   : "melhor dia não definido"}
+                {card.paymentDay ? ` · vence dia ${card.paymentDay}` : ""}
               </p>
             </CardContent>
           </Card>

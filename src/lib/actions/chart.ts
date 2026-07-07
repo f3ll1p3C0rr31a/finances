@@ -185,14 +185,19 @@ export async function getCardMonthlyHistory(
   cardId: string
 ): Promise<CardMonthChartPoint[]> {
   const [purchases, installments] = await Promise.all([
-    prisma.cardPurchase.findMany({ where: { cardId }, select: { purchaseDate: true } }),
+    prisma.cardPurchase.findMany({
+      where: { cardId },
+      select: { purchaseDate: true, billingMonth: true },
+    }),
     prisma.cardInstallment.findMany({ where: { purchase: { cardId } }, select: { month: true } }),
   ])
 
   if (purchases.length === 0) return []
 
   const purchaseMonths = purchases.map(
-    (p) => new Date(Date.UTC(p.purchaseDate.getUTCFullYear(), p.purchaseDate.getUTCMonth(), 1))
+    (p) =>
+      p.billingMonth ??
+      new Date(Date.UTC(p.purchaseDate.getUTCFullYear(), p.purchaseDate.getUTCMonth(), 1))
   )
   const allMonths = [...purchaseMonths, ...installments.map((i) => i.month)]
   const start = allMonths.reduce((min, d) => (d < min ? d : min), allMonths[0])
@@ -209,5 +214,21 @@ export async function getCardMonthlyHistory(
     month: monthKeyFromDate(month),
     label: formatMonthLabel(month),
     total: totals[i].toNumber(),
+  }))
+}
+
+export async function getCardMonthlyWindow(
+  userId: string,
+  cardId: string,
+  startMonth: Date,
+  monthCount = 12
+): Promise<CardMonthChartPoint[]> {
+  const months = Array.from({ length: monthCount }, (_, index) => addMonths(startMonth, index))
+  const totals = await Promise.all(months.map((month) => getCardMonthTotal(userId, cardId, month)))
+
+  return months.map((month, index) => ({
+    month: monthKeyFromDate(month),
+    label: formatMonthLabel(month),
+    total: totals[index].toNumber(),
   }))
 }

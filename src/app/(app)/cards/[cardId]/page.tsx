@@ -3,23 +3,33 @@ import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { requireUserId } from "@/lib/session"
 import { listTags } from "@/lib/actions/tags"
-import { getCardMonthlyHistory } from "@/lib/actions/chart"
-import { currentMonth } from "@/lib/calculations/month"
+import { getCardMonthlyHistory, getCardMonthlyWindow } from "@/lib/actions/chart"
+import { currentMonth, monthFromKey } from "@/lib/calculations/month"
 import { bestPurchaseDateForCard } from "@/lib/calculations/cardTiming"
 import type { SerializedCardPurchase } from "@/lib/types"
 import { MoneyText } from "@/components/ui/money-text"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { NewPurchaseDialog } from "@/components/cards/new-purchase-dialog"
 import { NewCardDialog } from "@/components/cards/new-card-dialog"
+import { CardMonthNav } from "@/components/cards/card-month-nav"
 import { PurchaseList } from "@/components/cards/purchase-list"
 import { CardMonthlyChart } from "@/components/chart/card-monthly-chart"
 
+const MONTH_KEY_PATTERN = /^\d{4}-\d{2}$/
+
 export default async function CardDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ cardId: string }>
+  searchParams: Promise<{ month?: string | string[] }>
 }) {
   const { cardId } = await params
+  const queryMonth = (await searchParams).month
+  const selectedMonth =
+    typeof queryMonth === "string" && MONTH_KEY_PATTERN.test(queryMonth)
+      ? monthFromKey(queryMonth)
+      : currentMonth()
   const userId = await requireUserId()
 
   const card = await prisma.card.findUnique({ where: { id: cardId, userId } })
@@ -27,7 +37,7 @@ export default async function CardDetailPage({
     notFound()
   }
 
-  const [purchases, allTags, monthlyHistory] = await Promise.all([
+  const [purchases, allTags, monthlyHistory, upcomingMonths] = await Promise.all([
     prisma.cardPurchase.findMany({
       where: { cardId },
       orderBy: { purchaseDate: "desc" },
@@ -35,54 +45,82 @@ export default async function CardDetailPage({
     }),
     listTags(userId),
     getCardMonthlyHistory(userId, cardId),
+    getCardMonthlyWindow(userId, cardId, selectedMonth, 12),
   ])
 
   const tagRefs = allTags.map((t) => ({ id: t.id, name: t.name }))
   const nowMonth = currentMonth()
 
-  const serialized: SerializedCardPurchase[] = purchases.map((p) => {
-    const purchaseMonth = new Date(Date.UTC(p.purchaseDate.getUTCFullYear(), p.purchaseDate.getUTCMonth(), 1))
+  const remainingDebt = purchases.reduce((sum, p) => {
+    const billingMonth =
+      p.billingMonth ??
+      new Date(Date.UTC(p.purchaseDate.getUTCFullYear(), p.purchaseDate.getUTCMonth(), 1))
+
+    if (p.installmentCount > 1) {
+      return (
+        sum +
+        p.installments
+          .filter((i) => i.month >= nowMonth)
+          .reduce((installmentSum, i) => installmentSum + i.amount.toNumber(), 0)
+      )
+    }
+
+    return billingMonth >= nowMonth ? sum + p.totalAmount.toNumber() : sum
+  }, 0)
+
+  const serialized: SerializedCardPurchase[] = purchases.flatMap((p) => {
+    const billingMonth =
+      p.billingMonth ??
+      new Date(Date.UTC(p.purchaseDate.getUTCFullYear(), p.purchaseDate.getUTCMonth(), 1))
+    const currentInstallment =
+      p.installmentCount > 1
+        ? p.installments.find((i) => i.month.getTime() === selectedMonth.getTime())
+        : null
+
+    if (p.installmentCount > 1 && !currentInstallment) return []
+    if (p.installmentCount === 1 && billingMonth.getTime() !== selectedMonth.getTime()) return []
 
     let paidInstallments: number
     let installmentAmount: number
     let remainingAmount: number
 
     if (p.installmentCount > 1) {
-      paidInstallments = p.installments.filter((i) => i.month < nowMonth).length
-      installmentAmount = (p.installments[0]?.amount ?? p.totalAmount.div(p.installmentCount)).toNumber()
+      paidInstallments = p.installments.filter((i) => i.month < selectedMonth).length
+      installmentAmount = (currentInstallment?.amount ?? p.totalAmount.div(p.installmentCount)).toNumber()
       remainingAmount = p.installments
-        .filter((i) => i.month >= nowMonth)
+        .filter((i) => i.month >= selectedMonth)
         .reduce((sum, i) => sum + i.amount.toNumber(), 0)
     } else {
-      paidInstallments = purchaseMonth < nowMonth ? 1 : 0
+      paidInstallments = billingMonth < selectedMonth ? 1 : 0
       installmentAmount = p.totalAmount.toNumber()
-      remainingAmount = purchaseMonth >= nowMonth ? p.totalAmount.toNumber() : 0
+      remainingAmount = billingMonth >= selectedMonth ? p.totalAmount.toNumber() : 0
     }
 
-    return {
+    return [{
       id: p.id,
       description: p.description,
       totalAmount: p.totalAmount.toNumber(),
       installmentAmount,
       remainingAmount,
       purchaseDate: p.purchaseDate.toISOString(),
+      billingMonth: billingMonth.toISOString(),
       installmentCount: p.installmentCount,
+      currentInstallmentNo: currentInstallment?.installmentNo ?? null,
       hasInterest: p.hasInterest,
       paidInstallments,
       remainingInstallments: p.installmentCount - paidInstallments,
       tags: p.tags.map((t) => ({ id: t.tag.id, name: t.tag.name })),
-    }
+    }]
   })
 
-  const remainingDebt = serialized.reduce((sum, p) => sum + p.remainingAmount, 0)
   const creditLimit = card.creditLimit ? card.creditLimit.toNumber() : null
   const availableLimit = creditLimit != null ? creditLimit - remainingDebt : null
 
-  const bestDay = bestPurchaseDateForCard(card, currentMonth())?.getUTCDate() ?? null
+  const bestDay = bestPurchaseDateForCard(card, selectedMonth)?.getUTCDate() ?? null
   const cardTimingLabel = bestDay
     ? `${
         card.closingDay ? `Fecha dia ${card.closingDay}` : "Sem fechamento clássico"
-      } — melhor dia para comprar: dia ${bestDay}`
+      }${card.paymentDay ? ` · vence dia ${card.paymentDay}` : ""} — melhor dia para comprar: dia ${bestDay}`
     : "Defina o fechamento ou informe manualmente o melhor dia de compra"
 
   return (
@@ -99,12 +137,17 @@ export default async function CardDetailPage({
               name: card.name,
               closingDay: card.closingDay,
               bestPurchaseDay: card.bestPurchaseDay,
+              paymentDay: card.paymentDay,
               creditLimit,
             }}
             triggerLabel="Editar cartão"
             triggerVariant="outline"
           />
-          <NewPurchaseDialog cardId={card.id} allTags={tagRefs} />
+          <NewPurchaseDialog
+            cardId={card.id}
+            allTags={tagRefs}
+            cardCycle={{ closingDay: card.closingDay, paymentDay: card.paymentDay }}
+          />
         </div>
       </div>
       {creditLimit != null ? (
@@ -124,7 +167,23 @@ export default async function CardDetailPage({
           </CardContent>
         </Card>
       ) : null}
-      <PurchaseList purchases={serialized} allTags={tagRefs} cardId={card.id} />
+      <CardMonthNav month={selectedMonth} basePath={`/cards/${card.id}`} />
+      <PurchaseList
+        purchases={serialized}
+        allTags={tagRefs}
+        cardId={card.id}
+        cardCycle={{ closingDay: card.closingDay, paymentDay: card.paymentDay }}
+      />
+      {upcomingMonths.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Próximos 12 meses</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CardMonthlyChart data={upcomingMonths} />
+          </CardContent>
+        </Card>
+      ) : null}
       {monthlyHistory.length > 0 ? (
         <Card>
           <CardHeader>

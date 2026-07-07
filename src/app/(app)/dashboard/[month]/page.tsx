@@ -89,6 +89,7 @@ export default async function DashboardMonthPage({
     paid: s.paid,
     closingDay: s.card.closingDay,
     bestPurchaseDay: bestPurchaseDateForCard(s.card, month)?.getUTCDate() ?? null,
+    paymentDay: s.card.paymentDay,
   }))
 
   return (

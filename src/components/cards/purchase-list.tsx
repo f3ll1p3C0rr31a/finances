@@ -73,10 +73,12 @@ export function PurchaseList({
   purchases,
   allTags,
   cardId,
+  cardCycle,
 }: {
   purchases: SerializedCardPurchase[]
   allTags: TagOption[]
   cardId: string
+  cardCycle?: { closingDay: number | null; paymentDay: number | null }
 }) {
   const [pending, startTransition] = useTransition()
   const [selected, setSelected] = useState<string[]>([])
@@ -228,7 +230,11 @@ export function PurchaseList({
                     </div>
                   </TableCell>
                   <TableCell>
-                    {purchase.installmentCount > 1 ? `${purchase.installmentCount}x` : "À vista"}
+                    {purchase.installmentCount > 1
+                      ? purchase.currentInstallmentNo
+                        ? `${purchase.currentInstallmentNo}/${purchase.installmentCount}`
+                        : `${purchase.installmentCount}x`
+                      : "À vista"}
                   </TableCell>
                   <TableCell className="w-32">
                     {purchase.installmentCount > 1 ? (
@@ -260,6 +266,7 @@ export function PurchaseList({
                       cardId={cardId}
                       allTags={allTags}
                       purchase={purchase}
+                      cardCycle={cardCycle}
                       triggerLabel="Editar"
                       triggerVariant="ghost"
                       triggerSize="xs"

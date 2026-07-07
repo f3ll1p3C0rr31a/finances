@@ -10,6 +10,7 @@ export const cardSchema = z.object({
   name: z.string().trim().min(1, "Informe um nome"),
   closingDay: optionalDaySchema,
   bestPurchaseDay: optionalDaySchema,
+  paymentDay: optionalDaySchema,
   creditLimit: z.coerce.number().nonnegative("Informe um valor válido").optional().nullable(),
 })
 export type CardFormValues = z.input<typeof cardSchema>

@@ -19,7 +19,10 @@ export async function getCardMonthTotal(
       where: {
         cardId,
         installmentCount: 1,
-        purchaseDate: { gte: month, lt: nextMonth },
+        OR: [
+          { billingMonth: month },
+          { billingMonth: null, purchaseDate: { gte: month, lt: nextMonth } },
+        ],
       },
     }),
     getCardSubscriptionsTotal(userId, cardId, month),

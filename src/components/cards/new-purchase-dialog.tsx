@@ -13,6 +13,7 @@ import {
 import { createCardPurchase, updateCardPurchase } from "@/lib/actions/cards"
 import { setCardPurchaseTags } from "@/lib/actions/tags"
 import { addMonths, formatMonthLabel } from "@/lib/calculations/month"
+import { invoiceMonthForPurchase } from "@/lib/calculations/cardTiming"
 import { formatCurrency } from "@/lib/calculations/format"
 import type { SerializedCardPurchase } from "@/lib/types"
 import type { TagOption } from "@/components/tags/tag-multi-select"
@@ -61,6 +62,7 @@ type Props = {
   triggerLabel?: string
   triggerVariant?: "default" | "outline" | "ghost" | "secondary"
   triggerSize?: "default" | "sm" | "xs" | "icon-sm"
+  cardCycle?: { closingDay: number | null; paymentDay: number | null }
 }
 
 export function NewPurchaseDialog({
@@ -70,6 +72,7 @@ export function NewPurchaseDialog({
   triggerLabel,
   triggerVariant = "default",
   triggerSize = "default",
+  cardCycle,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
@@ -97,9 +100,13 @@ export function NewPurchaseDialog({
 
   let rangeLabel: string | null = null
   if (purchaseDateStr && installmentCount > 0) {
-    const [y, m] = purchaseDateStr.split("-").map(Number)
-    if (y && m) {
-      const startMonth = new Date(Date.UTC(y, m - 1, 1))
+    const [y, m, d] = purchaseDateStr.split("-").map(Number)
+    if (y && m && d) {
+      const purchaseDate = new Date(Date.UTC(y, m - 1, d))
+      const startMonth = invoiceMonthForPurchase(
+        { closingDay: cardCycle?.closingDay ?? null },
+        purchaseDate
+      )
       const endMonth = addMonths(startMonth, installmentCount - 1)
       rangeLabel =
         installmentCount > 1
@@ -258,7 +265,10 @@ export function NewPurchaseDialog({
                   <strong>{formatCurrency(total)}</strong>
                 </p>
                 {rangeLabel ? (
-                  <p className="text-muted-foreground">Lançado em: {rangeLabel}</p>
+                  <p className="text-muted-foreground">
+                    Cobrança em: {rangeLabel}
+                    {cardCycle?.paymentDay ? ` · vencimento dia ${cardCycle.paymentDay}` : ""}
+                  </p>
                 ) : null}
               </div>
             ) : null}

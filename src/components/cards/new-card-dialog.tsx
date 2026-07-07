@@ -36,6 +36,7 @@ type Props = {
     name: string
     closingDay: number | null
     bestPurchaseDay: number | null
+    paymentDay: number | null
     creditLimit: number | null
   }
   triggerLabel?: string
@@ -58,6 +59,7 @@ export function NewCardDialog({
       name: card?.name ?? "",
       closingDay: card?.closingDay ?? undefined,
       bestPurchaseDay: card?.bestPurchaseDay ?? undefined,
+      paymentDay: card?.paymentDay ?? undefined,
       creditLimit: card?.creditLimit ?? undefined,
     },
   })
@@ -92,7 +94,7 @@ export function NewCardDialog({
         <DialogHeader>
           <DialogTitle>{card ? "Editar cartão" : "Novo cartão"}</DialogTitle>
           <DialogDescription>
-            Informe o fechamento e, se precisar, sobrescreva o melhor dia de compra.
+            Informe fechamento, vencimento e, se precisar, sobrescreva o melhor dia de compra.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -151,6 +153,26 @@ export function NewCardDialog({
                     Vazio usa 1 dia antes do fechamento. Melhor dia atual:{" "}
                     {effectiveBestDay ? `dia ${effectiveBestDay}` : "não definido"}.
                   </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="paymentDay"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dia de pagamento da fatura (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={31}
+                      placeholder="ex: 10"
+                      {...field}
+                      value={String(field.value ?? "")}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

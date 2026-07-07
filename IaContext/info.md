@@ -34,7 +34,8 @@ As versões exatas estão em `package.json` e `package-lock.json`.
 - Saldo inicial, saldo planejado e saldo real com propagação entre meses.
 - Saldo mensal com entradas/saídas combinadas e valores futuros em aberto.
 - Prévia de saldo que inclui pendências incertas sem alterar o saldo oficial.
-- Cartões, limite, fechamento, melhor dia de compra e compras parceladas.
+- Cartões, limite, fechamento, vencimento, melhor dia de compra e compras
+  parceladas.
 - Meta mensal combinada para gastos de cartões.
 - Assinaturas pagas por cartão ou fora do cartão.
 - Etiquetas aplicáveis a entradas, despesas e compras.
@@ -54,7 +55,7 @@ As versões exatas estão em `package.json` e `package-lock.json`.
 | `/dashboard` | Redireciona para o mês atual |
 | `/dashboard/[month]` | Visão financeira do mês `AAAA-MM` |
 | `/cards?month=AAAA-MM` | Cartões e meta do mês selecionado |
-| `/cards/[cardId]` | Compras, limite e histórico do cartão |
+| `/cards/[cardId]?month=AAAA-MM` | Fatura mensal, compras, limite e histórico do cartão |
 | `/assinaturas` | Assinaturas ativas e canceladas |
 | `/informacoes` | Contas e chaves Pix |
 | `/api/auth/[...nextauth]` | Endpoints do Auth.js |
