@@ -10,8 +10,9 @@ import {
   type SubscriptionFormValues,
   type SubscriptionInput,
 } from "@/lib/validation/subscriptionSchemas"
-import { createSubscription } from "@/lib/actions/subscriptions"
+import { createSubscription, updateSubscription } from "@/lib/actions/subscriptions"
 import { setSubscriptionTags } from "@/lib/actions/tags"
+import type { SerializedSubscription } from "@/lib/types"
 import type { TagOption } from "@/components/tags/tag-multi-select"
 import { TagMultiSelect } from "@/components/tags/tag-multi-select"
 import { Button } from "@/components/ui/button"
@@ -55,47 +56,99 @@ type CardOption = { id: string; name: string }
 export function NewSubscriptionDialog({
   cards,
   allTags,
+  subscription,
+  triggerLabel = "Nova assinatura",
+  triggerVariant,
+  triggerSize,
 }: {
   cards: CardOption[]
   allTags: TagOption[]
+  subscription?: SerializedSubscription
+  triggerLabel?: string
+  triggerVariant?: "default" | "ghost"
+  triggerSize?: "default" | "xs"
 }) {
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
-  const [tagIds, setTagIds] = useState<string[]>([])
+  const [tagIds, setTagIds] = useState<string[]>(subscription?.tags.map((tag) => tag.id) ?? [])
+  const isEditing = Boolean(subscription)
 
   const form = useForm<SubscriptionFormValues, unknown, SubscriptionInput>({
     resolver: zodResolver(subscriptionSchema),
     defaultValues: {
-      name: "",
-      amount: 0,
-      paymentMethod: "CASH",
-      cardId: null,
+      name: subscription?.name ?? "",
+      amount:
+        subscription?.currency === "USD"
+          ? subscription.originalAmount ?? 0
+          : subscription?.amount ?? 0,
+      currency: subscription?.currency ?? "BRL",
+      exchangeRate: subscription?.exchangeRate ?? null,
+      paymentMethod: subscription?.paymentMethod ?? "CASH",
+      cardId: subscription?.cardId ?? null,
     },
   })
 
   const paymentMethod = useWatch({ control: form.control, name: "paymentMethod" })
+  const currency = useWatch({ control: form.control, name: "currency" })
+
+  function resetForm() {
+    setTagIds(subscription?.tags.map((tag) => tag.id) ?? [])
+    form.reset({
+      name: subscription?.name ?? "",
+      amount:
+        subscription?.currency === "USD"
+          ? subscription.originalAmount ?? 0
+          : subscription?.amount ?? 0,
+      currency: subscription?.currency ?? "BRL",
+      exchangeRate: subscription?.exchangeRate ?? null,
+      paymentMethod: subscription?.paymentMethod ?? "CASH",
+      cardId: subscription?.cardId ?? null,
+    })
+  }
 
   function onSubmit(values: SubscriptionInput) {
     startTransition(async () => {
       try {
-        const result = await createSubscription(values)
-        await setSubscriptionTags(result.id, tagIds)
-        toast.success("Assinatura criada.")
+        const subscriptionId = subscription
+          ? subscription.id
+          : (await createSubscription(values)).id
+        if (subscription) {
+          await updateSubscription(subscription.id, values)
+        }
+        await setSubscriptionTags(subscriptionId, tagIds)
+        toast.success(subscription ? "Assinatura atualizada." : "Assinatura criada.")
         setOpen(false)
-        setTagIds([])
-        form.reset({ name: "", amount: 0, paymentMethod: "CASH", cardId: null })
+        if (!subscription) {
+          setTagIds([])
+          form.reset({
+            name: "",
+            amount: 0,
+            currency: "BRL",
+            exchangeRate: null,
+            paymentMethod: "CASH",
+            cardId: null,
+          })
+        }
       } catch {
-        toast.error("Não foi possível criar a assinatura.")
+        toast.error("Não foi possível salvar a assinatura.")
       }
     })
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>Nova assinatura</DialogTrigger>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        if (nextOpen) resetForm()
+      }}
+    >
+      <DialogTrigger render={<Button variant={triggerVariant} size={triggerSize} />}>
+        {triggerLabel}
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nova assinatura</DialogTitle>
+          <DialogTitle>{isEditing ? "Editar assinatura" : "Nova assinatura"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
@@ -115,18 +168,64 @@ export function NewSubscriptionDialog({
             <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
-                name="amount"
+                name="currency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valor mensal</FormLabel>
-                    <FormControl>
-                      <CurrencyInput value={Number(field.value) || 0} onChange={field.onChange} />
-                    </FormControl>
+                    <FormLabel>Moeda</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue>
+                            {(value: string) => (value === "USD" ? "Dólar (USD)" : "Real (BRL)")}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="BRL">Real (BRL)</SelectItem>
+                        <SelectItem value="USD">Dólar (USD)</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{currency === "USD" ? "Valor mensal em US$" : "Valor mensal"}</FormLabel>
+                    <FormControl>
+                      <CurrencyInput
+                        value={Number(field.value) || 0}
+                        onChange={field.onChange}
+                        currency={currency}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            {currency === "USD" ? (
+              <FormField
+                control={form.control}
+                name="exchangeRate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cotação média do mês</FormLabel>
+                    <FormControl>
+                      <CurrencyInput value={Number(field.value) || 0} onChange={field.onChange} />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Usada para converter esta assinatura para reais no planejamento.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
+            <FormField
                 control={form.control}
                 name="paymentMethod"
                 render={({ field }) => (
@@ -150,11 +249,10 @@ export function NewSubscriptionDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             {paymentMethod === "CARD" ? (
               <FormField
                 control={form.control}

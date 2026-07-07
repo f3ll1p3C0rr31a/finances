@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { SubscriptionTagsDialog } from "@/components/subscriptions/subscription-tags-dialog"
+import { NewSubscriptionDialog } from "@/components/subscriptions/new-subscription-dialog"
 
 const PAYMENT_METHOD_LABELS = {
   CASH: "Dinheiro",
@@ -37,6 +38,7 @@ type CardOption = { id: string; name: string }
 
 export function SubscriptionList({
   subscriptions,
+  cards,
   allTags,
 }: {
   subscriptions: SerializedSubscription[]
@@ -101,7 +103,14 @@ export function SubscriptionList({
           subscriptions.map((sub) => (
             <TableRow key={sub.id}>
               <TableCell className="font-medium">{sub.name}</TableCell>
-              <TableCell>{formatCurrency(sub.amount)}</TableCell>
+              <TableCell>
+                {formatCurrency(sub.amount)}
+                {sub.currency === "USD" && sub.originalAmount && sub.exchangeRate ? (
+                  <span className="block text-xs text-muted-foreground">
+                    US$ {sub.originalAmount.toFixed(2)} × {sub.exchangeRate.toFixed(4)}
+                  </span>
+                ) : null}
+              </TableCell>
               <TableCell>
                 {PAYMENT_METHOD_LABELS[sub.paymentMethod]}
                 {sub.cardName ? ` (${sub.cardName})` : ""}
@@ -126,6 +135,14 @@ export function SubscriptionList({
               <TableCell className="flex justify-end gap-2">
                 {sub.active ? (
                   <>
+                    <NewSubscriptionDialog
+                      cards={cards}
+                      allTags={allTags}
+                      subscription={sub}
+                      triggerLabel="Editar"
+                      triggerVariant="ghost"
+                      triggerSize="xs"
+                    />
                     <Button variant="ghost" size="xs" disabled={pending} onClick={() => cancel(sub.id)}>
                       Cancelar
                     </Button>
@@ -135,6 +152,14 @@ export function SubscriptionList({
                   </>
                 ) : (
                   <>
+                    <NewSubscriptionDialog
+                      cards={cards}
+                      allTags={allTags}
+                      subscription={sub}
+                      triggerLabel="Editar"
+                      triggerVariant="ghost"
+                      triggerSize="xs"
+                    />
                     <Button variant="ghost" size="xs" disabled={pending} onClick={() => reactivate(sub.id)}>
                       Reativar
                     </Button>

@@ -54,8 +54,9 @@ O alias `@/*` aponta para `src/*`.
 - `Subscription` é uma cobrança recorrente sem fim predefinido.
 - `Tag` se relaciona N:N com entradas, despesas, compras e assinaturas.
 - `Account` representa banco/conta com dados como banco, agência, número, tipo
-  e titular. `PixKey` e `Card` podem se vincular a uma `Account`; uma despesa
-  pode referenciar uma chave Pix de favorecido.
+  e titular. `PixKey` própria e `Card` podem se vincular a uma `Account`; uma
+  chave Pix de terceiro guarda banco de destino em texto, sem vínculo com conta
+  própria. Uma despesa pode referenciar uma chave Pix de favorecido.
 - `PaymentMethod` aceita `CASH`, `PIX`, `TRANSFER`, `BOLETO`, `CARD` e
   `OTHER`.
 
@@ -114,6 +115,10 @@ O alias `@/*` aponta para `src/*`.
   somam, pagamentos subtraem e desmarcar aplica o movimento inverso.
 - Se o Saldo Atual ainda não existir, o primeiro movimento parte de
   `openingBalance`; ele nunca deve ser silenciosamente ignorado.
+- Despesas podem ter um `externalLink` para portal/geração de boleto e um PDF
+  anexado por ocorrência mensal. PDFs ficam fora de `public/`, em
+  `storage/boletos`, e são baixados por rota autenticada que verifica o dono da
+  despesa.
 
 ### Cartões
 
@@ -178,13 +183,20 @@ O alias `@/*` aponta para `src/*`.
   cartão entram nos gastos por etiqueta do mês em que estão ativas usando seu
   `paymentMethod`. Assinaturas pagas por cartão entram no total da fatura e,
   no gráfico do dashboard, são representadas pela etiqueta `Fatura do Cartão`.
+- Assinaturas podem ser cadastradas em BRL ou USD. Para USD, `originalAmount`
+  guarda o valor em dólar, `exchangeRate` guarda a cotação usada e `amount`
+  guarda o valor final em reais que entra nos saldos/cartões.
 
 ### Informações bancárias
 
 - Contas bancárias e chaves Pix podem ser criadas, editadas e excluídas na tela
   Informações.
 - Chaves Pix podem ser próprias (`OWN`) ou de pagamentos frequentes
-  (`PAYEE`) e podem se vincular a uma conta do mesmo usuário.
+  (`PAYEE`) e possuem tipo (`PHONE`, `CPF`, `CNPJ`, `EMAIL`, `RANDOM`).
+- Chaves Pix próprias podem se vincular a uma conta do mesmo usuário.
+- Chaves Pix de terceiros não devem se vincular a contas próprias; elas usam
+  `destinationBankName` e `destinationBankCode` para registrar o banco de
+  destino.
 - Ações de edição devem verificar propriedade por `userId`, inclusive para a
   conta vinculada informada no payload.
 

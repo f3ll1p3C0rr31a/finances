@@ -23,12 +23,23 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
+const PIX_KEY_TYPE_LABELS = {
+  PHONE: "Celular",
+  CPF: "CPF",
+  CNPJ: "CNPJ",
+  EMAIL: "E-mail",
+  RANDOM: "Aleatória",
+} as const
+
 type PixKeyDialogRow = {
   id: string
   kind: "OWN" | "PAYEE"
+  keyType: keyof typeof PIX_KEY_TYPE_LABELS | null
   label: string
   keyValue: string
   accountId: string | null
+  destinationBankName: string | null
+  destinationBankCode: string | null
   notes: string | null
 }
 
@@ -49,8 +60,17 @@ export function NewPixKeyDialog({
 }) {
   const [open, setOpen] = useState(false)
   const [label, setLabel] = useState(pixKey?.label ?? "")
+  const [keyType, setKeyType] = useState<keyof typeof PIX_KEY_TYPE_LABELS>(
+    pixKey?.keyType ?? "PHONE"
+  )
   const [keyValue, setKeyValue] = useState(pixKey?.keyValue ?? "")
   const [accountId, setAccountId] = useState<string | null>(pixKey?.accountId ?? null)
+  const [destinationBankName, setDestinationBankName] = useState(
+    pixKey?.destinationBankName ?? ""
+  )
+  const [destinationBankCode, setDestinationBankCode] = useState(
+    pixKey?.destinationBankCode ?? ""
+  )
   const [notes, setNotes] = useState(pixKey?.notes ?? "")
   const [pending, startTransition] = useTransition()
 
@@ -58,15 +78,27 @@ export function NewPixKeyDialog({
 
   function resetForm() {
     setLabel(pixKey?.label ?? "")
+    setKeyType(pixKey?.keyType ?? "PHONE")
     setKeyValue(pixKey?.keyValue ?? "")
     setAccountId(pixKey?.accountId ?? null)
+    setDestinationBankName(pixKey?.destinationBankName ?? "")
+    setDestinationBankCode(pixKey?.destinationBankCode ?? "")
     setNotes(pixKey?.notes ?? "")
   }
 
   function save() {
     startTransition(async () => {
       try {
-        const payload = { kind, label, keyValue, accountId, notes }
+        const payload = {
+          kind,
+          keyType,
+          label,
+          keyValue,
+          accountId,
+          destinationBankName,
+          destinationBankCode,
+          notes,
+        }
         if (pixKey) {
           await updatePixKey(pixKey.id, payload)
         } else {
@@ -114,6 +146,29 @@ export function NewPixKeyDialog({
             <Input id="pix-key" value={keyValue} onChange={(e) => setKeyValue(e.target.value)} />
           </div>
           <div className="grid gap-2">
+            <Label>Tipo da chave</Label>
+            <Select
+              value={keyType}
+              onValueChange={(value) => setKeyType(value as keyof typeof PIX_KEY_TYPE_LABELS)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {(value: string) =>
+                    PIX_KEY_TYPE_LABELS[value as keyof typeof PIX_KEY_TYPE_LABELS]
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PIX_KEY_TYPE_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {kind === "OWN" ? (
+          <div className="grid gap-2">
             <Label>Conta vinculada (opcional)</Label>
             <Select
               value={accountId ?? "NONE"}
@@ -138,6 +193,28 @@ export function NewPixKeyDialog({
               </SelectContent>
             </Select>
           </div>
+          ) : (
+            <div className="grid grid-cols-[1fr_8rem] gap-3">
+              <div className="grid gap-2">
+                <Label htmlFor="pix-destination-bank">Banco de destino</Label>
+                <Input
+                  id="pix-destination-bank"
+                  value={destinationBankName}
+                  onChange={(e) => setDestinationBankName(e.target.value)}
+                  placeholder="ex: Banco do Brasil"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="pix-destination-code">Código</Label>
+                <Input
+                  id="pix-destination-code"
+                  value={destinationBankCode}
+                  onChange={(e) => setDestinationBankCode(e.target.value)}
+                  placeholder="001"
+                />
+              </div>
+            </div>
+          )}
           <div className="grid gap-2">
             <Label htmlFor="pix-notes">Notas (opcional)</Label>
             <Input id="pix-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />

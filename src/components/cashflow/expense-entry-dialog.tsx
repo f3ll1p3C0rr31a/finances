@@ -129,6 +129,7 @@ export function ExpenseEntryDialog({
       paidByName: entry?.paidByName ?? "",
       paymentMethod: entry?.paymentMethod ?? "PIX",
       pixKeyId: entry?.pixKeyId ?? null,
+      externalLink: entry?.externalLink ?? "",
     },
   })
 
@@ -436,6 +437,23 @@ export function ExpenseEntryDialog({
                 )}
               />
             ) : null}
+            <FormField
+              control={form.control}
+              name="externalLink"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Link externo (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      value={field.value ?? ""}
+                      placeholder="ex: portal onde gera o boleto"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="paidBy"

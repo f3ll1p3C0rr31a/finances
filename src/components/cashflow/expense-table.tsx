@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ExpenseEntryDialog } from "@/components/cashflow/expense-entry-dialog"
+import { ExpenseReferencesDialog } from "@/components/cashflow/expense-references-dialog"
 
 const CATEGORY_LABELS = {
   FIXED: "Fixa",
@@ -245,6 +246,7 @@ export function ExpenseTable({
                     allTags={allTags}
                     pixPayees={pixPayees}
                   />
+                  <ExpenseReferencesDialog entry={entry} />
                   <Button
                     variant="ghost"
                     size="xs"

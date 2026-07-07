@@ -32,6 +32,9 @@ export type SerializedExpenseEntry = {
   paymentMethod: PaymentMethod
   pixKeyId: string | null
   pixKeyLabel: string | null
+  externalLink: string | null
+  attachmentFileName: string | null
+  hasAttachment: boolean
 }
 
 export type SerializedCardSummary = {
@@ -50,6 +53,9 @@ export type SerializedSubscription = {
   id: string
   name: string
   amount: number
+  currency: "BRL" | "USD"
+  originalAmount: number | null
+  exchangeRate: number | null
   paymentMethod: PaymentMethod
   cardId: string | null
   cardName: string | null

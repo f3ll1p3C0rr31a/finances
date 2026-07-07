@@ -75,6 +75,16 @@ Foram ajustados o dashboard e a exclusão de despesas:
   `Fatura do Cartão`.
 - contas bancárias e chaves Pix podem ser editadas depois de criadas na tela
   Informações.
+- chaves Pix ganharam tipo da chave (`Celular`, `CPF`, `CNPJ`, `E-mail`,
+  `Aleatória`); Pix próprios podem se vincular a uma conta própria e Pix de
+  terceiros agora registram banco de destino/código sem vínculo com conta
+  própria.
+- despesas ganharam link externo e anexo PDF por ocorrência mensal; o PDF é
+  salvo em `storage/boletos` e servido por rota autenticada
+  `/api/expense-attachments/[expenseId]`.
+- assinaturas podem ser BRL ou USD; em USD, a UI pede valor em dólar e cotação
+  média do mês, guarda o valor convertido em reais e mostra a memória da
+  conversão na lista.
 - o deploy expõe `/api/version` e só passa no health check quando o SHA servido
   corresponde ao commit disparado pelo GitHub Actions.
 - Em produção, a duplicidade “Nubank” foi removida pelo serviço de domínio em
@@ -116,6 +126,14 @@ Foram ajustados o dashboard e a exclusão de despesas:
   remoção de metas futuras explícitas, `Fatura do Cartão` nos gastos por
   etiqueta, ausência de `Sem etiqueta`, e edição de conta/Pix com dados
   temporários.
+- `npx prisma migrate deploy`: aplicou localmente
+  `20260707224000_pix_boleto_subscription_currency` em 2026-07-07.
+- `npm run lint`: passou em 2026-07-07 após Pix, anexos de boleto e USD.
+- `npm run build`: passou em 2026-07-07 com Next.js 16.2.9 após Pix, anexos de
+  boleto e USD.
+- Teste local de domínio em 2026-07-07: confirmou Pix próprio com tipo e conta,
+  Pix terceiro com tipo e banco de destino, despesa com link/PDF e assinatura
+  USD convertida por cotação.
 - Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
   2026-07-05.
 - Produção: deploy do commit `e3175f4` validado em 2026-07-06; `/api/version`

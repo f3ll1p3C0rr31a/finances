@@ -26,6 +26,11 @@ export const expenseEntrySchema = z.object({
   paidByName: z.string().trim().optional().nullable(),
   paymentMethod: z.enum(["CASH", "PIX", "TRANSFER", "BOLETO", "CARD", "OTHER"]),
   pixKeyId: z.string().trim().optional().nullable(),
+  externalLink: z
+    .union([z.literal(""), z.string().trim().url("Informe um link válido")])
+    .optional()
+    .nullable()
+    .transform((value) => value || null),
 })
 export type ExpenseEntryFormValues = z.input<typeof expenseEntrySchema>
 export type ExpenseEntryInput = z.output<typeof expenseEntrySchema>

@@ -4,16 +4,17 @@ import * as React from "react"
 
 import { Input } from "@/components/ui/input"
 
-function centsToDisplay(cents: number): string {
+function centsToDisplay(cents: number, currency: "BRL" | "USD"): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
-    currency: "BRL",
+    currency,
   }).format(cents / 100)
 }
 
 type CurrencyInputProps = {
   value: number
   onChange: (value: number) => void
+  currency?: "BRL" | "USD"
 } & Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "type">
 
 /**
@@ -22,7 +23,7 @@ type CurrencyInputProps = {
  * so there's no comma/period to type and no risk of an ambiguous
  * decimal separator.
  */
-export function CurrencyInput({ value, onChange, ...props }: CurrencyInputProps) {
+export function CurrencyInput({ value, onChange, currency = "BRL", ...props }: CurrencyInputProps) {
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const digits = event.target.value.replace(/\D/g, "")
     const cents = digits === "" ? 0 : parseInt(digits, 10)
@@ -33,7 +34,7 @@ export function CurrencyInput({ value, onChange, ...props }: CurrencyInputProps)
     <Input
       type="text"
       inputMode="decimal"
-      value={centsToDisplay(Math.round((value || 0) * 100))}
+      value={centsToDisplay(Math.round((value || 0) * 100), currency)}
       onChange={handleChange}
       {...props}
     />

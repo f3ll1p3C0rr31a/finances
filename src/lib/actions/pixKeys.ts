@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { requireUserId } from "@/lib/session"
 
+type PixKeyTypeInput = "PHONE" | "CPF" | "CNPJ" | "EMAIL" | "RANDOM"
+
 export async function listPixKeys(userId: string, kind?: "OWN" | "PAYEE") {
   return prisma.pixKey.findMany({
     where: { userId, ...(kind ? { kind } : {}) },
@@ -15,16 +17,23 @@ export async function listPixKeys(userId: string, kind?: "OWN" | "PAYEE") {
 
 export async function createPixKey(input: {
   kind: "OWN" | "PAYEE"
+  keyType?: PixKeyTypeInput | null
   label: string
   keyValue: string
   accountId?: string | null
+  destinationBankName?: string | null
+  destinationBankCode?: string | null
   notes?: string | null
 }) {
   const userId = await requireUserId()
   const label = input.label.trim()
   const keyValue = input.keyValue.trim()
   if (!label || !keyValue) throw new Error("Preencha rótulo e chave")
-  const accountId = input.accountId?.trim() || null
+  const accountId = input.kind === "OWN" ? input.accountId?.trim() || null : null
+  const destinationBankName =
+    input.kind === "PAYEE" ? input.destinationBankName?.trim() || null : null
+  const destinationBankCode =
+    input.kind === "PAYEE" ? input.destinationBankCode?.trim() || null : null
 
   if (accountId) {
     await prisma.account.findUniqueOrThrow({ where: { id: accountId, userId } })
@@ -35,8 +44,11 @@ export async function createPixKey(input: {
       userId,
       accountId,
       kind: input.kind,
+      keyType: input.keyType ?? null,
       label,
       keyValue,
+      destinationBankName,
+      destinationBankCode,
       notes: input.notes?.trim() || null,
     },
   })
@@ -48,9 +60,12 @@ export async function updatePixKey(
   id: string,
   input: {
     kind: "OWN" | "PAYEE"
+    keyType?: PixKeyTypeInput | null
     label: string
     keyValue: string
     accountId?: string | null
+    destinationBankName?: string | null
+    destinationBankCode?: string | null
     notes?: string | null
   }
 ) {
@@ -58,7 +73,11 @@ export async function updatePixKey(
   const label = input.label.trim()
   const keyValue = input.keyValue.trim()
   if (!label || !keyValue) throw new Error("Preencha rótulo e chave")
-  const accountId = input.accountId?.trim() || null
+  const accountId = input.kind === "OWN" ? input.accountId?.trim() || null : null
+  const destinationBankName =
+    input.kind === "PAYEE" ? input.destinationBankName?.trim() || null : null
+  const destinationBankCode =
+    input.kind === "PAYEE" ? input.destinationBankCode?.trim() || null : null
 
   if (accountId) {
     await prisma.account.findUniqueOrThrow({ where: { id: accountId, userId } })
@@ -69,8 +88,11 @@ export async function updatePixKey(
     data: {
       accountId,
       kind: input.kind,
+      keyType: input.keyType ?? null,
       label,
       keyValue,
+      destinationBankName,
+      destinationBankCode,
       notes: input.notes?.trim() || null,
     },
   })

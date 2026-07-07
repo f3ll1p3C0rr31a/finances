@@ -1,5 +1,8 @@
 "use server"
 
+import { mkdir, rm, writeFile } from "node:fs/promises"
+import path from "node:path"
+
 import { prisma } from "@/lib/prisma"
 import { requireUserId } from "@/lib/session"
 import { revalidatePath } from "next/cache"
@@ -13,6 +16,14 @@ import { expenseEntrySchema, type ExpenseEntryInput } from "@/lib/validation/sch
 
 function revalidateMonth(month: Date) {
   revalidatePath(`/dashboard/${monthKeyFromDate(month)}`)
+}
+
+function cleanExternalLink(value: string | null | undefined) {
+  return value?.trim() || null
+}
+
+function safeFileName(name: string) {
+  return name.normalize("NFKD").replace(/[^\w.-]+/g, "-").replace(/-+/g, "-").slice(0, 120)
 }
 
 export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) {
@@ -54,6 +65,7 @@ export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) 
         paidByName,
         paymentMethod: data.paymentMethod,
         pixKeyId: data.pixKeyId ?? null,
+        externalLink: cleanExternalLink(data.externalLink),
       },
     })
     entryId = entry.id
@@ -72,6 +84,7 @@ export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) 
         paidByName,
         paymentMethod: data.paymentMethod,
         pixKeyId: data.pixKeyId ?? null,
+        externalLink: cleanExternalLink(data.externalLink),
         uncertain: data.uncertain,
       },
     })
@@ -109,6 +122,7 @@ export async function updateExpenseEntry(id: string, input: ExpenseEntryInput) {
       paidByName,
       paymentMethod: data.paymentMethod,
       pixKeyId: data.pixKeyId ?? null,
+      externalLink: cleanExternalLink(data.externalLink),
     },
   })
 
@@ -150,4 +164,69 @@ export async function deleteExpenseEntry(id: string) {
   const result = await deleteExpenseForUser(userId, id)
   revalidatePath("/dashboard", "layout")
   return result
+}
+
+export async function saveExpenseReferences(
+  id: string,
+  input: { externalLink?: string | null }
+) {
+  const userId = await requireUserId()
+  const entry = await prisma.expenseEntry.update({
+    where: { id, userId },
+    data: { externalLink: cleanExternalLink(input.externalLink) },
+  })
+  revalidateMonth(entry.month)
+}
+
+export async function uploadExpenseAttachment(id: string, formData: FormData) {
+  const userId = await requireUserId()
+  const file = formData.get("file")
+  if (!(file instanceof File)) throw new Error("Arquivo inválido")
+  if (file.type !== "application/pdf") throw new Error("Envie um PDF")
+  if (file.size > 10 * 1024 * 1024) throw new Error("PDF maior que 10 MB")
+
+  const existing = await prisma.expenseEntry.findUniqueOrThrow({ where: { id, userId } })
+  const bytes = Buffer.from(await file.arrayBuffer())
+  const relativeDir = path.join("storage", "boletos", userId, id)
+  const absoluteDir = path.join(/*turbopackIgnore: true*/ process.cwd(), relativeDir)
+  await mkdir(absoluteDir, { recursive: true })
+
+  if (existing.attachmentPath) {
+    await rm(path.join(/*turbopackIgnore: true*/ process.cwd(), existing.attachmentPath), {
+      force: true,
+    })
+  }
+
+  const filename = `${Date.now()}-${safeFileName(file.name || "boleto.pdf")}`
+  const relativePath = path.join(relativeDir, filename)
+  await writeFile(path.join(/*turbopackIgnore: true*/ process.cwd(), relativePath), bytes)
+
+  await prisma.expenseEntry.update({
+    where: { id, userId },
+    data: {
+      attachmentFileName: file.name || "boleto.pdf",
+      attachmentPath: relativePath,
+      attachmentUploadedAt: new Date(),
+    },
+  })
+  revalidateMonth(existing.month)
+}
+
+export async function removeExpenseAttachment(id: string) {
+  const userId = await requireUserId()
+  const existing = await prisma.expenseEntry.findUniqueOrThrow({ where: { id, userId } })
+  if (existing.attachmentPath) {
+    await rm(path.join(/*turbopackIgnore: true*/ process.cwd(), existing.attachmentPath), {
+      force: true,
+    })
+  }
+  await prisma.expenseEntry.update({
+    where: { id, userId },
+    data: {
+      attachmentFileName: null,
+      attachmentPath: null,
+      attachmentUploadedAt: null,
+    },
+  })
+  revalidateMonth(existing.month)
 }

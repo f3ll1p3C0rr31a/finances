@@ -15,13 +15,24 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+const PIX_KEY_TYPE_LABELS = {
+  PHONE: "Celular",
+  CPF: "CPF",
+  CNPJ: "CNPJ",
+  EMAIL: "E-mail",
+  RANDOM: "Aleatória",
+} as const
+
 type PixKeyRow = {
   id: string
   kind: "OWN" | "PAYEE"
+  keyType: keyof typeof PIX_KEY_TYPE_LABELS | null
   label: string
   keyValue: string
   accountId: string | null
   account: { name: string } | null
+  destinationBankName: string | null
+  destinationBankCode: string | null
   notes: string | null
 }
 
@@ -53,7 +64,7 @@ export function PixKeyList({
           <TableRow>
             <TableHead>Nome</TableHead>
             <TableHead>Chave</TableHead>
-            <TableHead>Conta vinculada</TableHead>
+            <TableHead>{kind === "OWN" ? "Conta vinculada" : "Banco de destino"}</TableHead>
             <TableHead>Notas</TableHead>
             <TableHead className="w-0" />
         </TableRow>
@@ -69,9 +80,25 @@ export function PixKeyList({
           pixKeys.map((key) => (
             <TableRow key={key.id}>
               <TableCell className="font-medium">{key.label}</TableCell>
-              <TableCell className="font-mono text-sm">{key.keyValue}</TableCell>
+              <TableCell className="font-mono text-sm">
+                {key.keyValue}
+                {key.keyType ? (
+                  <span className="block font-sans text-xs text-muted-foreground">
+                    {PIX_KEY_TYPE_LABELS[key.keyType]}
+                  </span>
+                ) : null}
+              </TableCell>
               <TableCell className="text-sm text-muted-foreground">
-                {key.account?.name ?? "—"}
+                {kind === "OWN" ? (
+                  key.account?.name ?? "—"
+                ) : (
+                  <>
+                    {key.destinationBankName ?? "—"}
+                    {key.destinationBankCode ? (
+                      <span className="block text-xs">Código {key.destinationBankCode}</span>
+                    ) : null}
+                  </>
+                )}
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">{key.notes ?? "—"}</TableCell>
               <TableCell className="text-right">

@@ -80,6 +80,9 @@ export default async function DashboardMonthPage({
     paymentMethod: entry.paymentMethod,
     pixKeyId: entry.pixKeyId,
     pixKeyLabel: entry.pixKey?.label ?? null,
+    externalLink: entry.externalLink,
+    attachmentFileName: entry.attachmentFileName,
+    hasAttachment: Boolean(entry.attachmentPath),
   }))
 
   const cardSummaries: SerializedCardSummary[] = data.cardSummaries.map((s) => ({
