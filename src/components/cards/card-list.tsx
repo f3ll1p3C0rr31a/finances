@@ -2,7 +2,7 @@ import Link from "next/link"
 
 import type { SerializedCardSummary } from "@/lib/types"
 import { MoneyText } from "@/components/ui/money-text"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { BankCardVisual } from "@/components/cards/bank-card-visual"
 
 export function CardList({ cards }: { cards: SerializedCardSummary[] }) {
   if (cards.length === 0) {
@@ -10,31 +10,36 @@ export function CardList({ cards }: { cards: SerializedCardSummary[] }) {
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((card) => (
-        <Link key={card.id} href={`/cards/${card.id}`}>
-          <Card className="transition-colors hover:bg-muted/50">
-            <CardHeader>
-              <CardTitle>{card.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <div>
-                <p className="text-sm text-muted-foreground">Total do mês</p>
-                <p className="text-xl font-semibold">
-                  <MoneyText value={-card.total} />
-                </p>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {card.accountName ? `${card.accountName} · ` : ""}
-                {card.closingDay ? `Fecha dia ${card.closingDay}` : "Sem fechamento clássico"}
-                {" · "}
-                {card.bestPurchaseDay
-                  ? `melhor compra dia ${card.bestPurchaseDay}`
-                  : "melhor dia não definido"}
-                {card.paymentDay ? ` · vence dia ${card.paymentDay}` : ""}
+        <Link key={card.id} href={`/cards/${card.id}`} className="group flex flex-col gap-2">
+          <BankCardVisual
+            compact
+            name={card.name}
+            accountName={card.accountName}
+            cardNumber={card.cardNumber}
+          />
+          <div className="flex items-baseline justify-between px-1">
+            <div>
+              <p className="text-xs text-muted-foreground">Fatura do mês</p>
+              <p className="text-lg font-semibold">
+                <MoneyText value={-card.total} />
               </p>
-            </CardContent>
-          </Card>
+            </div>
+            {card.paid ? (
+              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                Paga
+              </span>
+            ) : null}
+          </div>
+          <p className="px-1 text-xs text-muted-foreground">
+            {card.closingDay ? `Fecha dia ${card.closingDay}` : "Sem fechamento clássico"}
+            {" · "}
+            {card.bestPurchaseDay
+              ? `melhor compra dia ${card.bestPurchaseDay}`
+              : "melhor dia não definido"}
+            {card.paymentDay ? ` · vence dia ${card.paymentDay}` : ""}
+          </p>
         </Link>
       ))}
     </div>

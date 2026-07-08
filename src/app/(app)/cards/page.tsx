@@ -1,6 +1,7 @@
 import { requireUserId } from "@/lib/session"
 import { getCardGoalData } from "@/lib/actions/cardSummary"
 import { listAccounts } from "@/lib/actions/accounts"
+import { ensureSubscriptionChargesGenerated } from "@/lib/services/subscriptionCharges"
 import { currentMonth, monthFromKey, monthKeyFromDate } from "@/lib/calculations/month"
 import { bestPurchaseDateForCard } from "@/lib/calculations/cardTiming"
 import type { SerializedCardSummary } from "@/lib/types"
@@ -22,6 +23,7 @@ export default async function CardsPage({
     typeof queryMonth === "string" && MONTH_KEY_PATTERN.test(queryMonth)
       ? monthFromKey(queryMonth)
       : currentMonth()
+  await ensureSubscriptionChargesGenerated(userId)
   const [goalData, accounts] = await Promise.all([
     getCardGoalData(userId, month),
     listAccounts(userId),
@@ -47,6 +49,7 @@ export default async function CardsPage({
     closingDay: s.card.closingDay,
     bestPurchaseDay: bestPurchaseDateForCard(s.card, month)?.getUTCDate() ?? null,
     paymentDay: s.card.paymentDay,
+    cardNumber: s.card.cardNumber,
   }))
 
   return (

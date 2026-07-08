@@ -1,161 +1,92 @@
 # Continuidade
 
-Atualizado em: 2026-07-07
+Atualizado em: 2026-07-08
 
 ## Estado atual
 
-Foram ajustados o dashboard e a exclusão de despesas:
+### Objetivo
 
-- excluir uma despesa recorrente agora remove seu template e todas as
-  ocorrências, em vez de permitir que ela seja recriada automaticamente;
-- os ajustes de saldo real são desfeitos e a cadeia mensal é recalculada;
-- a remoção foi extraída para um serviço testável e validada por integração
-  contra PostgreSQL com dados temporários;
-- cartões ativos aparecem como linhas variáveis calculadas no topo de Despesas;
-- a coluna Pago dessas linhas agora possui um switch persistente por cartão e
-  mês; marcar/desmarcar ajusta e reverte o saldo real pelo valor da fatura;
-- a diferença positiva entre a meta combinada e as faturas é exibida como
-  despesa prevista e incluída no saldo planejado e nos gráficos;
-- o vencimento de despesas passou de campo numérico para calendário; no modo
-  dia útil, datas não úteis ficam indisponíveis;
-- entradas e despesas podem ser marcadas como incertas: ficam fora dos totais,
-  avançam para o mês atual enquanto pendentes e entram no mês quando
-  recebidas/pagas;
-- o resumo mensal ganhou uma prévia separada que considera valores incertos sem
-  tratá-la como saldo oficial;
-- `actualBalance` agora aparece como “Saldo Atual” imediatamente abaixo do
-  planejado, sincroniza visualmente após Pago/Recebido e parte do saldo inicial
-  quando ainda não tiver sido gravado;
-- a visão financeira ganhou uma matriz semelhante à planilha original, com
-  lançamentos por linha, meses por coluna, total lateral e resumos no rodapé;
-- a guia Cartões ganhou navegação Anterior/Próximo via `?month=AAAA-MM`, e
-  todos os cálculos da página respeitam o mês escolhido;
-- a tela de detalhe de um cartão também ganhou navegação mensal via
-  `?month=AAAA-MM`, lista apenas a fatura do mês escolhido e mantém gráficos de
-  histórico e próximos 12 meses;
-- o resumo mensal mostra Saldo Inicial, Total de Entrada, Entradas Futuras,
-  Total de Saídas, Saídas Futuras, Diferença, Saldo Planejado e Saldo Atual;
-- entradas futuras representam valores ainda não recebidos; saídas futuras
-  representam despesas em aberto, cartões não pagos, reserva da meta e
-  assinaturas fora do cartão;
-- a reserva da meta de cartões é calculada no mês aberto, mas lançada apenas no
-  mês da fatura projetada (`month + 1`), não no mês vigente;
-- `PaymentMethod` ganhou `BOLETO`, disponível em despesas, assinaturas e filtros
-  de gastos por etiqueta;
-- cartões ganharam `bestPurchaseDay` opcional; quando vazio, o melhor dia é 1
-  dia antes do fechamento; quando preenchido, o valor manual prevalece;
-- cartões ganharam `paymentDay`, exibido como vencimento da fatura;
-- compras de cartão ganharam `billingMonth`; compras feitas após o
-  `closingDay` passam a iniciar cobrança na fatura do mês seguinte, inclusive
-  a primeira parcela de compras parceladas;
-- editar o fechamento de um cartão recalcula o mês de cobrança das compras já
-  registradas daquele cartão e rematerializa as parcelas;
-- assinaturas ganharam etiquetas por `SubscriptionTag`; a página Assinaturas
-  permite criar/editar etiquetas e elas entram nos gastos por etiqueta;
-- contas passaram a registrar banco, código, agência, número, dígito, tipo e
-  titular; cartões e chaves Pix podem ser vinculados a uma conta;
-- a visão padrão dos gráficos do dashboard agora é “Próximos 12 meses”;
-- a meta dos cartões do mês agora compara a meta com a próxima fatura projetada
-  (`month + 1`), e a despesa planejada de cartões usa a fatura do mês somada à
-  reserva restante dessa próxima fatura;
-- criação, edição e exclusão de compras de cartão recalculam a cadeia de saldos
-  do mês afetado e do anterior;
-- o app foi renomeado visualmente para Fortuna, com logo SVG próprio e paleta
-  mais viva em verde/roxo;
-- o bloco separado de cartões foi removido do dashboard;
-- os gráficos oferecem as visões “Ano completo” e “Próximos 12 meses”, ambas
-  com 12 meses completos relativos ao mês aberto.
-- a navegação mensal do dashboard e da guia Cartões ganhou o botão “Mês atual”
-  para voltar diretamente ao mês vigente.
-- a meta de cartões passou a funcionar por herança: salvar em um mês cria a
-  nova meta daquele mês em diante, removendo metas futuras explícitas e sem
-  alterar meses anteriores.
-- o gráfico de gastos por etiqueta agora formata rótulos em `R$` com centavos,
-  ignora lançamentos sem etiqueta e representa cartões pela etiqueta fixa
-  `Fatura do Cartão`.
-- contas bancárias e chaves Pix podem ser editadas depois de criadas na tela
-  Informações.
-- chaves Pix ganharam tipo da chave (`Celular`, `CPF`, `CNPJ`, `E-mail`,
-  `Aleatória`); Pix próprios podem se vincular a uma conta própria e Pix de
-  terceiros agora registram banco de destino/código sem vínculo com conta
-  própria.
-- despesas ganharam link externo e anexo PDF por ocorrência mensal; o PDF é
-  salvo em `storage/boletos` e servido por rota autenticada
-  `/api/expense-attachments/[expenseId]`.
-- assinaturas podem ser BRL ou USD; em USD, a UI pede valor em dólar e cotação
-  média do mês, guarda o valor convertido em reais e mostra a memória da
-  conversão na lista.
-- a regra de fatura de cartão passou a considerar `billingMonth` como mês de
-  pagamento/vencimento: no cartão específico da compra, compras até o
-  `closingDay` entram no mês seguinte; compras depois do fechamento entram dois
-  meses à frente. O melhor dia automático passou a ser o dia posterior ao
-  fechamento.
-- o gráfico “Saldo ao longo do tempo” passou a exibir também Saídas e
-  Diferença; o dashboard ganhou o gráfico “Fluxo de caixa do mês”, com
-  entradas e saídas acumuladas por dia.
-- o deploy expõe `/api/version` e só passa no health check quando o SHA servido
-  corresponde ao commit disparado pelo GitHub Actions.
-- Em produção, a duplicidade “Nubank” foi removida pelo serviço de domínio em
-  2026-07-05: um template e 12 ocorrências foram apagados; o cartão foi
-  preservado. Foi criado backup SQL imediatamente antes da operação.
+Corrigir o mês de fatura das compras de cartão (compras de 07/07 no Nubank
+caíam em setembro em vez de agosto), transformar assinaturas em cobranças
+mensais datadas com histórico, e melhorar o visual (cartõezinhos de banco,
+número/CVV com copiar, bandeira, logos de assinaturas, ícone Pix, nova logo
+Fortuna em moeda romana).
 
-## Validação desta passagem
+### Alterações realizadas
 
-- `npm run lint`: passou em 2026-07-05.
-- `npm run build`: passou após os ajustes em 2026-07-05 com Next.js 16.2.9.
-- Teste de integração isolado da exclusão recorrente: passou em 2026-07-05.
-- Teste de integração do pagamento e estorno de fatura: passou em 2026-07-05.
-- Teste de integração da reserva da meta (R$ 4.500 gastos / R$ 5.000 de meta):
-  passou com reserva de R$ 500 e despesa planejada de R$ 5.000.
-- Teste de integração de pendências incertas: confirmou avanço de mês, exclusão
-  dos totais enquanto pendentes, inclusão na prévia e contabilização após
-  liquidação.
-- Teste do Saldo Atual: confirmou inicialização em R$ 100, movimento de +R$ 50
-  para R$ 150 e reversão para R$ 100.
-- Teste da matriz: confirmou 12 meses em ambas as visões e detalhamento correto
-  de cartão e receita.
-- `npm run lint`: passou em 2026-07-06.
-- `npm run build`: passou em 2026-07-06 com Next.js 16.2.9.
-- Teste local de domínio: confirmou entrada futura R$ 1.000, saída futura
-  R$ 300, fechamento dia 10 gerando melhor compra dia 9 e override manual sendo
-  respeitado.
-- Teste local de domínio em 2026-07-07: com fechamento dia 5 e vencimento dia
-  10, uma compra em 02/07 ficou na fatura de julho; compra parcelada em 08/07
-  iniciou em agosto; totais retornaram R$ 12 em julho e R$ 100 em agosto.
-- Teste local de domínio em 2026-07-07: uma meta de julho para fatura de agosto
-  calculou reserva, não lançou a reserva em julho, lançou em agosto e fechou o
-  planejado de agosto na meta; assinatura com tag `Stream` apareceu em gastos
-  por etiqueta como método `CARD`.
-- Teste local de domínio em 2026-07-07: uma conta com banco/agência/conta foi
-  criada e vinculada a uma chave Pix e a um cartão temporários.
-- `npm run lint`: passou em 2026-07-07.
-- `npm run build`: passou em 2026-07-07 com Next.js 16.2.9.
-- Teste local de domínio em 2026-07-07: confirmou herança da meta de cartões,
-  remoção de metas futuras explícitas, `Fatura do Cartão` nos gastos por
-  etiqueta, ausência de `Sem etiqueta`, e edição de conta/Pix com dados
-  temporários.
-- `npx prisma migrate deploy`: aplicou localmente
-  `20260707224000_pix_boleto_subscription_currency` em 2026-07-07.
-- `npm run lint`: passou em 2026-07-07 após Pix, anexos de boleto e USD.
-- `npm run build`: passou em 2026-07-07 com Next.js 16.2.9 após Pix, anexos de
-  boleto e USD.
-- Teste local de domínio em 2026-07-07: confirmou Pix próprio com tipo e conta,
-  Pix terceiro com tipo e banco de destino, despesa com link/PDF e assinatura
-  USD convertida por cotação.
-- `npm run lint`: passou em 2026-07-07 após ajuste da regra de fatura e
-  gráficos.
-- `npm run build`: passou em 2026-07-07 com Next.js 16.2.9 após ajuste da regra
-  de fatura e gráficos.
-- Teste local de domínio em 2026-07-07: cartão com fechamento dia 23 e
-  vencimento dia 1 moveu compra antiga em 20/07 de julho para agosto; julho
-  zerou, agosto recebeu R$ 2.476,03 e o fluxo de caixa colocou a fatura no dia
-  1.
-- Produção: endpoint de versão, login, banco pós-exclusão e logs validados em
-  2026-07-05.
-- Produção: deploy do commit `e3175f4` validado em 2026-07-06; `/api/version`
-  retornou o SHA esperado, `/login` retornou 200 com a marca Fortuna e
-  `/dashboard` retornou 307 sem sessão autenticada, como esperado.
-- Testes automatizados: não existem no projeto.
+- `invoiceMonthForPurchase()` passou a considerar `paymentDay`: fatura paga no
+  mesmo mês do fechamento quando `paymentDay > closingDay` (Nubank fecha dia 2
+  e vence dia 10 → compra 07/07 cai em agosto); mês seguinte quando
+  `paymentDay <= closingDay` ou nulo (comportamento anterior preservado).
+  Nova inversa `chargeDateForBillingMonth()` para recorrências.
+- Novo `scripts/recalculate-card-billing.ts` (idempotente) reaplica a regra a
+  todas as compras existentes e recalcula a cadeia de saldos.
+- Assinaturas: novos campos `chargeDay`, `cancelledAt` (data exata, migrado de
+  `cancelledMonth` = último dia do mês; coluna antiga removida) e
+  `logoDomain`. Novo modelo `SubscriptionCharge` materializa cada cobrança
+  mensal (valor congelado); meses futuros são projetados virtualmente.
+  Geração preguiçosa em `src/lib/services/subscriptionCharges.ts`, chamada nas
+  páginas Dashboard, Cartões, detalhe do cartão e Assinaturas.
+- Cancelar mantém cobranças até `cancelledAt`; reativar limpa o cancelamento e
+  move `startMonth` para frente (sem cobrar o período cancelado). Editar
+  dia/cartão/valor rematerializa do mês corrente em diante; editar o ciclo do
+  cartão rematerializa compras e assinaturas daquele cartão.
+- `subscriptionSummary.ts` reescrito (materializado + projeção); consumidores
+  atualizados: `cardSummary`, `monthly`, `chart` (fluxo de caixa usa o dia da
+  cobrança), `spendingByTag`.
+- Cartões ganharam `cardNumber`, `cvv`, `expiryMonth`, `expiryYear`;
+  `src/lib/cardBrand.ts` detecta a bandeira pelo número (Elo antes de
+  Visa/Master) e o tema visual pelo nome do emissor. `BankCardVisual` renderiza
+  o cartãozinho: lista compacta em /cards e versão completa no detalhe com
+  máscara (últimos 4 visíveis), olho para revelar, cópia por bloco de 4
+  dígitos, cópia do número completo e CVV oculto/copiável.
+- Cobranças de assinatura aparecem como linhas somente leitura na fatura do
+  cartão (logo + badge Assinatura/Cancelada, link Gerenciar).
+- Logos de assinaturas via favicon do `logoDomain` (Google s2), com sugestão
+  automática por nome (`subscription-logo.tsx`) e campo no diálogo; ícone Pix
+  (`pix-icon.tsx`) na lista de chaves, formas de pagamento de despesas e
+  assinaturas; nova logo Fortuna como moeda romana (dourada, borda perlada,
+  louros e F serifado) mantendo o halo verde/violeta.
+- Migration `20260708120000_card_details_subscription_charges` aplicada
+  localmente.
+
+### Decisões e motivos
+
+- Cobranças passadas são materializadas (histórico imutável a cancelamentos e
+  edições de preço) e futuras são projetadas (planejamento/reserva/gráficos
+  continuam funcionando) — híbrido escolhido para satisfazer "cancelar não
+  apaga o que já foi cobrado" sem quebrar projeções de 12 meses.
+- `chargeDay` de assinaturas existentes ficou com default 1; o usuário deve
+  ajustar o dia real de cada assinatura (a edição rematerializa o mês
+  corrente em diante).
+- Número/CVV ficam em texto no banco (app pessoal, single-user, atrás de
+  autenticação); a UI sempre mascara por padrão.
+
+### Validações executadas
+
+- `npx tsc --noEmit`, `npm run lint` e `npm run build`: passaram em
+  2026-07-08 (Next.js 16.2.9).
+- `scripts/test-card-billing-domain.ts` (novo, roda com `npx tsx` e dados
+  temporários): regra de fatura pura (Nubank 07/07→ago, 01/07→jul; fecha
+  23/vence 1: 20/07→ago, 24/07→set; sem vencimento preserva regra antiga),
+  inversa consistente para vários ciclos/dias, rematerialização corrige compra
+  set→ago, assinatura dia 8 no cartão Nubank cobra 08/07 na fatura de agosto,
+  cancelamento preserva cobrança feita e corta futuras, edição de dia refaz o
+  mês corrente, assinatura fora de cartão conta no mês civil. Tudo passou em
+  2026-07-08.
+- Smoke test com `npm run start` + login de sessão real: /dashboard, /cards,
+  /assinaturas e /informacoes responderam 200 autenticados; /login 200 e
+  /dashboard 307 sem sessão.
+
+### Pendências ou próximo passo
+
+- Produção (após deploy, com pedido explícito do usuário): rodar
+  `npx tsx scripts/recalculate-card-billing.ts` uma vez para realinhar as
+  faturas existentes (a migration roda sozinha no deploy).
+- Usuário deve revisar cada assinatura e definir o `chargeDay` real (default
+  ficou 1) e, se quiser, o site da logo.
+- Cadastrar número/CVV/validade dos cartões pela edição do cartão para ativar
+  bandeira e cópia por blocos.
 
 ## Débitos documentais confirmados
 
@@ -169,10 +100,12 @@ Foram ajustados o dashboard e a exclusão de despesas:
 - Server Actions precisam verificar propriedade por `userId`.
 - O projeto usa Next.js 16.2.9; ler a documentação instalada antes de codificar.
 - Não habilitar `cacheComponents` incidentalmente.
+- Cobranças de assinatura materializadas nunca são sobrescritas pela geração;
+  correções de dados passados exigem apagar/refazer o `SubscriptionCharge`.
 
 ## Modelo para a próxima passagem
 
-Substitua esta seção ao iniciar trabalho relevante:
+Substitua a seção "Estado atual" ao iniciar trabalho relevante:
 
 ```md
 ### Objetivo

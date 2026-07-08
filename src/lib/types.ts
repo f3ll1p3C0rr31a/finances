@@ -47,6 +47,7 @@ export type SerializedCardSummary = {
   closingDay: number | null
   bestPurchaseDay: number | null
   paymentDay: number | null
+  cardNumber: string | null
 }
 
 export type SerializedSubscription = {
@@ -60,8 +61,10 @@ export type SerializedSubscription = {
   cardId: string | null
   cardName: string | null
   active: boolean
+  chargeDay: number
+  logoDomain: string | null
   startMonth: string
-  cancelledMonth: string | null
+  cancelledAt: string | null
   tags: TagRef[]
 }
 
@@ -79,4 +82,10 @@ export type SerializedCardPurchase = {
   paidInstallments: number
   remainingInstallments: number
   tags: TagRef[]
+  /** Present when this row is a subscription charge on the invoice, not a purchase. */
+  subscription?: {
+    subscriptionId: string
+    logoDomain: string | null
+    cancelled: boolean
+  }
 }

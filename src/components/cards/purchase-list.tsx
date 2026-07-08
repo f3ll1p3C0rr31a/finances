@@ -1,9 +1,11 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
+import Link from "next/link"
 import { toast } from "sonner"
 
 import type { SerializedCardPurchase } from "@/lib/types"
+import { SubscriptionLogo } from "@/components/brand/subscription-logo"
 import type { TagOption } from "@/components/tags/tag-multi-select"
 import { deleteCardPurchase } from "@/lib/actions/cards"
 import { bulkSetCardPurchaseTags } from "@/lib/actions/tags"
@@ -114,12 +116,19 @@ export function PurchaseList({
     )
   }
 
+  const selectablePurchases = useMemo(
+    () => purchases.filter((p) => !p.subscription),
+    [purchases]
+  )
+
   function toggleSelect(id: string) {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
   function toggleSelectAll() {
-    setSelected((prev) => (prev.length === purchases.length ? [] : purchases.map((p) => p.id)))
+    setSelected((prev) =>
+      prev.length === selectablePurchases.length ? [] : selectablePurchases.map((p) => p.id)
+    )
   }
 
   function remove(id: string) {
@@ -169,7 +178,9 @@ export function PurchaseList({
           <TableRow>
             <TableHead className="w-0">
               <Checkbox
-                checked={purchases.length > 0 && selected.length === purchases.length}
+                checked={
+                  selectablePurchases.length > 0 && selected.length === selectablePurchases.length
+                }
                 onCheckedChange={toggleSelectAll}
               />
             </TableHead>
@@ -192,6 +203,7 @@ export function PurchaseList({
             </TableRow>
           ) : (
             sorted.map((purchase) => {
+              const subscription = purchase.subscription
               const progress =
                 purchase.installmentCount > 0
                   ? (purchase.paidInstallments / purchase.installmentCount) * 100
@@ -199,16 +211,33 @@ export function PurchaseList({
               return (
                 <TableRow key={purchase.id}>
                   <TableCell>
-                    <Checkbox
-                      checked={selected.includes(purchase.id)}
-                      onCheckedChange={() => toggleSelect(purchase.id)}
-                    />
+                    {subscription ? null : (
+                      <Checkbox
+                        checked={selected.includes(purchase.id)}
+                        onCheckedChange={() => toggleSelect(purchase.id)}
+                      />
+                    )}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {purchase.description}{" "}
-                    {purchase.hasInterest ? (
-                      <Badge variant="destructive">c/ juros</Badge>
-                    ) : null}
+                    <span className="inline-flex items-center gap-2">
+                      {subscription ? (
+                        <SubscriptionLogo
+                          name={purchase.description}
+                          logoDomain={subscription.logoDomain}
+                          className="size-6"
+                        />
+                      ) : null}
+                      {purchase.description}
+                      {subscription ? (
+                        <Badge variant="outline">Assinatura</Badge>
+                      ) : null}
+                      {subscription?.cancelled ? (
+                        <Badge variant="destructive">Cancelada</Badge>
+                      ) : null}
+                      {purchase.hasInterest ? (
+                        <Badge variant="destructive">c/ juros</Badge>
+                      ) : null}
+                    </span>
                   </TableCell>
                   <TableCell>
                     {new Date(purchase.purchaseDate).toLocaleDateString("pt-BR", {
@@ -222,22 +251,30 @@ export function PurchaseList({
                           {tag.name}
                         </Badge>
                       ))}
-                      <PurchaseTagsDialog
-                        purchaseId={purchase.id}
-                        currentTagIds={purchase.tags.map((t) => t.id)}
-                        allTags={allTags}
-                      />
+                      {subscription ? null : (
+                        <PurchaseTagsDialog
+                          purchaseId={purchase.id}
+                          currentTagIds={purchase.tags.map((t) => t.id)}
+                          allTags={allTags}
+                        />
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
-                    {purchase.installmentCount > 1
-                      ? purchase.currentInstallmentNo
-                        ? `${purchase.currentInstallmentNo}/${purchase.installmentCount}`
-                        : `${purchase.installmentCount}x`
-                      : "À vista"}
+                    {subscription
+                      ? "Mensal"
+                      : purchase.installmentCount > 1
+                        ? purchase.currentInstallmentNo
+                          ? `${purchase.currentInstallmentNo}/${purchase.installmentCount}`
+                          : `${purchase.installmentCount}x`
+                        : "À vista"}
                   </TableCell>
                   <TableCell className="w-32">
-                    {purchase.installmentCount > 1 ? (
+                    {subscription ? (
+                      <span className="text-xs text-muted-foreground">
+                        {subscription.cancelled ? "Encerrando" : "Recorrente"}
+                      </span>
+                    ) : purchase.installmentCount > 1 ? (
                       <div className="flex flex-col gap-1">
                         <span className="text-xs text-muted-foreground">
                           {purchase.paidInstallments}/{purchase.installmentCount}
@@ -262,23 +299,31 @@ export function PurchaseList({
                     <MoneyText value={-purchase.totalAmount} />
                   </TableCell>
                   <TableCell className="flex items-center justify-end gap-1">
-                    <NewPurchaseDialog
-                      cardId={cardId}
-                      allTags={allTags}
-                      purchase={purchase}
-                      cardCycle={cardCycle}
-                      triggerLabel="Editar"
-                      triggerVariant="ghost"
-                      triggerSize="xs"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      disabled={pending}
-                      onClick={() => remove(purchase.id)}
-                    >
-                      Excluir
-                    </Button>
+                    {subscription ? (
+                      <Button variant="ghost" size="xs" render={<Link href="/assinaturas" />}>
+                        Gerenciar
+                      </Button>
+                    ) : (
+                      <>
+                        <NewPurchaseDialog
+                          cardId={cardId}
+                          allTags={allTags}
+                          purchase={purchase}
+                          cardCycle={cardCycle}
+                          triggerLabel="Editar"
+                          triggerVariant="ghost"
+                          triggerSize="xs"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          disabled={pending}
+                          onClick={() => remove(purchase.id)}
+                        >
+                          Excluir
+                        </Button>
+                      </>
+                    )}
                   </TableCell>
                 </TableRow>
               )

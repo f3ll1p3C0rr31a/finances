@@ -9,6 +9,7 @@ import { cardSchema, type CardFormValues, type CardInput } from "@/lib/validatio
 import { createCard, updateCard } from "@/lib/actions/cards"
 import { defaultBestPurchaseDay } from "@/lib/calculations/cardTiming"
 import { currentMonth } from "@/lib/calculations/month"
+import { CARD_BRAND_LABELS, detectCardBrand } from "@/lib/cardBrand"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CurrencyInput } from "@/components/ui/currency-input"
@@ -37,6 +38,11 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 
+function formatCardNumber(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 19)
+  return digits.replace(/(.{4})/g, "$1 ").trim()
+}
+
 type Props = {
   card?: {
     id: string
@@ -46,6 +52,10 @@ type Props = {
     bestPurchaseDay: number | null
     paymentDay: number | null
     creditLimit: number | null
+    cardNumber: string | null
+    cvv: string | null
+    expiryMonth: number | null
+    expiryYear: number | null
   }
   accounts?: { id: string; name: string }[]
   triggerLabel?: string
@@ -72,12 +82,18 @@ export function NewCardDialog({
       bestPurchaseDay: card?.bestPurchaseDay ?? undefined,
       paymentDay: card?.paymentDay ?? undefined,
       creditLimit: card?.creditLimit ?? undefined,
+      cardNumber: card?.cardNumber ? formatCardNumber(card.cardNumber) : "",
+      cvv: card?.cvv ?? "",
+      expiryMonth: card?.expiryMonth ?? undefined,
+      expiryYear: card?.expiryYear ?? undefined,
     },
   })
   const closingDay = useWatch({ control: form.control, name: "closingDay" })
   const bestPurchaseDay = useWatch({ control: form.control, name: "bestPurchaseDay" })
+  const cardNumber = useWatch({ control: form.control, name: "cardNumber" })
   const automaticBestDay = defaultBestPurchaseDay(Number(closingDay) || null, currentMonth())
   const effectiveBestDay = Number(bestPurchaseDay) || automaticBestDay
+  const detectedBrand = detectCardBrand(cardNumber ?? "")
 
   function onSubmit(values: CardInput) {
     startTransition(async () => {
@@ -154,6 +170,99 @@ export function NewCardDialog({
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="cardNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Número do cartão (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="0000 0000 0000 0000"
+                      className="font-mono"
+                      {...field}
+                      value={String(field.value ?? "")}
+                      onChange={(event) => field.onChange(formatCardNumber(event.target.value))}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    {detectedBrand !== "unknown"
+                      ? `Bandeira detectada: ${CARD_BRAND_LABELS[detectedBrand]}.`
+                      : "A bandeira é detectada automaticamente pelo número."}{" "}
+                    Fica mascarado na tela; cada bloco pode ser copiado com um clique.
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-3 gap-3">
+              <FormField
+                control={form.control}
+                name="cvv"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CVV</FormLabel>
+                    <FormControl>
+                      <Input
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="123"
+                        maxLength={4}
+                        className="font-mono"
+                        {...field}
+                        value={String(field.value ?? "")}
+                        onChange={(event) =>
+                          field.onChange(event.target.value.replace(/\D/g, "").slice(0, 4))
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="expiryMonth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Validade (mês)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={12}
+                        placeholder="MM"
+                        {...field}
+                        value={String(field.value ?? "")}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="expiryYear"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Validade (ano)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={2099}
+                        placeholder="AA"
+                        {...field}
+                        value={String(field.value ?? "")}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <FormField
               control={form.control}
               name="closingDay"

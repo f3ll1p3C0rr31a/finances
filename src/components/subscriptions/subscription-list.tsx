@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/table"
 import { SubscriptionTagsDialog } from "@/components/subscriptions/subscription-tags-dialog"
 import { NewSubscriptionDialog } from "@/components/subscriptions/new-subscription-dialog"
+import { SubscriptionLogo } from "@/components/brand/subscription-logo"
+import { PixIcon } from "@/components/brand/pix-icon"
 
 const PAYMENT_METHOD_LABELS = {
   CASH: "Dinheiro",
@@ -86,6 +88,7 @@ export function SubscriptionList({
         <TableRow>
           <TableHead>Nome</TableHead>
           <TableHead>Valor</TableHead>
+          <TableHead>Cobra dia</TableHead>
           <TableHead>Forma de pagamento</TableHead>
           <TableHead>Etiquetas</TableHead>
           <TableHead>Desde</TableHead>
@@ -95,14 +98,19 @@ export function SubscriptionList({
       <TableBody>
         {subscriptions.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={6} className="text-center text-muted-foreground">
+            <TableCell colSpan={7} className="text-center text-muted-foreground">
               Nenhuma assinatura por aqui.
             </TableCell>
           </TableRow>
         ) : (
           subscriptions.map((sub) => (
             <TableRow key={sub.id}>
-              <TableCell className="font-medium">{sub.name}</TableCell>
+              <TableCell className="font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <SubscriptionLogo name={sub.name} logoDomain={sub.logoDomain} />
+                  {sub.name}
+                </span>
+              </TableCell>
               <TableCell>
                 {formatCurrency(sub.amount)}
                 {sub.currency === "USD" && sub.originalAmount && sub.exchangeRate ? (
@@ -111,9 +119,13 @@ export function SubscriptionList({
                   </span>
                 ) : null}
               </TableCell>
+              <TableCell>Dia {sub.chargeDay}</TableCell>
               <TableCell>
-                {PAYMENT_METHOD_LABELS[sub.paymentMethod]}
-                {sub.cardName ? ` (${sub.cardName})` : ""}
+                <span className="inline-flex items-center gap-1.5">
+                  {sub.paymentMethod === "PIX" ? <PixIcon /> : null}
+                  {PAYMENT_METHOD_LABELS[sub.paymentMethod]}
+                  {sub.cardName ? ` (${sub.cardName})` : ""}
+                </span>
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap items-center gap-1">
@@ -131,6 +143,12 @@ export function SubscriptionList({
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {formatMonthLabel(new Date(sub.startMonth))}
+                {sub.cancelledAt ? (
+                  <span className="block text-xs text-destructive">
+                    Cancelada em{" "}
+                    {new Date(sub.cancelledAt).toLocaleDateString("pt-BR", { timeZone: "UTC" })}
+                  </span>
+                ) : null}
               </TableCell>
               <TableCell className="flex justify-end gap-2">
                 {sub.active ? (

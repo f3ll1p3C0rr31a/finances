@@ -1,6 +1,7 @@
 import { requireUserId } from "@/lib/session"
 import { listSubscriptions } from "@/lib/actions/subscriptions"
 import { listTags } from "@/lib/actions/tags"
+import { ensureSubscriptionChargesGenerated } from "@/lib/services/subscriptionCharges"
 import { prisma } from "@/lib/prisma"
 import type { SerializedSubscription } from "@/lib/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +10,7 @@ import { NewSubscriptionDialog } from "@/components/subscriptions/new-subscripti
 
 export default async function AssinaturasPage() {
   const userId = await requireUserId()
+  await ensureSubscriptionChargesGenerated(userId)
   const [subscriptions, cards, tags] = await Promise.all([
     listSubscriptions(userId),
     prisma.card.findMany({ where: { userId, active: true }, orderBy: { name: "asc" } }),
@@ -26,8 +28,10 @@ export default async function AssinaturasPage() {
     cardId: s.cardId,
     cardName: s.card?.name ?? null,
     active: s.active,
+    chargeDay: s.chargeDay,
+    logoDomain: s.logoDomain,
     startMonth: s.startMonth.toISOString(),
-    cancelledMonth: s.cancelledMonth ? s.cancelledMonth.toISOString() : null,
+    cancelledAt: s.cancelledAt ? s.cancelledAt.toISOString() : null,
     tags: s.tags.map((t) => ({ id: t.tag.id, name: t.tag.name })),
   }))
 

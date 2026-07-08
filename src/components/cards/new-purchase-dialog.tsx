@@ -104,7 +104,7 @@ export function NewPurchaseDialog({
     if (y && m && d) {
       const purchaseDate = new Date(Date.UTC(y, m - 1, d))
       const startMonth = invoiceMonthForPurchase(
-        { closingDay: cardCycle?.closingDay ?? null },
+        { closingDay: cardCycle?.closingDay ?? null, paymentDay: cardCycle?.paymentDay ?? null },
         purchaseDate
       )
       const endMonth = addMonths(startMonth, installmentCount - 1)

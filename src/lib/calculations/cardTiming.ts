@@ -21,18 +21,29 @@ export function bestPurchaseDateForCard(
   return day == null ? null : dateWithDay(month, day)
 }
 
+export type CardCycle = { closingDay: number | null; paymentDay: number | null }
+
 /**
  * Returns the invoice due month that should receive a purchase.
  *
  * The app treats `billingMonth` as the month where the invoice is paid
- * in the dashboard. For a card that closes on day 23 and is due on day 1,
- * a purchase made on 20/07 belongs to the invoice paid in 08; a purchase
- * made after the 23/07 closing belongs to the invoice paid in 09.
+ * in the dashboard. A purchase made on or before the closing day belongs
+ * to the invoice that closes in the same calendar month; after the
+ * closing day it belongs to the invoice that closes in the next month.
+ * The payment month then depends on where the due day sits relative to
+ * the closing day:
+ *
+ * - Nubank-style (closes day 2, due day 10): the invoice is paid in the
+ *   same month it closes, so a purchase on 07/07 closes on 02/08 and is
+ *   paid on 10/08 — billingMonth = August.
+ * - Closes day 23, due day 1: the invoice is paid in the month after it
+ *   closes, so a purchase on 20/07 closes on 23/07 and is paid on 01/08;
+ *   a purchase on 24/07 closes on 23/08 and is paid on 01/09.
+ *
+ * Without a paymentDay the payment is assumed to happen in the month
+ * after the closing (the previous behavior of this rule).
  */
-export function invoiceMonthForPurchase(
-  card: { closingDay: number | null },
-  purchaseDate: Date
-): Date {
+export function invoiceMonthForPurchase(card: CardCycle, purchaseDate: Date): Date {
   const purchaseMonth = new Date(
     Date.UTC(purchaseDate.getUTCFullYear(), purchaseDate.getUTCMonth(), 1)
   )
@@ -40,5 +51,28 @@ export function invoiceMonthForPurchase(
   if (card.closingDay == null) return purchaseMonth
 
   const closingDay = Math.min(card.closingDay, daysInMonth(purchaseMonth))
-  return addMonths(purchaseMonth, purchaseDate.getUTCDate() > closingDay ? 2 : 1)
+  const closingMonthOffset = purchaseDate.getUTCDate() > closingDay ? 1 : 0
+  const paymentMonthOffset =
+    card.paymentDay != null && card.paymentDay > card.closingDay ? 0 : 1
+  return addMonths(purchaseMonth, closingMonthOffset + paymentMonthOffset)
+}
+
+/**
+ * Inverse of invoiceMonthForPurchase for recurring charges: finds the
+ * calendar date (day `chargeDay`) whose charge lands on the invoice paid
+ * in `billingMonth`. Every billing month maps back to exactly one charge
+ * date, at most two months earlier.
+ */
+export function chargeDateForBillingMonth(
+  card: CardCycle,
+  chargeDay: number,
+  billingMonth: Date
+): Date | null {
+  for (let offset = 0; offset <= 2; offset++) {
+    const chargeDate = dateWithDay(addMonths(billingMonth, -offset), chargeDay)
+    if (invoiceMonthForPurchase(card, chargeDate).getTime() === billingMonth.getTime()) {
+      return chargeDate
+    }
+  }
+  return null
 }

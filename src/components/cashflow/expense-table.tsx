@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table"
 import { ExpenseEntryDialog } from "@/components/cashflow/expense-entry-dialog"
 import { ExpenseReferencesDialog } from "@/components/cashflow/expense-references-dialog"
+import { PixIcon } from "@/components/brand/pix-icon"
 
 const CATEGORY_LABELS = {
   FIXED: "Fixa",
@@ -212,7 +213,10 @@ export function ExpenseTable({
                   )}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {PAYMENT_METHOD_LABELS[entry.paymentMethod]}
+                  <span className="inline-flex items-center gap-1.5">
+                    {entry.paymentMethod === "PIX" ? <PixIcon /> : null}
+                    {PAYMENT_METHOD_LABELS[entry.paymentMethod]}
+                  </span>
                   {entry.pixKeyLabel ? (
                     <span className="block text-xs">→ {entry.pixKeyLabel}</span>
                   ) : null}

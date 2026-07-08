@@ -5,6 +5,8 @@ import { requireUserId } from "@/lib/session"
 import { listTags } from "@/lib/actions/tags"
 import { listAccounts } from "@/lib/actions/accounts"
 import { getCardMonthlyHistory, getCardMonthlyWindow } from "@/lib/actions/chart"
+import { getCardSubscriptionChargesForMonth } from "@/lib/actions/subscriptionSummary"
+import { ensureSubscriptionChargesGenerated } from "@/lib/services/subscriptionCharges"
 import { currentMonth, monthFromKey } from "@/lib/calculations/month"
 import { bestPurchaseDateForCard } from "@/lib/calculations/cardTiming"
 import type { SerializedCardPurchase } from "@/lib/types"
@@ -14,6 +16,7 @@ import { NewPurchaseDialog } from "@/components/cards/new-purchase-dialog"
 import { NewCardDialog } from "@/components/cards/new-card-dialog"
 import { CardMonthNav } from "@/components/cards/card-month-nav"
 import { PurchaseList } from "@/components/cards/purchase-list"
+import { BankCardVisual } from "@/components/cards/bank-card-visual"
 import { CardMonthlyChart } from "@/components/chart/card-monthly-chart"
 
 const MONTH_KEY_PATTERN = /^\d{4}-\d{2}$/
@@ -38,17 +41,21 @@ export default async function CardDetailPage({
     notFound()
   }
 
-  const [purchases, allTags, accounts, monthlyHistory, upcomingMonths] = await Promise.all([
-    prisma.cardPurchase.findMany({
-      where: { cardId },
-      orderBy: { purchaseDate: "desc" },
-      include: { tags: { include: { tag: true } }, installments: { orderBy: { installmentNo: "asc" } } },
-    }),
-    listTags(userId),
-    listAccounts(userId),
-    getCardMonthlyHistory(userId, cardId),
-    getCardMonthlyWindow(userId, cardId, selectedMonth, 12),
-  ])
+  await ensureSubscriptionChargesGenerated(userId)
+
+  const [purchases, subscriptionCharges, allTags, accounts, monthlyHistory, upcomingMonths] =
+    await Promise.all([
+      prisma.cardPurchase.findMany({
+        where: { cardId },
+        orderBy: { purchaseDate: "desc" },
+        include: { tags: { include: { tag: true } }, installments: { orderBy: { installmentNo: "asc" } } },
+      }),
+      getCardSubscriptionChargesForMonth(userId, cardId, selectedMonth, card),
+      listTags(userId),
+      listAccounts(userId),
+      getCardMonthlyHistory(userId, cardId),
+      getCardMonthlyWindow(userId, cardId, selectedMonth, 12),
+    ])
 
   const tagRefs = allTags.map((t) => ({ id: t.id, name: t.name }))
   const accountOptions = accounts.map((account) => ({ id: account.id, name: account.name }))
@@ -116,6 +123,27 @@ export default async function CardDetailPage({
     }]
   })
 
+  const subscriptionRows: SerializedCardPurchase[] = subscriptionCharges.map((charge) => ({
+    id: `subscription:${charge.subscriptionId}`,
+    description: charge.name,
+    totalAmount: charge.amount.toNumber(),
+    installmentAmount: charge.amount.toNumber(),
+    remainingAmount: charge.amount.toNumber(),
+    purchaseDate: charge.chargeDate.toISOString(),
+    billingMonth: selectedMonth.toISOString(),
+    installmentCount: 1,
+    currentInstallmentNo: null,
+    hasInterest: false,
+    paidInstallments: 0,
+    remainingInstallments: 1,
+    tags: charge.tags,
+    subscription: {
+      subscriptionId: charge.subscriptionId,
+      logoDomain: charge.logoDomain,
+      cancelled: charge.cancelled,
+    },
+  }))
+
   const creditLimit = card.creditLimit ? card.creditLimit.toNumber() : null
   const availableLimit = creditLimit != null ? creditLimit - remainingDebt : null
 
@@ -147,6 +175,10 @@ export default async function CardDetailPage({
               bestPurchaseDay: card.bestPurchaseDay,
               paymentDay: card.paymentDay,
               creditLimit,
+              cardNumber: card.cardNumber,
+              cvv: card.cvv,
+              expiryMonth: card.expiryMonth,
+              expiryYear: card.expiryYear,
             }}
             accounts={accountOptions}
             triggerLabel="Editar cartão"
@@ -159,26 +191,37 @@ export default async function CardDetailPage({
           />
         </div>
       </div>
-      {creditLimit != null ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Limite de crédito</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-3 gap-2 text-sm">
-              <dt className="text-muted-foreground">Limite total</dt>
-              <dt className="text-muted-foreground">Débito restante</dt>
-              <dt className="font-medium">Limite livre</dt>
-              <dd className="text-right"><MoneyText value={creditLimit} /></dd>
-              <dd className="text-right"><MoneyText value={-remainingDebt} /></dd>
-              <dd className="text-right font-medium"><MoneyText value={availableLimit ?? 0} /></dd>
-            </dl>
-          </CardContent>
-        </Card>
-      ) : null}
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_1fr]">
+        <BankCardVisual
+          name={card.name}
+          accountName={card.account?.name ?? null}
+          cardNumber={card.cardNumber}
+          cvv={card.cvv}
+          expiryMonth={card.expiryMonth}
+          expiryYear={card.expiryYear}
+          holderName={card.account?.holderName ?? null}
+        />
+        {creditLimit != null ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Limite de crédito</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-3 gap-2 text-sm">
+                <dt className="text-muted-foreground">Limite total</dt>
+                <dt className="text-muted-foreground">Débito restante</dt>
+                <dt className="font-medium">Limite livre</dt>
+                <dd className="text-right"><MoneyText value={creditLimit} /></dd>
+                <dd className="text-right"><MoneyText value={-remainingDebt} /></dd>
+                <dd className="text-right font-medium"><MoneyText value={availableLimit ?? 0} /></dd>
+              </dl>
+            </CardContent>
+          </Card>
+        ) : null}
+      </div>
       <CardMonthNav month={selectedMonth} basePath={`/cards/${card.id}`} />
       <PurchaseList
-        purchases={serialized}
+        purchases={[...serialized, ...subscriptionRows]}
         allTags={tagRefs}
         cardId={card.id}
         cardCycle={{ closingDay: card.closingDay, paymentDay: card.paymentDay }}

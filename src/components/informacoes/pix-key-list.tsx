@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { deletePixKey } from "@/lib/actions/pixKeys"
 import { Button } from "@/components/ui/button"
 import { NewPixKeyDialog } from "@/components/informacoes/new-pix-key-dialog"
+import { PixIcon } from "@/components/brand/pix-icon"
 import {
   Table,
   TableBody,
@@ -79,7 +80,12 @@ export function PixKeyList({
         ) : (
           pixKeys.map((key) => (
             <TableRow key={key.id}>
-              <TableCell className="font-medium">{key.label}</TableCell>
+              <TableCell className="font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <PixIcon />
+                  {key.label}
+                </span>
+              </TableCell>
               <TableCell className="font-mono text-sm">
                 {key.keyValue}
                 {key.keyType ? (

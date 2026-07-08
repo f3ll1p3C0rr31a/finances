@@ -1,13 +1,13 @@
 import type { Prisma } from "@/generated/prisma/client"
 
 import { addMonths } from "@/lib/calculations/month"
-import { invoiceMonthForPurchase } from "@/lib/calculations/cardTiming"
+import { invoiceMonthForPurchase, type CardCycle } from "@/lib/calculations/cardTiming"
 import { splitIntoInstallments } from "@/lib/calculations/installments"
 
 export async function rematerializeCardPurchaseSchedules(
   tx: Prisma.TransactionClient,
   cardId: string,
-  card: { closingDay: number | null }
+  card: CardCycle
 ): Promise<Date[]> {
   const purchases = await tx.cardPurchase.findMany({
     where: { cardId },

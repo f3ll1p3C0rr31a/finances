@@ -15,6 +15,7 @@ import { setSubscriptionTags } from "@/lib/actions/tags"
 import type { SerializedSubscription } from "@/lib/types"
 import type { TagOption } from "@/components/tags/tag-multi-select"
 import { TagMultiSelect } from "@/components/tags/tag-multi-select"
+import { SubscriptionLogo, suggestLogoDomain } from "@/components/brand/subscription-logo"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CurrencyInput } from "@/components/ui/currency-input"
@@ -53,6 +54,10 @@ const PAYMENT_METHOD_LABELS = {
 
 type CardOption = { id: string; name: string }
 
+function todayDayOfMonth(): number {
+  return new Date().getDate()
+}
+
 export function NewSubscriptionDialog({
   cards,
   allTags,
@@ -85,11 +90,16 @@ export function NewSubscriptionDialog({
       exchangeRate: subscription?.exchangeRate ?? null,
       paymentMethod: subscription?.paymentMethod ?? "CASH",
       cardId: subscription?.cardId ?? null,
+      chargeDay: subscription?.chargeDay ?? todayDayOfMonth(),
+      logoDomain: subscription?.logoDomain ?? "",
     },
   })
 
   const paymentMethod = useWatch({ control: form.control, name: "paymentMethod" })
   const currency = useWatch({ control: form.control, name: "currency" })
+  const watchedName = useWatch({ control: form.control, name: "name" })
+  const watchedLogoDomain = useWatch({ control: form.control, name: "logoDomain" })
+  const suggestedDomain = suggestLogoDomain(watchedName ?? "")
 
   function resetForm() {
     setTagIds(subscription?.tags.map((tag) => tag.id) ?? [])
@@ -103,6 +113,8 @@ export function NewSubscriptionDialog({
       exchangeRate: subscription?.exchangeRate ?? null,
       paymentMethod: subscription?.paymentMethod ?? "CASH",
       cardId: subscription?.cardId ?? null,
+      chargeDay: subscription?.chargeDay ?? todayDayOfMonth(),
+      logoDomain: subscription?.logoDomain ?? "",
     })
   }
 
@@ -127,6 +139,8 @@ export function NewSubscriptionDialog({
             exchangeRate: null,
             paymentMethod: "CASH",
             cardId: null,
+            chargeDay: todayDayOfMonth(),
+            logoDomain: "",
           })
         }
       } catch {
@@ -283,6 +297,57 @@ export function NewSubscriptionDialog({
                 )}
               />
             ) : null}
+            <FormField
+              control={form.control}
+              name="chargeDay"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dia da cobrança</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={31}
+                      {...field}
+                      value={String(field.value ?? "")}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Dia do mês em que o serviço efetua a cobrança. Em cartão, a cobrança entra
+                    na fatura conforme o fechamento do cartão.
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="logoDomain"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Site do serviço (para a logo)</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <SubscriptionLogo
+                      name={watchedName ?? ""}
+                      logoDomain={(watchedLogoDomain || suggestedDomain) ?? null}
+                      className="size-8"
+                    />
+                    <FormControl>
+                      <Input
+                        placeholder={suggestedDomain ?? "ex: netflix.com"}
+                        {...field}
+                        value={String(field.value ?? "")}
+                      />
+                    </FormControl>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Serviços conhecidos são detectados pelo nome; para outros, informe o site
+                    que a logo é buscada automaticamente.
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className="grid gap-2">
               <FormLabel>Etiquetas</FormLabel>
               <TagMultiSelect allTags={allTags} selectedIds={tagIds} onChange={setTagIds} />

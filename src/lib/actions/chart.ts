@@ -152,7 +152,7 @@ export async function getBalanceChartRanges(
             value: (expense.paidAmount ?? expense.amount).neg().toNumber(),
           })),
         ...nonCardSubscriptions.map((subscription) => ({
-          key: `expense:subscription:${subscription.id}`,
+          key: `expense:subscription:${subscription.subscriptionId}`,
           label: subscription.name,
           group: "expense" as const,
           value: subscription.amount.neg().toNumber(),
@@ -241,7 +241,12 @@ export async function getMonthlyCashflowPoints(
   }
 
   for (const subscription of subscriptions) {
-    addToDay(dayTotals, 1, "expense", subscription.amount.toNumber())
+    addToDay(
+      dayTotals,
+      subscription.chargeDate.getUTCDate(),
+      "expense",
+      subscription.amount.toNumber()
+    )
   }
 
   const points: DailyCashflowPoint[] = []

@@ -46,6 +46,14 @@ O alias `@/*` aponta para `src/*`.
 - `Card` contém `CardPurchase`; compras parceladas materializam
   `CardInstallment`. `CardPurchase.billingMonth` representa a fatura em que a
   compra começa a ser cobrada.
+- `Card` pode guardar `cardNumber`, `cvv`, `expiryMonth` e `expiryYear` para
+  referência rápida do usuário. A bandeira não é persistida: é detectada pelo
+  número (`src/lib/cardBrand.ts`), que também define o tema visual do
+  cartãozinho pelo nome do emissor.
+- `SubscriptionCharge` é uma cobrança mensal materializada de uma
+  `Subscription` (única por `(subscriptionId, month)` civil). `chargeDate` é o
+  dia em que o serviço cobrou; `billingMonth` é a fatura em que a cobrança cai
+  (ciclo do cartão aplicado; igual ao mês civil fora de cartão).
 - `CardSpendingGoal` é uma meta mensal somando todos os cartões.
 - A meta efetiva de cartões de um mês é a última `CardSpendingGoal` cadastrada
   naquele mês ou antes dele. Ao salvar uma meta em M, metas futuras explícitas
@@ -127,12 +135,20 @@ O alias `@/*` aponta para `src/*`.
   dashboard, não o mês em que a fatura fecha.
 - Compra parcelada cria todas as parcelas antecipadamente a partir do
   `billingMonth`.
-- `billingMonth` é calculado por `invoiceMonthForPurchase()` usando o cartão da
-  própria compra. Sem `closingDay`, usa o mês da compra. Com fechamento,
-  compras no dia de fechamento ou antes entram na fatura paga no mês seguinte;
-  compras depois do fechamento entram na fatura paga dois meses à frente.
-  Exemplo: cartão que fecha dia 23 e vence dia 1; compra em 20/07 entra nos
-  débitos de agosto e vence em 01/08, compra em 24/07 entra em setembro.
+- `billingMonth` é calculado por `invoiceMonthForPurchase()` usando o ciclo
+  (`closingDay` + `paymentDay`) do cartão da própria compra. Sem `closingDay`,
+  usa o mês da compra. Com fechamento: compra até o dia de fechamento pertence
+  à fatura que fecha no próprio mês civil; depois do fechamento, à fatura que
+  fecha no mês seguinte. O mês de pagamento é o mês do fechamento quando
+  `paymentDay > closingDay` (ex.: Nubank fecha dia 2 e vence dia 10 — compra em
+  07/07 fecha em 02/08 e é paga em 10/08, `billingMonth` agosto) e o mês
+  seguinte ao fechamento quando `paymentDay <= closingDay` ou nulo (ex.: fecha
+  dia 23 e vence dia 1 — compra em 20/07 paga em 01/08; em 24/07, em 01/09).
+- `chargeDateForBillingMonth()` é a inversa dessa regra para recorrências:
+  dado um dia de cobrança e uma fatura, devolve a data civil da cobrança.
+- `scripts/recalculate-card-billing.ts` reaplica a regra a todas as compras
+  existentes e recalcula a cadeia de saldos (rodar uma vez após mudar a regra
+  de ciclo; idempotente).
 - No modo `TOTAL`, o valor é dividido e eventual centavo residual vai para a
   última parcela.
 - No modo `INSTALLMENT`, o valor digitado é o de cada parcela; o total é a
@@ -179,20 +195,45 @@ O alias `@/*` aponta para `src/*`.
 - O gráfico de saldo ao longo do tempo também mostra saídas e diferença.
 - O dashboard possui um gráfico diário de fluxo de caixa do mês: entradas e
   saídas acumuladas por dia, com faturas de cartão alocadas no `paymentDay` do
-  cartão e lançamentos manuais na sua data de vencimento.
+  cartão, lançamentos manuais na sua data de vencimento e assinaturas fora de
+  cartão no seu dia de cobrança.
 
 ### Assinaturas
 
-- Uma assinatura vale desde `startMonth`.
-- Cancelamento no mês X ainda cobra X; deixa de contar depois de X.
-- Reativar remove `cancelledMonth`.
-- Assinaturas possuem etiquetas via `SubscriptionTag`; assinaturas fora de
-  cartão entram nos gastos por etiqueta do mês em que estão ativas usando seu
+- Uma assinatura cobra todo mês no `chargeDay`, a partir de `startMonth`
+  (primeira cobrança = `chargeDay` de `startMonth`).
+- Quando a data de cobrança é atingida, a cobrança vira um
+  `SubscriptionCharge` materializado (geração preguiçosa e idempotente por
+  `ensureSubscriptionChargesGenerated()`, chamada nas páginas Dashboard,
+  Cartões, detalhe do cartão e Assinaturas). O valor é congelado no momento da
+  cobrança; edições de preço/cotação só afetam cobranças seguintes.
+- Meses futuros usam projeção virtual: enquanto a assinatura estiver ativa, a
+  cobrança projetada aparece na fatura correspondente (para gráficos, meta e
+  reserva). Materializado sempre vence projeção no mesmo mês civil.
+- Em cartão, a cobrança entra na fatura definida pelo ciclo do cartão a partir
+  da `chargeDate` (mesma regra de compras). Fora de cartão, conta no próprio
+  mês civil e no fluxo de caixa no dia `chargeDay`.
+- Cancelar grava `cancelledAt` (data exata): cobranças com data até
+  `cancelledAt` permanecem; posteriores deixam de existir. A assinatura
+  cancelada continua listada (seção Canceladas) e pode ser reativada.
+- Reativar limpa `cancelledAt` e move `startMonth` para frente (mês atual, ou
+  próximo mês se o `chargeDay` já passou), para nunca cobrar o período em que
+  esteve cancelada; o histórico materializado é preservado.
+- Editar dia/cartão/valor rematerializa apenas do mês civil corrente em
+  diante (`rematerializeUpcomingSubscriptionCharges()`); editar o ciclo do
+  cartão faz o mesmo para as assinaturas daquele cartão.
+- Assinaturas possuem etiquetas via `SubscriptionTag`; cobranças fora de
+  cartão entram nos gastos por etiqueta do mês da cobrança usando seu
   `paymentMethod`. Assinaturas pagas por cartão entram no total da fatura e,
   no gráfico do dashboard, são representadas pela etiqueta `Fatura do Cartão`.
+- Na tela do cartão, as cobranças da fatura aparecem como linhas somente
+  leitura (badge Assinatura) junto às compras.
 - Assinaturas podem ser cadastradas em BRL ou USD. Para USD, `originalAmount`
   guarda o valor em dólar, `exchangeRate` guarda a cotação usada e `amount`
   guarda o valor final em reais que entra nos saldos/cartões.
+- `logoDomain` guarda o site do serviço para exibir a logo (favicon);
+  serviços conhecidos são sugeridos pelo nome em
+  `src/components/brand/subscription-logo.tsx`.
 
 ### Informações bancárias
 

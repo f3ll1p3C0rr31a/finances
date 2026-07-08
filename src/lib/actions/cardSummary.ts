@@ -9,7 +9,8 @@ import { getCardSubscriptionsTotal } from "@/lib/actions/subscriptionSummary"
 export async function getCardMonthTotal(
   userId: string,
   cardId: string,
-  month: Date
+  month: Date,
+  cycle?: { closingDay: number | null; paymentDay: number | null }
 ): Promise<Prisma.Decimal> {
   const nextMonth = addMonths(month, 1)
 
@@ -25,7 +26,7 @@ export async function getCardMonthTotal(
         ],
       },
     }),
-    getCardSubscriptionsTotal(userId, cardId, month),
+    getCardSubscriptionsTotal(userId, cardId, month, cycle),
   ])
 
   return sumAmounts([
@@ -51,7 +52,7 @@ export async function getCardsMonthSummary(userId: string, month: Date) {
   const summaries = await Promise.all(
     cards.map(async (card) => ({
       card,
-      total: await getCardMonthTotal(userId, card.id, month),
+      total: await getCardMonthTotal(userId, card.id, month, card),
       paid: card.invoicePayments[0]?.paid ?? false,
     }))
   )

@@ -209,6 +209,10 @@ model Card {
   bestPurchaseDay Int?
   paymentDay      Int?
   creditLimit     Decimal? @db.Decimal(12, 2)
+  cardNumber      String?
+  cvv             String?
+  expiryMonth     Int?
+  expiryYear      Int?
   active          Boolean  @default(true)
   createdAt       DateTime @default(now())
 
@@ -404,12 +408,39 @@ model Subscription {
   cardId         String?
   card           Card?         @relation(fields: [cardId], references: [id], onDelete: SetNull)
   active         Boolean       @default(true)
+  /// Day of the calendar month the provider charges this subscription.
+  chargeDay      Int           @default(1)
+  logoDomain     String?
   startMonth     DateTime      @db.Date
-  cancelledMonth DateTime?     @db.Date
+  /// Exact cancellation date. Charges due on or before it stay billed;
+  /// charges after it stop. Reactivating clears it and moves startMonth
+  /// forward so the cancelled gap is never billed retroactively.
+  cancelledAt    DateTime?     @db.Date
   createdAt      DateTime      @default(now())
 
-  tags SubscriptionTag[]
+  tags    SubscriptionTag[]
+  charges SubscriptionCharge[]
 
   @@index([userId])
   @@index([cardId])
+}
+
+/// One materialized monthly charge of a subscription. Created when the
+/// charge date is reached (generation is lazy and idempotent), so past
+/// charges survive later cancellation, card switches or price edits.
+/// `month` is the calendar month of chargeDate; `billingMonth` is the
+/// invoice month the charge lands on (card cycle applied) and equals
+/// `month` for non-card subscriptions.
+model SubscriptionCharge {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  chargeDate     DateTime     @db.Date
+  month          DateTime     @db.Date
+  billingMonth   DateTime     @db.Date
+  amount         Decimal      @db.Decimal(12, 2)
+  createdAt      DateTime     @default(now())
+
+  @@unique([subscriptionId, month])
+  @@index([billingMonth])
 }

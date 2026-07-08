@@ -12,6 +12,7 @@ import {
 } from "@/lib/calculations/balanceChain"
 import { getCardMonthBudget } from "@/lib/actions/cardSummary"
 import { getNonCardSubscriptionsTotal } from "@/lib/actions/subscriptionSummary"
+import { ensureSubscriptionChargesGenerated } from "@/lib/services/subscriptionCharges"
 
 async function ensureTemplateEntries(userId: string, month: Date) {
   const incomeTemplates = await prisma.incomeTemplate.findMany({
@@ -221,6 +222,7 @@ export async function adjustActualBalance(
 
 export async function getMonthData(userId: string, month: Date) {
   await rollPendingUncertainEntries(userId)
+  await ensureSubscriptionChargesGenerated(userId)
   await ensureMonthGenerated(userId, month)
 
   const [incomeEntries, expenseEntries, balance, cards, nonCardSubscriptions] = await Promise.all([

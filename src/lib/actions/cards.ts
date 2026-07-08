@@ -10,6 +10,7 @@ import { invoiceMonthForPurchase } from "@/lib/calculations/cardTiming"
 import { splitIntoInstallments } from "@/lib/calculations/installments"
 import { recalcOpeningBalanceChain } from "@/lib/actions/monthly"
 import { rematerializeCardPurchaseSchedules } from "@/lib/services/cardSchedule"
+import { rematerializeUpcomingSubscriptionCharges } from "@/lib/services/subscriptionCharges"
 import {
   cardSchema,
   cardPurchaseSchema,
@@ -39,6 +40,10 @@ export async function createCard(input: CardInput) {
       bestPurchaseDay: data.bestPurchaseDay ?? null,
       paymentDay: data.paymentDay ?? null,
       creditLimit: data.creditLimit != null ? new Prisma.Decimal(data.creditLimit) : null,
+      cardNumber: data.cardNumber,
+      cvv: data.cvv,
+      expiryMonth: data.expiryMonth,
+      expiryYear: data.expiryYear,
     },
   })
   revalidateCards()
@@ -60,11 +65,23 @@ export async function updateCard(id: string, input: CardInput) {
         bestPurchaseDay: data.bestPurchaseDay ?? null,
         paymentDay: data.paymentDay ?? null,
         creditLimit: data.creditLimit != null ? new Prisma.Decimal(data.creditLimit) : null,
+        cardNumber: data.cardNumber,
+        cvv: data.cvv,
+        expiryMonth: data.expiryMonth,
+        expiryYear: data.expiryYear,
       },
     })
 
     return rematerializeCardPurchaseSchedules(tx, id, card)
   })
+  // A cycle change also moves where upcoming subscription charges land.
+  const cardSubscriptions = await prisma.subscription.findMany({
+    where: { userId, cardId: id },
+    select: { id: true },
+  })
+  for (const subscription of cardSubscriptions) {
+    await rematerializeUpcomingSubscriptionCharges(subscription.id)
+  }
   revalidateCards()
   if (affectedMonths.length > 0) {
     const earliestAffectedMonth = affectedMonths.reduce((min, month) => (month < min ? month : min))
