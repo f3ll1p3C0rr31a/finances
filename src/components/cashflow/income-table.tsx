@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { IncomeEntryDialog } from "@/components/cashflow/income-entry-dialog"
+import { ImportedBadge } from "@/components/brand/imported-badge"
 
 export function IncomeTable({
   month,
@@ -83,6 +84,7 @@ export function IncomeTable({
                 <TableCell className="font-medium">
                   <div className="flex flex-wrap items-center gap-2">
                     {entry.name}
+                    {entry.importedFromPluggy ? <ImportedBadge /> : null}
                     {entry.uncertain && !entry.received ? (
                       <Badge variant="outline">Incerta · avança até receber</Badge>
                     ) : null}

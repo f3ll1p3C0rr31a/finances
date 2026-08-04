@@ -6,6 +6,7 @@ import { listTags } from "@/lib/actions/tags"
 import { listAccounts } from "@/lib/actions/accounts"
 import { getCardMonthlyHistory, getCardMonthlyWindow } from "@/lib/actions/chart"
 import { getCardSubscriptionChargesForMonth } from "@/lib/actions/subscriptionSummary"
+import { findImportedTargetIds } from "@/lib/actions/pluggyImports"
 import { ensureSubscriptionChargesGenerated } from "@/lib/services/subscriptionCharges"
 import { currentMonth, monthFromKey } from "@/lib/calculations/month"
 import { bestPurchaseDateForCard } from "@/lib/calculations/cardTiming"
@@ -60,6 +61,7 @@ export default async function CardDetailPage({
   const tagRefs = allTags.map((t) => ({ id: t.id, name: t.name }))
   const accountOptions = accounts.map((account) => ({ id: account.id, name: account.name }))
   const nowMonth = currentMonth()
+  const importedIds = await findImportedTargetIds(purchases.map((p) => p.id))
 
   const remainingDebt = purchases.reduce((sum, p) => {
     const billingMonth =
@@ -120,6 +122,7 @@ export default async function CardDetailPage({
       paidInstallments,
       remainingInstallments: p.installmentCount - paidInstallments,
       tags: p.tags.map((t) => ({ id: t.tag.id, name: t.tag.name })),
+      importedFromPluggy: importedIds.has(p.id),
     }]
   })
 
@@ -137,6 +140,7 @@ export default async function CardDetailPage({
     paidInstallments: 0,
     remainingInstallments: 1,
     tags: charge.tags,
+    importedFromPluggy: false,
     subscription: {
       subscriptionId: charge.subscriptionId,
       logoDomain: charge.logoDomain,

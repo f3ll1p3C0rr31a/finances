@@ -54,6 +54,10 @@ O alias `@/*` aponta para `src/*`.
   `Subscription` (única por `(subscriptionId, month)` civil). `chargeDate` é o
   dia em que o serviço cobrou; `billingMonth` é a fatura em que a cobrança cai
   (ciclo do cartão aplicado; igual ao mês civil fora de cartão).
+- `PluggyConnection` é um Item do Pluggy (conexão viva com um banco).
+  `PluggyAccountLink` liga uma conta/cartão de dentro dessa conexão a uma
+  `Account` ou `Card` local; sem esse vínculo nada é importado.
+  `PluggyImportedTransaction` registra cada transação já importada.
 - `CardSpendingGoal` é uma meta mensal somando todos os cartões.
 - A meta efetiva de cartões de um mês é a última `CardSpendingGoal` cadastrada
   naquele mês ou antes dele. Ao salvar uma meta em M, metas futuras explícitas
@@ -234,6 +238,58 @@ O alias `@/*` aponta para `src/*`.
 - `logoDomain` guarda o site do serviço para exibir a logo (favicon);
   serviços conhecidos são sugeridos pelo nome em
   `src/components/brand/subscription-logo.tsx`.
+
+### Integração com o Pluggy (open finance)
+
+- Credenciais ficam só no servidor: `PLUGGY_CLIENT_ID`, `PLUGGY_CLIENT_SECRET`,
+  `PLUGGY_WEBHOOK_SECRET` e `APP_PUBLIC_URL`. Sem as duas primeiras, a página
+  `/conexoes` mostra o estado “não configurada” e o resto do app não muda.
+- `src/lib/services/pluggyClient.ts` isola o HTTP: autentica em `/auth`,
+  mantém a `apiKey` (~2h) em memória e refaz uma vez em 401/403.
+- O usuário conecta o banco pelo widget oficial (`react-pluggy-connect`,
+  carregado com `next/dynamic` e `ssr: false`) usando um connect token de 30
+  min gerado no servidor. O item resultante vira `PluggyConnection` e suas
+  contas viram `PluggyAccountLink` ainda sem vínculo.
+- Nada é importado até o usuário vincular cada conta/cartão. Para cartão, o
+  vínculo é sugerido comparando os 4 últimos dígitos do `Card.cardNumber`;
+  para conta, por semelhança de nome. A sugestão só aparece quando há
+  exatamente um candidato, e o usuário sempre confirma.
+- `syncPluggyConnection()` (`src/lib/services/pluggySync.ts`) é o único motor
+  de importação, disparado pelo botão “Sincronizar agora”, pelo vínculo
+  inicial (que traz o histórico) e pelo webhook. Não roda ao abrir páginas,
+  porque cada chamada tem custo e latência reais.
+- Sincronização é incremental por `PluggyAccountLink.transactionsSyncedAt`,
+  com 24h de sobreposição; a deduplicação real é a unicidade de
+  `PluggyImportedTransaction.pluggyTransactionId`.
+- Transações `PENDING` são ignoradas até liquidarem, pois valor e existência
+  ainda podem mudar.
+- Mapeamento: conta `BANK` com `DEBIT` vira `ExpenseEntry` paga (método de
+  pagamento inferido do texto); `CREDIT` vira `IncomeEntry` recebida; conta
+  `CREDIT` vira `CardPurchase` à vista, com `billingMonth` calculado por
+  `invoiceMonthForPurchase()` — nunca pelo `billId` do Pluggy, para que
+  compras manuais e importadas sigam a mesma regra de fatura. O Pluggy já
+  entrega uma transação por parcela, então cada uma é uma compra própria.
+- Lançamentos importados são criados direto no Prisma, sem passar por
+  `setExpensePaid`/`setIncomeReceived`: esses ajustam o saldo por delta, e o
+  sync sobrescreve `actualBalance` com o saldo real do banco ao final. Usar os
+  dois causaria dupla contagem.
+- Ao final de cada sincronização, `actualBalance` do mês corrente é
+  sobrescrito pela soma do `lastBalance` de todos os `PluggyAccountLink` de
+  tipo `BANK` com `includeInBalance`. Cartões não entram: sua dívida já é
+  representada pela fatura.
+- Excluir um lançamento importado não o faz voltar: a linha de
+  `PluggyImportedTransaction` sobrevive como lápide (`targetId` é um id solto,
+  sem FK, porque aponta para três modelos diferentes).
+- A rota `POST /api/webhooks/pluggy` é pública e autentica pelo header
+  `Authorization: Bearer $PLUGGY_WEBHOOK_SECRET` (comparado em tempo
+  constante), já que o Pluggy não assina os payloads. Sem segredo definido,
+  ela recusa tudo. Eventos desconhecidos e itens não cadastrados respondem
+  2xx para o Pluggy parar de reenviar.
+- Remover uma conexão chama `DELETE /items/{id}` no Pluggy antes de apagar
+  localmente, revogando o compartilhamento de verdade; os lançamentos já
+  importados são mantidos.
+- `CardInvoicePayment` (fatura paga) continua manual — não é reconciliado com
+  as bills do Pluggy.
 
 ### Informações bancárias
 
