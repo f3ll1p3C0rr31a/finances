@@ -6,7 +6,6 @@ import { toast } from "sonner"
 
 import type { SerializedCardPurchase } from "@/lib/types"
 import { SubscriptionLogo } from "@/components/brand/subscription-logo"
-import { ImportedBadge } from "@/components/brand/imported-badge"
 import type { TagOption } from "@/components/tags/tag-multi-select"
 import { deleteCardPurchase } from "@/lib/actions/cards"
 import { bulkSetCardPurchaseTags } from "@/lib/actions/tags"
@@ -229,7 +228,6 @@ export function PurchaseList({
                         />
                       ) : null}
                       {purchase.description}
-                      {purchase.importedFromPluggy ? <ImportedBadge /> : null}
                       {subscription ? (
                         <Badge variant="outline">Assinatura</Badge>
                       ) : null}

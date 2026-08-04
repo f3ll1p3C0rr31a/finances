@@ -7,7 +7,6 @@ import { getCardGoalData } from "@/lib/actions/cardSummary"
 import { listTags } from "@/lib/actions/tags"
 import { listPixKeys } from "@/lib/actions/pixKeys"
 import { getSpendingByTagRows } from "@/lib/actions/spendingByTag"
-import { findImportedTargetIds } from "@/lib/actions/pluggyImports"
 import { monthFromKey, monthKeyFromDate } from "@/lib/calculations/month"
 import { bestPurchaseDateForCard } from "@/lib/calculations/cardTiming"
 import type {
@@ -52,10 +51,6 @@ export default async function DashboardMonthPage({
 
   const tagRefs = allTags.map((t) => ({ id: t.id, name: t.name }))
   const pixPayees = pixPayeeKeys.map((k) => ({ id: k.id, label: k.label }))
-  const importedIds = await findImportedTargetIds([
-    ...data.incomeEntries.map((entry) => entry.id),
-    ...data.expenseEntries.map((entry) => entry.id),
-  ])
 
   const incomeEntries: SerializedIncomeEntry[] = data.incomeEntries.map((entry) => ({
     id: entry.id,
@@ -68,7 +63,6 @@ export default async function DashboardMonthPage({
     isRecurring: entry.templateId != null,
     uncertain: entry.uncertain,
     tags: entry.tags.map((t) => ({ id: t.tag.id, name: t.tag.name })),
-    importedFromPluggy: importedIds.has(entry.id),
   }))
 
   const expenseEntries: SerializedExpenseEntry[] = data.expenseEntries.map((entry) => ({
@@ -91,7 +85,6 @@ export default async function DashboardMonthPage({
     externalLink: entry.externalLink,
     attachmentFileName: entry.attachmentFileName,
     hasAttachment: Boolean(entry.attachmentPath),
-    importedFromPluggy: importedIds.has(entry.id),
   }))
 
   const cardSummaries: SerializedCardSummary[] = data.cardSummaries.map((s) => ({

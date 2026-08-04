@@ -25,7 +25,6 @@ import {
 import { ExpenseEntryDialog } from "@/components/cashflow/expense-entry-dialog"
 import { ExpenseReferencesDialog } from "@/components/cashflow/expense-references-dialog"
 import { PixIcon } from "@/components/brand/pix-icon"
-import { ImportedBadge } from "@/components/brand/imported-badge"
 
 const CATEGORY_LABELS = {
   FIXED: "Fixa",
@@ -193,7 +192,6 @@ export function ExpenseTable({
                 <TableCell className="font-medium">
                   <div className="flex flex-wrap items-center gap-2">
                     {entry.name}
-                    {entry.importedFromPluggy ? <ImportedBadge /> : null}
                     {entry.uncertain && !entry.paid ? (
                       <Badge variant="outline">Incerta · avança até pagar</Badge>
                     ) : null}

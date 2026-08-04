@@ -11,7 +11,6 @@ const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/cards", label: "Cartões" },
   { href: "/assinaturas", label: "Assinaturas" },
-  { href: "/conexoes", label: "Conexões" },
   { href: "/informacoes", label: "Informações" },
 ]
 

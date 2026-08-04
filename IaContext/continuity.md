@@ -1,75 +1,8 @@
 # Continuidade
 
-Atualizado em: 2026-07-09
+Atualizado em: 2026-07-08
 
 ## Estado atual
-
-### Objetivo
-
-Integrar o Pluggy (open finance) para importar automaticamente lançamentos
-bancários, compras de cartão e saldo real, reduzindo o lançamento manual.
-
-### Alterações realizadas
-
-- Novos modelos `PluggyConnection`, `PluggyAccountLink` e
-  `PluggyImportedTransaction` (migration
-  `20260709120000_pluggy_integration`), com relações inversas em `User`,
-  `Account` e `Card`.
-- `src/lib/services/pluggyClient.ts`: cliente HTTP com cache da `apiKey` e
-  retry único em 401/403; `src/lib/services/pluggySync.ts`: motor de
-  importação, dedup, recálculo da cadeia de saldos e aplicação do saldo real.
-- Server Actions em `src/lib/actions/pluggy.ts` (connect token, finalizar
-  conexão, vincular/desvincular, sincronizar, remover) e schemas Zod em
-  `src/lib/validation/pluggySchemas.ts`.
-- Nova página `/conexoes` (entrou no `NAV_LINKS`) com widget oficial
-  `react-pluggy-connect`, sugestão de vínculo e ações por conexão.
-- Rota pública `POST /api/webhooks/pluggy` autenticada por header secreto.
-- `setActualBalance` foi dividido para expor `setActualBalanceForUser`,
-  reutilizável pelo sync (que não tem sessão HTTP).
-- Selo “Importado” nas tabelas de despesas, entradas e compras de cartão.
-
-### Decisões e motivos
-
-- Importação automática completa (escolha explícita do usuário), com histórico
-  na primeira conexão e saldo real sobrescrevendo `actualBalance` a cada
-  sincronização.
-- Lançamentos importados são criados direto no Prisma para não somar delta de
-  saldo em cima do saldo real vindo do banco (evita dupla contagem).
-- `billingMonth` de compras importadas vem de `invoiceMonthForPurchase()`, não
-  do `billId` do Pluggy, para manter uma única regra de fatura no sistema.
-- Dedup pela unicidade de `pluggyTransactionId`, com a linha funcionando como
-  lápide — excluir um lançamento importado não o traz de volta.
-
-### Validações executadas
-
-- `npx tsc --noEmit`, `npm run lint`, `npm run build`: passaram em 2026-07-09.
-- `scripts/test-pluggy-sync-domain.ts` (novo, com o `pluggyClient` mockado por
-  interceptação de módulo, sem tocar a API real): 20 asserções passaram —
-  débito vira despesa paga com método inferido, crédito vira entrada recebida,
-  compra de cartão em 07/07 cai na fatura de agosto com sufixo de parcela,
-  `PENDING` é ignorada e importada quando liquida, saldo do mês igual ao saldo
-  do banco, resync não duplica e lançamento excluído não ressuscita.
-- Smoke test autenticado: `/dashboard`, `/cards`, `/assinaturas`, `/conexoes` e
-  `/informacoes` retornaram 200; `/conexoes` mostra corretamente o estado “não
-  configurada” sem credenciais.
-- Webhook validado nos quatro caminhos: segredo correto com item desconhecido
-  → 200 `ignored`, evento irrelevante → 200 `ignored`, payload incompleto →
-  400, segredo errado ou ausente → 401.
-
-### Pendências ou próximo passo
-
-- **Não testado contra a API real do Pluggy** — falta o usuário criar uma
-  aplicação no dashboard de desenvolvedor do Pluggy e informar
-  `PLUGGY_CLIENT_ID`/`PLUGGY_CLIENT_SECRET`, além do domínio público para
-  `APP_PUBLIC_URL` (o repositório não registra nenhum domínio).
-- Após configurar o `.env` de produção: registrar o webhook no Pluggy
-  (`registerWebhook()` existe no cliente, mas ainda não há comando/tela que o
-  chame — registrar manualmente ou criar um script).
-- Validar em sandbox antes de conectar uma conta bancária real.
-- Após a primeira importação com histórico, revisar os lançamentos marcados
-  como “Importado” e remover duplicatas do que já havia sido lançado à mão.
-
-## Passagem anterior (2026-07-08)
 
 ### Objetivo
 

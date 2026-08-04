@@ -13,7 +13,6 @@ export type SerializedIncomeEntry = {
   isRecurring: boolean
   uncertain: boolean
   tags: TagRef[]
-  importedFromPluggy: boolean
 }
 
 export type SerializedExpenseEntry = {
@@ -36,7 +35,6 @@ export type SerializedExpenseEntry = {
   externalLink: string | null
   attachmentFileName: string | null
   hasAttachment: boolean
-  importedFromPluggy: boolean
 }
 
 export type SerializedCardSummary = {
@@ -84,39 +82,10 @@ export type SerializedCardPurchase = {
   paidInstallments: number
   remainingInstallments: number
   tags: TagRef[]
-  importedFromPluggy: boolean
   /** Present when this row is a subscription charge on the invoice, not a purchase. */
   subscription?: {
     subscriptionId: string
     logoDomain: string | null
     cancelled: boolean
   }
-}
-
-export type SerializedPluggyAccountLink = {
-  id: string
-  pluggyAccountId: string
-  type: "BANK" | "CREDIT"
-  name: string
-  numberLast4: string | null
-  accountId: string | null
-  accountName: string | null
-  cardId: string | null
-  cardName: string | null
-  includeInBalance: boolean
-  lastBalance: number | null
-  lastBalanceAt: string | null
-  suggestedCardId: string | null
-  suggestedAccountId: string | null
-}
-
-export type SerializedPluggyConnection = {
-  id: string
-  itemId: string
-  connectorName: string
-  connectorImageUrl: string | null
-  status: string
-  executionStatus: string | null
-  lastSyncedAt: string | null
-  accountLinks: SerializedPluggyAccountLink[]
 }

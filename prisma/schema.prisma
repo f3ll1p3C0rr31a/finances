@@ -24,7 +24,6 @@ model User {
   accounts          Account[]
   pixKeys           PixKey[]
   subscriptions     Subscription[]
-  pluggyConnections PluggyConnection[]
 }
 
 enum PaidBy {
@@ -68,17 +67,6 @@ enum PixKeyType {
 enum Currency {
   BRL
   USD
-}
-
-enum PluggyAccountType {
-  BANK
-  CREDIT
-}
-
-enum PluggyImportTarget {
-  EXPENSE
-  INCOME
-  CARD_PURCHASE
 }
 
 /// A recurring income rule (e.g. monthly salary). One-time income is
@@ -231,7 +219,6 @@ model Card {
   purchases       CardPurchase[]
   subscriptions   Subscription[]
   invoicePayments CardInvoicePayment[]
-  pluggyLink      PluggyAccountLink?
 
   @@index([userId])
   @@index([accountId])
@@ -373,9 +360,8 @@ model Account {
   notes         String?
   createdAt     DateTime @default(now())
 
-  cards      Card[]
-  pixKeys    PixKey[]
-  pluggyLink PluggyAccountLink?
+  cards   Card[]
+  pixKeys PixKey[]
 
   @@index([userId])
 }
@@ -437,79 +423,6 @@ model Subscription {
 
   @@index([userId])
   @@index([cardId])
-}
-
-/// One Pluggy Item: a live connection to a financial institution, created
-/// by the user through the Pluggy Connect widget. Holds no credentials —
-/// Pluggy keeps those; we only store the item id needed to read data.
-model PluggyConnection {
-  id              String    @id @default(cuid())
-  userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  itemId          String    @unique
-  connectorId     Int
-  connectorName   String
-  connectorImageUrl String?
-  status          String
-  executionStatus String?
-  lastSyncedAt    DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  accountLinks PluggyAccountLink[]
-
-  @@index([userId])
-}
-
-/// Maps one account inside a Pluggy connection to the local Account
-/// (checking account) or Card it feeds. Until linked, nothing is imported
-/// from it. `transactionsCursor` makes each sync incremental.
-model PluggyAccountLink {
-  id                 String            @id @default(cuid())
-  connectionId       String
-  connection         PluggyConnection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  pluggyAccountId    String            @unique
-  type               PluggyAccountType
-  name               String
-  numberLast4        String?
-  accountId          String?           @unique
-  account            Account?          @relation(fields: [accountId], references: [id], onDelete: SetNull)
-  cardId             String?           @unique
-  card               Card?             @relation(fields: [cardId], references: [id], onDelete: SetNull)
-  /// Whether this account's balance counts toward the month's real balance.
-  includeInBalance   Boolean           @default(true)
-  lastBalance        Decimal?          @db.Decimal(12, 2)
-  lastBalanceAt      DateTime?
-  /// Watermark for incremental sync: only transactions created at Pluggy
-  /// after this instant are fetched next time. Null means "never synced",
-  /// which pulls the full available history.
-  transactionsSyncedAt DateTime?
-  createdAt          DateTime          @default(now())
-
-  importedTransactions PluggyImportedTransaction[]
-
-  @@index([connectionId])
-}
-
-/// Audit/tombstone row: its existence (keyed by pluggyTransactionId) is what
-/// prevents re-import, independent of whether targetId still points to a live
-/// record — deleting the imported ExpenseEntry/IncomeEntry/CardPurchase never
-/// makes it come back on the next sync. targetId is a plain id with no FK on
-/// purpose, since it points across three different models.
-model PluggyImportedTransaction {
-  id                  String             @id @default(cuid())
-  accountLinkId       String
-  accountLink         PluggyAccountLink  @relation(fields: [accountLinkId], references: [id], onDelete: Cascade)
-  pluggyTransactionId String             @unique
-  targetType          PluggyImportTarget
-  targetId            String?
-  amount              Decimal            @db.Decimal(12, 2)
-  description         String
-  transactionDate     DateTime           @db.Date
-  importedAt          DateTime           @default(now())
-
-  @@index([accountLinkId])
-  @@index([targetId])
 }
 
 /// One materialized monthly charge of a subscription. Created when the
