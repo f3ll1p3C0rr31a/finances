@@ -56,18 +56,55 @@ bancários, compras de cartão e saldo real, reduzindo o lançamento manual.
   → 200 `ignored`, evento irrelevante → 200 `ignored`, payload incompleto →
   400, segredo errado ou ausente → 401.
 
-### Pendências ou próximo passo
+### Situação em 2026-08-04: aguardando aprovação, fora de produção
 
-- **Não testado contra a API real do Pluggy** — falta o usuário criar uma
-  aplicação no dashboard de desenvolvedor do Pluggy e informar
-  `PLUGGY_CLIENT_ID`/`PLUGGY_CLIENT_SECRET`, além do domínio público para
-  `APP_PUBLIC_URL` (o repositório não registra nenhum domínio).
-- Após configurar o `.env` de produção: registrar o webhook no Pluggy
-  (`registerWebhook()` existe no cliente, mas ainda não há comando/tela que o
-  chame — registrar manualmente ou criar um script).
-- Validar em sandbox antes de conectar uma conta bancária real.
-- Após a primeira importação com histórico, revisar os lançamentos marcados
-  como “Importado” e remover duplicatas do que já havia sido lançado à mão.
+Esta branch (`staging/pluggy`) NÃO está em produção. O commit `eab114a` chegou
+a ser publicado em 2026-08-03 por engano e foi revertido no mesmo dia pelo
+commit `f284148` na `main`, antes de qualquer banco ser conectado. Produção
+roda hoje sem nenhuma parte do Pluggy.
+
+Estado deixado no servidor (jupiter):
+
+- `.env` de produção **já contém** `PLUGGY_CLIENT_ID`, `PLUGGY_CLIENT_SECRET`,
+  `PLUGGY_WEBHOOK_SECRET` e `APP_PUBLIC_URL=https://finances.fellipecorreia.com`.
+  São inertes enquanto o código estiver revertido. Backup do `.env` anterior
+  em `.env.bak-AAAAMMDD-HHMMSS` na mesma pasta.
+- As três tabelas `Pluggy*` continuam no banco, **vazias**, junto do registro
+  da migration `20260709120000_pluggy_integration` em `_prisma_migrations`.
+  Foram deixadas de propósito: `prisma migrate deploy` ignora migrations
+  registradas que não estão na pasta (verificado, exit 0), então elas não
+  quebram a `main` revertida e evitam retrabalho no re-deploy.
+- Backups em `/home/fellipecorreia/sites/finances/backups/`:
+  `finances-20260803-212542.sql.gz` é o snapshot **pré-Pluggy** (ponto de
+  restauração) e `finances-pos-pluggy-20260803-213018.sql.gz` é o pós-migration.
+
+### Para publicar quando a equipe aprovar
+
+1. `git checkout main && git revert --no-edit f284148` (reverte a reversão) ou
+   `git merge staging/pluggy`; depois `git push origin main` — o deploy é
+   automático.
+2. Conferir `curl https://finances.fellipecorreia.com/api/version` e o acesso a
+   `/conexoes`.
+3. Registrar o webhook no Pluggy apontando para
+   `https://finances.fellipecorreia.com/api/webhooks/pluggy` com o header
+   `Authorization: Bearer $PLUGGY_WEBHOOK_SECRET` (`registerWebhook()` existe
+   em `pluggyClient.ts`, mas ainda não há tela/script que o chame).
+4. Validar em sandbox antes de conectar uma conta bancária real.
+5. Após a primeira importação com histórico, revisar os lançamentos marcados
+   como “Importado” e remover duplicatas do que já havia sido lançado à mão.
+
+### Para reverter de novo, se preciso
+
+`git revert` do merge/commit na `main` e push. Só restaure o dump SQL se algum
+dado real tiver sido corrompido — restaurar backup descarta lançamentos feitos
+depois dele, então prefira sempre a reversão de código.
+
+### Pendências conhecidas
+
+- **Nunca testado contra a API real do Pluggy.** As credenciais foram
+  validadas apenas no endpoint `/auth` (HTTP 200); nenhum item, conta ou
+  transação real chegou a ser lido.
+- Não existe tela nem script para registrar o webhook — hoje seria manual.
 
 ## Passagem anterior (2026-07-08)
 
