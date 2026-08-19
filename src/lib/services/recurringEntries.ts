@@ -13,6 +13,12 @@ import { currentMonth } from "@/lib/calculations/month"
  * nenhum mês anterior. Assim, mudar o valor da van em agosto vale para
  * setembro em diante sem precisar repetir a edição.
  *
+ * A propagação é seletiva: um mês futuro só recebe o campo alterado se ainda
+ * estiver com o valor antigo, ou seja, se estava apenas herdando. Um mês que
+ * você ajustou de propósito sobrevive à edição dos meses anteriores. A
+ * comparação é campo a campo, então mudar quem paga a conta alcança até o mês
+ * que tem um valor diferente combinado.
+ *
  * Um mês encerrado é histórico e nunca é reescrito. Um lançamento já pago
  * também não: o pagamento já mexeu no saldo real, e alterar o valor por baixo
  * deixaria a conta inconsistente.
@@ -57,82 +63,167 @@ function dueDateFor(
   return resolveDueDate(month, traits.dueDayType ?? "CALENDAR_DAY", traits.dueDayValue)
 }
 
+function sameTrait(a: unknown, b: unknown): boolean {
+  if (a instanceof Prisma.Decimal && b instanceof Prisma.Decimal) return a.equals(b)
+  if (a instanceof Prisma.Decimal || b instanceof Prisma.Decimal) {
+    // Um lado é Decimal e o outro não é: só são iguais se ambos forem nulos,
+    // caso já coberto acima, então aqui a resposta é sempre não.
+    return false
+  }
+  return a === b
+}
+
 /**
- * Propaga as características de uma despesa recorrente para os meses seguintes
- * ainda abertos. `dueDate` é recalculado mês a mês porque dia útil cai em datas
- * diferentes em cada um.
+ * O que um mês futuro deve herdar de uma edição: só os campos que realmente
+ * mudaram e que aquele mês ainda mantinha no valor antigo.
+ *
+ * Comparar contra o valor antigo — e não simplesmente sobrescrever — é o que
+ * preserva um mês ajustado de propósito. Comparar campo a campo é o que
+ * permite, por exemplo, mudar quem paga a conta sem esbarrar num mês que tem
+ * um valor combinado diferente.
+ */
+export function traitsToInherit<T extends object>(
+  previous: T,
+  next: T,
+  target: T,
+  fields: readonly (keyof T)[]
+): Partial<T> {
+  const changes: Partial<T> = {}
+  for (const field of fields) {
+    if (sameTrait(previous[field], next[field])) continue
+    if (!sameTrait(target[field], previous[field])) continue
+    changes[field] = next[field]
+  }
+  return changes
+}
+
+/**
+ * Propaga uma edição de despesa recorrente para os meses seguintes ainda
+ * abertos. `dueDate` é recalculado por mês porque dia útil cai em datas
+ * diferentes em cada um. Devolve quantos meses mudaram.
  */
 export async function propagateExpenseTraits(
   userId: string,
-  entry: { id: string; templateId: string | null; month: Date } & ExpenseTraits
+  previous: ExpenseTraits,
+  next: { templateId: string | null; month: Date } & ExpenseTraits
 ): Promise<number> {
-  if (!entry.templateId) return 0
+  if (!next.templateId) return 0
 
   const targets = await prisma.expenseEntry.findMany({
     where: {
       userId,
-      templateId: entry.templateId,
-      month: inheritingMonths(entry.month),
+      templateId: next.templateId,
+      month: inheritingMonths(next.month),
       paid: false,
     },
-    select: { id: true, month: true },
   })
 
-  const traits = Object.fromEntries(EXPENSE_TRAITS.map((key) => [key, entry[key]])) as ExpenseTraits
-
-  await prisma.$transaction(
-    targets.map((target) =>
+  const updates = targets.flatMap((target) => {
+    const changes = traitsToInherit(previous, next, target, EXPENSE_TRAITS)
+    if (Object.keys(changes).length === 0) return []
+    const touchesDueDay = "dueDayType" in changes || "dueDayValue" in changes
+    return [
       prisma.expenseEntry.update({
         where: { id: target.id },
-        data: { ...traits, dueDate: dueDateFor(target.month, entry) },
-      })
-    )
-  )
+        data: {
+          ...changes,
+          ...(touchesDueDay
+            ? {
+                dueDate: dueDateFor(target.month, {
+                  dueDayType: changes.dueDayType ?? target.dueDayType,
+                  dueDayValue: changes.dueDayValue ?? target.dueDayValue,
+                }),
+              }
+            : {}),
+        },
+      }),
+    ]
+  })
 
-  return targets.length
+  await prisma.$transaction(updates)
+  return updates.length
 }
 
 export async function propagateIncomeTraits(
   userId: string,
-  entry: { id: string; templateId: string | null; month: Date } & IncomeTraits
+  previous: IncomeTraits,
+  next: { templateId: string | null; month: Date } & IncomeTraits
 ): Promise<number> {
-  if (!entry.templateId) return 0
+  if (!next.templateId) return 0
 
   const targets = await prisma.incomeEntry.findMany({
     where: {
       userId,
-      templateId: entry.templateId,
-      month: inheritingMonths(entry.month),
+      templateId: next.templateId,
+      month: inheritingMonths(next.month),
       received: false,
     },
-    select: { id: true, month: true },
   })
 
-  const traits = Object.fromEntries(INCOME_TRAITS.map((key) => [key, entry[key]])) as IncomeTraits
-
-  await prisma.$transaction(
-    targets.map((target) =>
+  const updates = targets.flatMap((target) => {
+    const changes = traitsToInherit(previous, next, target, INCOME_TRAITS)
+    if (Object.keys(changes).length === 0) return []
+    const touchesDueDay = "dueDayType" in changes || "dueDayValue" in changes
+    return [
       prisma.incomeEntry.update({
         where: { id: target.id },
-        data: { ...traits, dueDate: dueDateFor(target.month, entry) },
-      })
-    )
-  )
+        data: {
+          ...changes,
+          ...(touchesDueDay
+            ? {
+                dueDate: dueDateFor(target.month, {
+                  dueDayType: changes.dueDayType ?? target.dueDayType,
+                  dueDayValue: changes.dueDayValue ?? target.dueDayValue,
+                }),
+              }
+            : {}),
+        },
+      }),
+    ]
+  })
 
-  return targets.length
+  await prisma.$transaction(updates)
+  return updates.length
+}
+
+function sameTagSet(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false
+  const sorted = [...b].sort()
+  return [...a].sort().every((tagId, index) => tagId === sorted[index])
 }
 
 /**
  * Espelha as etiquetas de um lançamento recorrente nos meses seguintes ainda
- * abertos: sem isso, o gráfico de gastos por etiqueta perderia a conta a partir
+ * abertos — sem isso o gráfico de gastos por etiqueta perderia a conta a partir
  * do mês seguinte, já que ele ignora lançamentos sem etiqueta.
+ *
+ * Segue a mesma seletividade dos demais campos: só recebe as etiquetas novas o
+ * mês que ainda estava com exatamente o conjunto antigo.
  */
+async function propagateTags(
+  targets: { id: string; tags: { tagId: string }[] }[],
+  previousTagIds: string[],
+  nextTagIds: string[],
+  replace: (entryIds: string[], tagIds: string[]) => Prisma.PrismaPromise<unknown>[]
+): Promise<number> {
+  if (sameTagSet(previousTagIds, nextTagIds)) return 0
+
+  const ids = targets
+    .filter((target) => sameTagSet(target.tags.map(({ tagId }) => tagId), previousTagIds))
+    .map((target) => target.id)
+  if (ids.length === 0) return 0
+
+  await prisma.$transaction(replace(ids, nextTagIds))
+  return ids.length
+}
+
 export async function propagateExpenseTags(
   userId: string,
   entry: { templateId: string | null; month: Date },
-  tagIds: string[]
-): Promise<void> {
-  if (!entry.templateId) return
+  previousTagIds: string[],
+  nextTagIds: string[]
+): Promise<number> {
+  if (!entry.templateId) return 0
 
   const targets = await prisma.expenseEntry.findMany({
     where: {
@@ -141,15 +232,13 @@ export async function propagateExpenseTags(
       month: inheritingMonths(entry.month),
       paid: false,
     },
-    select: { id: true },
+    select: { id: true, tags: { select: { tagId: true } } },
   })
-  if (targets.length === 0) return
 
-  const ids = targets.map((target) => target.id)
-  await prisma.$transaction([
-    prisma.expenseEntryTag.deleteMany({ where: { entryId: { in: ids } } }),
+  return propagateTags(targets, previousTagIds, nextTagIds, (entryIds, tagIds) => [
+    prisma.expenseEntryTag.deleteMany({ where: { entryId: { in: entryIds } } }),
     prisma.expenseEntryTag.createMany({
-      data: ids.flatMap((entryId) => tagIds.map((tagId) => ({ entryId, tagId }))),
+      data: entryIds.flatMap((entryId) => tagIds.map((tagId) => ({ entryId, tagId }))),
     }),
   ])
 }
@@ -157,9 +246,10 @@ export async function propagateExpenseTags(
 export async function propagateIncomeTags(
   userId: string,
   entry: { templateId: string | null; month: Date },
-  tagIds: string[]
-): Promise<void> {
-  if (!entry.templateId) return
+  previousTagIds: string[],
+  nextTagIds: string[]
+): Promise<number> {
+  if (!entry.templateId) return 0
 
   const targets = await prisma.incomeEntry.findMany({
     where: {
@@ -168,15 +258,13 @@ export async function propagateIncomeTags(
       month: inheritingMonths(entry.month),
       received: false,
     },
-    select: { id: true },
+    select: { id: true, tags: { select: { tagId: true } } },
   })
-  if (targets.length === 0) return
 
-  const ids = targets.map((target) => target.id)
-  await prisma.$transaction([
-    prisma.incomeEntryTag.deleteMany({ where: { entryId: { in: ids } } }),
+  return propagateTags(targets, previousTagIds, nextTagIds, (entryIds, tagIds) => [
+    prisma.incomeEntryTag.deleteMany({ where: { entryId: { in: entryIds } } }),
     prisma.incomeEntryTag.createMany({
-      data: ids.flatMap((entryId) => tagIds.map((tagId) => ({ entryId, tagId }))),
+      data: entryIds.flatMap((entryId) => tagIds.map((tagId) => ({ entryId, tagId }))),
     }),
   ])
 }

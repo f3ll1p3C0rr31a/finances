@@ -29,7 +29,34 @@ export function formatMonthLabel(date: Date): string {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
+/**
+ * Fuso em que "hoje" é decidido. Datas são guardadas normalizadas em UTC, mas
+ * a virada do dia — e principalmente a do mês — tem que acontecer à
+ * meia-noite de Brasília. Lendo direto o UTC, das 21h do dia 31 em diante o
+ * app já mostrava o mês seguinte.
+ */
+export const APP_TIME_ZONE = "America/Sao_Paulo"
+
+/**
+ * Data de hoje no fuso do app, normalizada em UTC (meia-noite).
+ *
+ * O formato `en-CA` é AAAA-MM-DD, o que evita ter que remontar a data a partir
+ * de partes localizadas.
+ */
+export function today(now: Date = new Date()): Date {
+  const [year, month, day] = new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .format(now)
+    .split("-")
+    .map(Number)
+  return new Date(Date.UTC(year, month - 1, day))
+}
+
 export function currentMonth(): Date {
-  const now = new Date()
+  const now = today()
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
 }

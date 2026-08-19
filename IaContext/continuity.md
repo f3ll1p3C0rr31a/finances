@@ -116,13 +116,38 @@ formulários longos também ficaram mais largos no desktop
 **Scripts de manutenção** novos: `recalculate-balance-chain.ts` e
 `apply-recurring-inheritance.ts`.
 
+### Sessão de 2026-08-19 (segunda leva)
+
+- **Herança seletiva**: `traitsToInherit()` só reescreve o mês futuro que ainda
+  está com o valor antigo, campo a campo. Decisão do usuário depois de ver a
+  primeira versão sobrescrever tudo.
+- **Ícone e PWA**: `scripts/generate-icons.mjs` gera todos os ícones (web e
+  Android) a partir da moeda de `fortuna-logo.tsx`; `manifest.ts`, `icon.svg`,
+  `apple-icon.png`, metadados de viewport/tema e um service worker
+  conservador. Sessão passou de 30 dias para um ano.
+- **Fuso horário (bug real)**: "hoje" era lido em UTC, então das 21h do dia 31
+  em diante o app já operava no mês seguinte. `today()` agora decide em
+  `America/Sao_Paulo` e aceita um instante, o que tornou a virada testável.
+- **Widget do Android**: modelo `DeviceToken` (só o hash), rotas
+  `/api/widget/overview` e `/api/widget/purchase`, UI de gerar/revogar em
+  Informações. `createCardPurchaseForUser()` foi extraído para que web e
+  widget usem exatamente a mesma regra.
+- **Projeto Android** em `android/`: TWA + widget + lançamento rápido.
+  **Nunca foi compilado** — não há JDK nem SDK nesta máquina. Ver o aviso no
+  `android/README.md`.
+- **Autorização**: `assertOwnedCard()` / `assertOwnedPixKey()` passaram a
+  validar as chaves estrangeiras que as Server Actions gravam (antes só a
+  posse do registro editado era conferida).
+
 ### Pendências ou próximo passo
 
-- Conferir no app real, com dados de verdade: saldo planejado do mês corrente,
-  faturas em aberto em `/cards` e as novas cores. Só o usuário pode validar o
-  significado dos números.
-- Revisar se alguma conta de terceiro deveria sair dos totais do mês (hoje só
-  mudou de cor).
+- Compilar o `android/` no Android Studio, gerar a chave, publicar a
+  impressão digital em `ANDROID_APP_FINGERPRINT` e conferir o assetlinks.
+- Confirmar com o usuário se o salário de agosto (4.700,69) era aumento ou
+  valor pontual: a herança o propagou para 14 meses.
+- Validar na tela os números do saldo planejado e das faturas em aberto.
+- Decidir se conta de terceiro deve sair dos totais do mês (hoje só muda de
+  cor).
 
 ## Débitos documentais confirmados
 

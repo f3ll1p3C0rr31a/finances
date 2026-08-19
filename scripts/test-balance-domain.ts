@@ -12,6 +12,8 @@ import {
   computeUncertainPreview,
 } from "../src/lib/calculations/balanceChain"
 import { openInvoiceMonth } from "../src/lib/calculations/cardTiming"
+import { today } from "../src/lib/calculations/month"
+import { traitsToInherit } from "../src/lib/services/recurringEntries"
 
 function utc(y: number, m: number, d = 1) {
   return new Date(Date.UTC(y, m - 1, d))
@@ -204,6 +206,34 @@ function carryOverTests() {
   )
 }
 
+function timeZoneTests() {
+  console.log("\n== virada do dia no fuso de Brasilia ==")
+
+  // O caso que motivou a correcao: 23h de Brasilia do dia 31 ja e dia 1 em
+  // UTC, e o app pulava de mes tres horas antes da hora.
+  assertEqual(
+    today(new Date("2026-09-01T02:00:00Z")),
+    utc(2026, 8, 31),
+    "23h de 31/08 em Brasilia ainda e 31/08"
+  )
+  assertEqual(
+    today(new Date("2026-09-01T03:00:00Z")),
+    utc(2026, 9, 1),
+    "meia-noite de Brasilia vira o dia"
+  )
+  assertEqual(
+    today(new Date("2026-08-31T12:00:00Z")),
+    utc(2026, 8, 31),
+    "meio-dia UTC cai no mesmo dia civil"
+  )
+  // Madrugada em Brasilia ainda e o dia anterior em relacao ao UTC seguinte.
+  assertEqual(
+    today(new Date("2026-08-31T05:00:00Z")),
+    utc(2026, 8, 31),
+    "2h da manha de Brasilia e o mesmo dia"
+  )
+}
+
 function openInvoiceTests() {
   console.log("\n== fatura em aberto ==")
 
@@ -232,8 +262,62 @@ function openInvoiceTests() {
   assertEqual(openInvoiceMonth(noCycle, utc(2026, 8, 18)), utc(2026, 8), "sem fechamento -> mês corrente")
 }
 
+function inheritanceTests() {
+  console.log("\n== heranca de recorrentes ==")
+
+  const FIELDS = ["name", "amount", "paidBy", "paidByName"] as const
+  type Conta = { name: string; amount: Prisma.Decimal; paidBy: string; paidByName: string | null }
+
+  const antes: Conta = { name: "Van Escolar", amount: dec(400), paidBy: "SELF", paidByName: null }
+  const depois: Conta = { name: "Van Escolar", amount: dec(600), paidBy: "SELF", paidByName: null }
+
+  // Mes futuro que so herdava recebe o valor novo.
+  {
+    const herdando: Conta = { ...antes }
+    const mudancas = traitsToInherit(antes, depois, herdando, FIELDS)
+    assertEqual(Object.keys(mudancas).join(","), "amount", "mes que so herdava recebe o campo alterado")
+    assertEqual(mudancas.amount ?? dec(0), dec(600), "valor propagado")
+  }
+
+  // Mes ajustado de proposito sobrevive.
+  {
+    const personalizado: Conta = { ...antes, amount: dec(450) }
+    const mudancas = traitsToInherit(antes, depois, personalizado, FIELDS)
+    assertEqual(Object.keys(mudancas).length, 0, "mes personalizado nao e sobrescrito")
+  }
+
+  // Campo a campo: mudar quem paga alcanca ate o mes com valor diferente.
+  {
+    const personalizado: Conta = { ...antes, amount: dec(450) }
+    const trocaPagador: Conta = { ...antes, paidBy: "THIRD_PARTY", paidByName: "Vovo" }
+    const mudancas = traitsToInherit(antes, trocaPagador, personalizado, FIELDS)
+    assertEqual(
+      Object.keys(mudancas).sort().join(","),
+      "paidBy,paidByName",
+      "quem paga propaga mesmo com valor personalizado"
+    )
+    assertEqual(personalizado.amount, dec(450), "e o valor personalizado nao e tocado")
+  }
+
+  // Campo que nao mudou nunca e reescrito, mesmo com o mes divergente.
+  {
+    const divergente: Conta = { ...antes, name: "Van da escola" }
+    const mudancas = traitsToInherit(antes, depois, divergente, FIELDS)
+    assertEqual("name" in mudancas, false, "campo inalterado na edicao nao propaga")
+  }
+
+  // Decimal precisa comparar por valor, nao por identidade de objeto.
+  {
+    const outroObjeto: Conta = { ...antes, amount: dec(400) }
+    const mudancas = traitsToInherit(antes, depois, outroObjeto, FIELDS)
+    assertEqual(Object.keys(mudancas).join(","), "amount", "Decimal e comparado por valor")
+  }
+}
+
 plannedBalanceTests()
 carryOverTests()
+inheritanceTests()
+timeZoneTests()
 openInvoiceTests()
 
 if (failures > 0) {

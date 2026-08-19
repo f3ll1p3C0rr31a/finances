@@ -104,7 +104,7 @@ export async function updateIncomeEntry(id: string, input: IncomeEntryInput) {
   // Entrada recorrente leva as novas características para os meses seguintes
   // ainda abertos, e o template acompanha para os meses ainda não gerados.
   if (entry.templateId) {
-    await propagateIncomeTraits(userId, entry)
+    await propagateIncomeTraits(userId, existing, entry)
     await prisma.incomeTemplate.update({
       where: { id: entry.templateId },
       data: {

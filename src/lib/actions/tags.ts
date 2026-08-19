@@ -71,25 +71,33 @@ export async function bulkSetCardPurchaseTags(purchaseIds: string[], tagIds: str
 
 export async function setIncomeEntryTags(entryId: string, tagIds: string[]) {
   const userId = await requireUserId()
-  const entry = await prisma.incomeEntry.findUniqueOrThrow({ where: { id: entryId, userId } })
+  const entry = await prisma.incomeEntry.findUniqueOrThrow({
+    where: { id: entryId, userId },
+    include: { tags: { select: { tagId: true } } },
+  })
+  const previousTagIds = entry.tags.map(({ tagId }) => tagId)
 
   await prisma.$transaction([
     prisma.incomeEntryTag.deleteMany({ where: { entryId } }),
     prisma.incomeEntryTag.createMany({ data: tagIds.map((tagId) => ({ entryId, tagId })) }),
   ])
-  await propagateIncomeTags(userId, entry, tagIds)
+  await propagateIncomeTags(userId, entry, previousTagIds, tagIds)
   revalidatePath("/dashboard", "layout")
 }
 
 export async function setExpenseEntryTags(entryId: string, tagIds: string[]) {
   const userId = await requireUserId()
-  const entry = await prisma.expenseEntry.findUniqueOrThrow({ where: { id: entryId, userId } })
+  const entry = await prisma.expenseEntry.findUniqueOrThrow({
+    where: { id: entryId, userId },
+    include: { tags: { select: { tagId: true } } },
+  })
+  const previousTagIds = entry.tags.map(({ tagId }) => tagId)
 
   await prisma.$transaction([
     prisma.expenseEntryTag.deleteMany({ where: { entryId } }),
     prisma.expenseEntryTag.createMany({ data: tagIds.map((tagId) => ({ entryId, tagId })) }),
   ])
-  await propagateExpenseTags(userId, entry, tagIds)
+  await propagateExpenseTags(userId, entry, previousTagIds, tagIds)
   revalidatePath("/dashboard", "layout")
 }
 

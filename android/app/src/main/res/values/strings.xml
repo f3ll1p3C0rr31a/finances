@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fortuna</string>
+    <string name="setup_title">Conectar ao Fortuna</string>
+    <string name="setup_help">Gere um token em Informações → Dispositivos, no site, e cole aqui. Ele fica só neste aparelho e pode ser revogado a qualquer momento pelo site.</string>
+    <string name="field_base_url">Endereço do site</string>
+    <string name="field_token">Token do dispositivo</string>
+    <string name="token_required">Cole o token</string>
+    <string name="token_saved">Conectado</string>
+
+    <string name="quick_purchase_title">Lançamento rápido</string>
+    <string name="quick_purchase_default">Compra rápida</string>
+    <string name="field_amount">Valor</string>
+    <string name="field_installments">Parcelas</string>
+    <string name="field_description">Descrição (opcional)</string>
+    <string name="mode_total">Valor total da compra</string>
+    <string name="mode_installment">Valor de cada parcela</string>
+    <string name="loading_cards">Carregando cartões…</string>
+    <string name="no_cards">Nenhum cartão ativo</string>
+    <string name="invalid_amount">Informe um valor maior que zero</string>
+    <string name="saving">Salvando…</string>
+    <string name="saved_on_invoice">Lançado na fatura de %1$s</string>
+    <string name="invoice_hint">Cai na fatura de %1$s</string>
+    <string name="cancel">Cancelar</string>
+    <string name="save">Salvar</string>
+
+    <string name="widget_loading">Atualizando…</string>
+    <string name="widget_refresh">Atualizar</string>
+    <string name="widget_current">Saldo atual %1$s</string>
+    <string name="widget_goal">Meta: %1$s restantes · %2$s/dia · %3$d dias</string>
+    <string name="widget_goal_unset">Meta dos cartões não definida</string>
+    <string name="widget_quick_purchase">+ Lançar compra no cartão</string>
+    <string name="error_no_token">Conecte o app ao site</string>
+    <string name="error_unexpected_response">Resposta inesperada do servidor</string>
+
+    <!-- Digital Asset Links: sem isso o TWA abre com a barra do Chrome. -->
+    <string name="asset_statements" translatable="false">
+        [{
+          \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+          \"target\": {
+            \"namespace\": \"web\",
+            \"site\": \"https://finances.fellipecorreia.com\"
+          }
+        }]
+    </string>
+</resources>

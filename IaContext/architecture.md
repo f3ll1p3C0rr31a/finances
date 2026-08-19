@@ -153,6 +153,40 @@ O alias `@/*` aponta para `src/*`.
   `storage/boletos`, e são baixados por rota autenticada que verifica o dono da
   despesa.
 
+### App instalável e widget do Android
+
+- O site é um PWA: `src/app/manifest.ts` define nome, ícones, `display:
+  standalone` e cores; `src/app/icon.svg` e `src/app/apple-icon.png` dão o
+  favicon e o ícone do iOS. Todos os ícones saem de
+  `scripts/generate-icons.mjs`, que desenha a mesma moeda de
+  `fortuna-logo.tsx` — rodar de novo quando a marca mudar.
+- `public/sw.js` só guarda em cache o que tem hash no nome (`/_next/static/`)
+  e os ícones. HTML e API passam sempre pela rede: cachear página autenticada
+  mostraria saldo velho como se fosse o atual.
+- A sessão dura um ano (`src/lib/auth.ts`), renovada a cada uso. Os 30 dias
+  padrão deslogavam o app instalado sem aviso.
+- `android/` traz uma TWA (o app abre o próprio site em tela cheia) mais um
+  widget nativo. O widget não consegue usar a sessão do navegador, então
+  autentica com **token de dispositivo**: `DeviceToken` guarda só o SHA-256, o
+  valor em claro aparece uma vez na criação e é revogável em Informações →
+  Dispositivos.
+- Rotas do widget: `GET /api/widget/overview` (resumo do mês + meta + faturas
+  em aberto) e `POST /api/widget/purchase` (lançamento rápido). A compra passa
+  pelo mesmo `createCardPurchaseForUser()` e pelo mesmo schema Zod do diálogo
+  da web — a regra de parcelamento e de mês de fatura não é duplicada.
+- `/.well-known/assetlinks.json` é servido por rewrite para `/api/assetlinks`,
+  a partir de `ANDROID_APP_FINGERPRINT`. Sem ele o app abre com a barra do
+  Chrome por cima.
+
+### Fuso horário
+
+- Datas ficam normalizadas em UTC no banco, mas **"hoje" é decidido em
+  `America/Sao_Paulo`** (`today()` em `month.ts`). Lendo o UTC direto, das 21h
+  do último dia do mês em diante o app já operava no mês seguinte.
+- `currentMonth()`, `utcToday()` e o padrão de `openInvoiceMonth()` derivam
+  daí. `today()` aceita um instante como parâmetro, o que torna a virada
+  testável.
+
 ### Recorrentes e herança
 
 - Um mês novo de lançamento recorrente nasce copiando o **mês anterior mais
@@ -163,7 +197,11 @@ O alias `@/*` aponta para `src/*`.
 - Editar um lançamento recorrente propaga as características para os meses
   seguintes **ainda abertos** (`propagateExpenseTraits()` /
   `propagateIncomeTraits()`): nome, valor, categoria, dia/tipo de vencimento,
-  pago por, forma de pagamento, chave Pix e link externo. As etiquetas seguem o
+  pago por, forma de pagamento, chave Pix e link externo.
+- A propagação é **seletiva** (`traitsToInherit()`): um mês futuro só recebe o
+  campo alterado se ainda estiver com o valor antigo — um mês ajustado de
+  propósito sobrevive. A comparação é campo a campo, então trocar quem paga a
+  conta alcança até o mês que tem valor diferente combinado. As etiquetas seguem o
   mesmo caminho (`propagateExpenseTags()` / `propagateIncomeTags()`), senão o
   gráfico por etiqueta perderia a conta a partir do mês seguinte.
 - Nunca são reescritos: meses já encerrados (`month >= currentMonth()` é

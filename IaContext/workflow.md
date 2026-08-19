@@ -59,8 +59,8 @@ Scripts de manutenção (idempotentes, rodam contra o banco apontado por
 
 ```bash
 npx tsx scripts/recalculate-balance-chain.ts     # reaplica a regra de saldo herdado
-npx tsx scripts/apply-recurring-inheritance.ts   # empurra o mês corrente das recorrentes para os meses abertos
 npx tsx scripts/recalculate-card-billing.ts      # realinha o mês de fatura das compras
+node scripts/generate-icons.mjs                  # regera os ícones (web e Android) a partir da moeda
 ```
 
 ## Checklist de implementação

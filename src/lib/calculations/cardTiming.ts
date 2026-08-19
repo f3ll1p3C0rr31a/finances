@@ -1,4 +1,4 @@
-import { addMonths, dateWithDay, daysInMonth } from "./month"
+import { addMonths, dateWithDay, daysInMonth, today } from "./month"
 
 /**
  * By default, the best day to buy is the day immediately after the
@@ -85,9 +85,9 @@ export function chargeDateForBillingMonth(
  *
  * Cartão sem fechamento clássico cai no mês corrente, como no resto do app.
  */
-export function openInvoiceMonth(card: CardCycle, reference: Date = new Date()): Date {
-  const today = new Date(
+export function openInvoiceMonth(card: CardCycle, reference: Date = today()): Date {
+  const day = new Date(
     Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), reference.getUTCDate())
   )
-  return invoiceMonthForPurchase(card, today)
+  return invoiceMonthForPurchase(card, day)
 }

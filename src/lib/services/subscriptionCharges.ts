@@ -1,12 +1,12 @@
 import type { Prisma } from "@/generated/prisma/client"
 
 import { prisma } from "@/lib/prisma"
-import { addMonths, dateWithDay } from "@/lib/calculations/month"
+import { addMonths, dateWithDay, today } from "@/lib/calculations/month"
 import { invoiceMonthForPurchase } from "@/lib/calculations/cardTiming"
 
+/** Hoje no fuso do app (ver `today()`), normalizado em UTC. */
 export function utcToday(): Date {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  return today()
 }
 
 function monthOf(date: Date): Date {

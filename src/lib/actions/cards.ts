@@ -7,8 +7,13 @@ import { prisma } from "@/lib/prisma"
 import { requireUserId } from "@/lib/session"
 import { addMonths } from "@/lib/calculations/month"
 import { invoiceMonthForPurchase } from "@/lib/calculations/cardTiming"
-import { splitIntoInstallments } from "@/lib/calculations/installments"
 import { recalcOpeningBalanceChain } from "@/lib/actions/monthly"
+import {
+  createCardPurchaseForUser,
+  monthFromDate,
+  recalcCardAffectedChain,
+  resolvePurchaseAmounts,
+} from "@/lib/services/cardPurchase"
 import { rematerializeCardPurchaseSchedules } from "@/lib/services/cardSchedule"
 import { rematerializeUpcomingSubscriptionCharges } from "@/lib/services/subscriptionCharges"
 import {
@@ -96,89 +101,13 @@ export async function deleteCard(id: string) {
   revalidateCards()
 }
 
-/**
- * Resolves the (totalAmount, perInstallmentSlices) pair for a purchase
- * depending on whether the user typed the purchase's total or a single
- * installment's value. In INSTALLMENT mode every slice is exactly the
- * typed amount (no rounding split needed); in TOTAL mode the total is
- * divided across installments with the remainder cent on the last one.
- */
-function resolvePurchaseAmounts(
-  amount: number,
-  amountMode: "TOTAL" | "INSTALLMENT",
-  installmentCount: number
-): { totalAmount: Prisma.Decimal; slices: Prisma.Decimal[] } {
-  if (amountMode === "INSTALLMENT") {
-    const perInstallment = new Prisma.Decimal(amount)
-    return {
-      totalAmount: perInstallment.mul(installmentCount),
-      slices: Array.from({ length: installmentCount }, () => perInstallment),
-    }
-  }
-  const totalAmount = new Prisma.Decimal(amount)
-  return {
-    totalAmount,
-    slices: installmentCount > 1 ? splitIntoInstallments(totalAmount, installmentCount) : [totalAmount],
-  }
-}
-
-async function recalcCardAffectedChain(userId: string, earliestAffectedMonth: Date) {
-  await recalcOpeningBalanceChain(userId, addMonths(earliestAffectedMonth, -1))
-  await recalcOpeningBalanceChain(userId, earliestAffectedMonth)
-}
-
-function monthFromDate(date: Date): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1))
-}
-
 export async function createCardPurchase(cardId: string, input: CardPurchaseInput) {
   const userId = await requireUserId()
-  const data = cardPurchaseSchema.parse(input)
-
-  const card = await prisma.card.findUniqueOrThrow({ where: { id: cardId, userId } })
-
-  const [year, month, day] = data.purchaseDate.split("-").map(Number)
-  const purchaseDate = new Date(Date.UTC(year, month - 1, day))
-  const purchaseMonth = monthFromDate(purchaseDate)
-  const billingMonth = invoiceMonthForPurchase(card, purchaseDate)
-
-  const { totalAmount, slices } = resolvePurchaseAmounts(
-    data.amount,
-    data.amountMode,
-    data.installmentCount
-  )
-
-  const purchaseId = await prisma.$transaction(async (tx) => {
-    const purchase = await tx.cardPurchase.create({
-      data: {
-        cardId,
-        description: data.description,
-        totalAmount,
-        purchaseDate,
-        billingMonth,
-        installmentCount: data.installmentCount,
-        hasInterest: data.hasInterest,
-      },
-    })
-
-    if (data.installmentCount > 1) {
-      await tx.cardInstallment.createMany({
-        data: slices.map((amount, index) => ({
-          purchaseId: purchase.id,
-          installmentNo: index + 1,
-          month: addMonths(billingMonth, index),
-          amount,
-        })),
-      })
-    }
-
-    return purchase.id
-  })
+  const purchase = await createCardPurchaseForUser(userId, cardId, input)
 
   revalidateCards()
-  await recalcCardAffectedChain(userId, purchaseMonth < billingMonth ? purchaseMonth : billingMonth)
   revalidatePath(`/cards/${cardId}`)
-  return { id: purchaseId }
+  return { id: purchase.id }
 }
 
 export async function updateCardPurchase(purchaseId: string, input: CardPurchaseInput) {

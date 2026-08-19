@@ -5,7 +5,10 @@ import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
+  // 30 dias (padrão) desloga o app instalado no celular sem aviso, no meio de
+  // um lançamento. App pessoal de um usuário só, atrás de senha: um ano de
+  // sessão, renovada a cada uso.
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 365, updateAge: 60 * 60 * 24 },
   pages: { signIn: "/login" },
   trustHost: true,
   providers: [

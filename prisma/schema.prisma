@@ -24,6 +24,23 @@ model User {
   accounts          Account[]
   pixKeys           PixKey[]
   subscriptions     Subscription[]
+  deviceTokens      DeviceToken[]
+}
+
+/// Credencial de leitura/escrita usada pelo widget do Android, que não tem
+/// como manter uma sessão de navegador. Só o hash é guardado: o valor em claro
+/// aparece uma única vez, na criação.
+model DeviceToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  tokenHash  String    @unique
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
 }
 
 enum PaidBy {

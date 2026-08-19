@@ -13,6 +13,7 @@ import { resolveDueDate } from "@/lib/calculations/businessDay"
 import { adjustActualBalance, recalcOpeningBalanceChain } from "@/lib/actions/monthly"
 import { deleteExpenseForUser } from "@/lib/services/deleteExpense"
 import { propagateExpenseTraits } from "@/lib/services/recurringEntries"
+import { assertOwnedPixKey } from "@/lib/services/ownership"
 import { expenseEntrySchema, type ExpenseEntryInput } from "@/lib/validation/schemas"
 
 function revalidateMonth(month: Date) {
@@ -36,6 +37,7 @@ export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) 
       ? resolveDueDate(entryMonth, data.dueDayType, data.dueDay)
       : null
   const paidByName = data.paidBy === "THIRD_PARTY" ? data.paidByName ?? null : null
+  await assertOwnedPixKey(userId, data.pixKeyId)
 
   let entryId: string
 
@@ -102,6 +104,8 @@ export async function updateExpenseEntry(id: string, input: ExpenseEntryInput) {
   const data = expenseEntrySchema.parse(input)
   const paidByName = data.paidBy === "THIRD_PARTY" ? data.paidByName ?? null : null
 
+  await assertOwnedPixKey(userId, data.pixKeyId)
+
   const existing = await prisma.expenseEntry.findUniqueOrThrow({ where: { id, userId } })
   if (existing.templateId && data.uncertain) {
     throw new Error("A recurring expense cannot become uncertain")
@@ -139,7 +143,7 @@ export async function updateExpenseEntry(id: string, input: ExpenseEntryInput) {
   // Conta recorrente carrega as novas características para os meses seguintes
   // ainda abertos, e o template acompanha para os meses ainda não gerados.
   if (entry.templateId) {
-    await propagateExpenseTraits(userId, entry)
+    await propagateExpenseTraits(userId, existing, entry)
     await prisma.expenseTemplate.update({
       where: { id: entry.templateId },
       data: {

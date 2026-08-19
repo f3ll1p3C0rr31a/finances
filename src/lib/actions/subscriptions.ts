@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { requireUserId } from "@/lib/session"
+import { assertOwnedCard } from "@/lib/services/ownership"
 import { addMonths, currentMonth } from "@/lib/calculations/month"
 import { recalcOpeningBalanceChain } from "@/lib/actions/monthly"
 import {
@@ -58,6 +59,7 @@ export async function createSubscription(input: SubscriptionInput) {
   const userId = await requireUserId()
   const data = subscriptionSchema.parse(input)
   const amounts = resolveSubscriptionAmounts(data)
+  await assertOwnedCard(userId, data.paymentMethod === "CARD" ? data.cardId : null)
 
   const subscription = await prisma.subscription.create({
     data: {
@@ -84,6 +86,7 @@ export async function updateSubscription(id: string, input: SubscriptionInput) {
   const userId = await requireUserId()
   const data = subscriptionSchema.parse(input)
   const amounts = resolveSubscriptionAmounts(data)
+  await assertOwnedCard(userId, data.paymentMethod === "CARD" ? data.cardId : null)
 
   await prisma.subscription.update({
     where: { id, userId },

@@ -1,0 +1,156 @@
+package com.fellipecorreia.fortuna
+
+import android.content.Context
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+
+/**
+ * Cliente das rotas `/api/widget/*`.
+ *
+ * HttpURLConnection e org.json em vez de OkHttp/Retrofit de propósito: são
+ * duas chamadas, e menos dependência é menos coisa para quebrar num app que
+ * vai ficar anos sem receber manutenção.
+ *
+ * Todas as chamadas são bloqueantes — quem chama já está fora da main thread.
+ */
+object FortunaApi {
+
+    sealed interface Result<out T> {
+        data class Ok<T>(val value: T) : Result<T>
+        data class Error(val message: String) : Result<Nothing>
+    }
+
+    data class Card(val id: String, val name: String, val total: Double, val invoiceLabel: String)
+
+    data class Overview(
+        val monthLabel: String,
+        val plannedBalance: Double,
+        val currentBalance: Double,
+        val goalRemaining: Double?,
+        val goalPerDay: Double?,
+        val goalDaysLeft: Int?,
+        val cards: List<Card>,
+    )
+
+    fun overview(context: Context): Result<Overview> {
+        val token = TokenStore.token(context)
+            ?: return Result.Error(context.getString(R.string.error_no_token))
+
+        return request(
+            url = "${TokenStore.baseUrl(context)}/api/widget/overview",
+            token = token,
+            method = "GET",
+            body = null,
+        ).let { result ->
+            when (result) {
+                is Result.Error -> result
+                is Result.Ok -> runCatching { Result.Ok(parseOverview(result.value)) }
+                    .getOrElse { Result.Error(context.getString(R.string.error_unexpected_response)) }
+            }
+        }
+    }
+
+    fun createPurchase(
+        context: Context,
+        cardId: String,
+        description: String,
+        amount: Double,
+        installmentCount: Int,
+        amountMode: String,
+    ): Result<String> {
+        val token = TokenStore.token(context)
+            ?: return Result.Error(context.getString(R.string.error_no_token))
+
+        val payload = JSONObject().apply {
+            put("cardId", cardId)
+            put("description", description)
+            put("amount", amount)
+            put("installmentCount", installmentCount)
+            put("amountMode", amountMode)
+            put("hasInterest", false)
+        }
+
+        return when (val result = request(
+            url = "${TokenStore.baseUrl(context)}/api/widget/purchase",
+            token = token,
+            method = "POST",
+            body = payload.toString(),
+        )) {
+            is Result.Error -> result
+            is Result.Ok -> Result.Ok(
+                result.value.optString("billingMonthLabel").ifBlank { "—" }
+            )
+        }
+    }
+
+    private fun parseOverview(json: JSONObject): Overview {
+        val goal = json.optJSONObject("cardGoal")
+        val cardsJson = json.optJSONArray("cards")
+        val cards = buildList {
+            for (i in 0 until (cardsJson?.length() ?: 0)) {
+                val card = cardsJson!!.getJSONObject(i)
+                add(
+                    Card(
+                        id = card.getString("id"),
+                        name = card.getString("name"),
+                        total = card.optDouble("total", 0.0),
+                        invoiceLabel = card.optString("invoiceMonthLabel"),
+                    )
+                )
+            }
+        }
+
+        return Overview(
+            monthLabel = json.optString("monthLabel"),
+            plannedBalance = json.optDouble("plannedBalance", 0.0),
+            currentBalance = json.optDouble("currentBalance", 0.0),
+            goalRemaining = goal?.optDouble("remaining"),
+            goalPerDay = goal?.optDouble("perDay"),
+            goalDaysLeft = goal?.optInt("daysLeft"),
+            cards = cards,
+        )
+    }
+
+    private fun request(
+        url: String,
+        token: String,
+        method: String,
+        body: String?,
+    ): Result<JSONObject> {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = method
+            setRequestProperty("Authorization", "Bearer $token")
+            setRequestProperty("Accept", "application/json")
+            connectTimeout = 15_000
+            readTimeout = 15_000
+            if (body != null) {
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json")
+            }
+        }
+
+        return try {
+            if (body != null) {
+                connection.outputStream.use { it.write(body.toByteArray()) }
+            }
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+
+            when {
+                code == 401 -> Result.Error("Token inválido ou revogado")
+                code !in 200..299 -> Result.Error(errorMessage(text, code))
+                else -> Result.Ok(JSONObject(text))
+            }
+        } catch (error: Exception) {
+            Result.Error(error.message ?: "Falha de rede")
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun errorMessage(text: String, code: Int): String =
+        runCatching { JSONObject(text).optString("error").ifBlank { "HTTP $code" } }
+            .getOrDefault("HTTP $code")
+}
