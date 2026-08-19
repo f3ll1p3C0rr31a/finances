@@ -9,7 +9,12 @@ import type { TagOption } from "@/components/tags/tag-multi-select"
 import { setExpensePaid, deleteExpenseEntry } from "@/lib/actions/expense"
 import { setCardInvoicePaid } from "@/lib/actions/cardPayments"
 import { monthFromKey } from "@/lib/calculations/month"
-import { formatDueDay } from "@/lib/calculations/format"
+import {
+  formatDueDay,
+  THIRD_PARTY_BADGE_CLASS,
+  UNCERTAIN_BADGE_CLASS,
+  type MoneyTone,
+} from "@/lib/calculations/format"
 import { MoneyText } from "@/components/ui/money-text"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
@@ -39,6 +44,17 @@ const PAYMENT_METHOD_LABELS = {
   BOLETO: "Boleto",
   CARD: "Cartão",
   OTHER: "Outro",
+}
+
+/**
+ * Conta de terceiro fica cinza porque o dinheiro não é seu; incerta pendente
+ * fica roxa porque ainda pode não acontecer. Terceiro vem primeiro: mesmo
+ * confirmada, a despesa continua não saindo da sua conta.
+ */
+function expenseTone(entry: SerializedExpenseEntry): MoneyTone {
+  if (entry.paidBy === "THIRD_PARTY") return "third-party"
+  if (entry.uncertain && !entry.paid) return "uncertain"
+  return "default"
 }
 
 export function ExpenseTable({
@@ -193,7 +209,9 @@ export function ExpenseTable({
                   <div className="flex flex-wrap items-center gap-2">
                     {entry.name}
                     {entry.uncertain && !entry.paid ? (
-                      <Badge variant="outline">Incerta · avança até pagar</Badge>
+                      <Badge variant="outline" className={UNCERTAIN_BADGE_CLASS}>
+                        Incerta · avança até pagar
+                      </Badge>
                     ) : null}
                   </div>
                 </TableCell>
@@ -207,7 +225,9 @@ export function ExpenseTable({
                 </TableCell>
                 <TableCell>
                   {entry.paidBy === "THIRD_PARTY" ? (
-                    <Badge variant="outline">{entry.paidByName || "Terceiro"}</Badge>
+                    <Badge variant="outline" className={THIRD_PARTY_BADGE_CLASS}>
+                      {entry.paidByName || "Terceiro"}
+                    </Badge>
                   ) : (
                     "Eu"
                   )}
@@ -231,7 +251,7 @@ export function ExpenseTable({
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
-                  <MoneyText value={-entry.amount} />
+                  <MoneyText value={-entry.amount} tone={expenseTone(entry)} />
                 </TableCell>
                 <TableCell className="text-center">
                   <Switch

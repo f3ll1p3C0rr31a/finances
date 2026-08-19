@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { addMonths } from "@/lib/calculations/month"
 import { sumAmounts } from "@/lib/calculations/money"
 import { computeGoalProgress } from "@/lib/calculations/goalProgress"
+import { openInvoiceMonth } from "@/lib/calculations/cardTiming"
 import { getCardSubscriptionsTotal } from "@/lib/actions/subscriptionSummary"
 
 export async function getCardMonthTotal(
@@ -60,6 +61,35 @@ export async function getCardsMonthSummary(userId: string, month: Date) {
   const combinedTotal = sumAmounts(summaries.map((s) => s.total))
 
   return { summaries, combinedTotal }
+}
+
+/**
+ * Resumo da fatura que está aberta em cada cartão. Cada cartão tem o seu
+ * próprio ciclo, então o mês de faturamento é resolvido cartão a cartão em vez
+ * de usar um mês comum: depois do fechamento, o cartão já mostra a fatura que
+ * está acumulando, e não a que fechou.
+ */
+export async function getCardsOpenInvoiceSummary(userId: string) {
+  const cards = await prisma.card.findMany({
+    where: { userId, active: true },
+    orderBy: { name: "asc" },
+    include: { account: true },
+  })
+
+  const summaries = await Promise.all(
+    cards.map(async (card) => {
+      const month = openInvoiceMonth(card)
+      const [total, payment] = await Promise.all([
+        getCardMonthTotal(userId, card.id, month, card),
+        prisma.cardInvoicePayment.findUnique({
+          where: { cardId_month: { cardId: card.id, month } },
+        }),
+      ])
+      return { card, month, total, paid: payment?.paid ?? false }
+    })
+  )
+
+  return { summaries, combinedTotal: sumAmounts(summaries.map((s) => s.total)) }
 }
 
 export async function getCardMonthBudget(userId: string, month: Date) {

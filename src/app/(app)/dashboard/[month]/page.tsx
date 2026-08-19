@@ -7,7 +7,7 @@ import { getCardGoalData } from "@/lib/actions/cardSummary"
 import { listTags } from "@/lib/actions/tags"
 import { listPixKeys } from "@/lib/actions/pixKeys"
 import { getSpendingByTagRows } from "@/lib/actions/spendingByTag"
-import { monthFromKey, monthKeyFromDate } from "@/lib/calculations/month"
+import { formatMonthLabel, monthFromKey, monthKeyFromDate } from "@/lib/calculations/month"
 import { bestPurchaseDateForCard } from "@/lib/calculations/cardTiming"
 import type {
   SerializedIncomeEntry,
@@ -98,6 +98,11 @@ export default async function DashboardMonthPage({
     bestPurchaseDay: bestPurchaseDateForCard(s.card, month)?.getUTCDate() ?? null,
     paymentDay: s.card.paymentDay,
     cardNumber: s.card.cardNumber,
+    // No dashboard o número é a saída de caixa do mês: sempre a fatura que
+    // vence aqui, mesmo que outra já esteja aberta no cartão.
+    invoiceMonth: monthKey,
+    invoiceMonthLabel: formatMonthLabel(month),
+    invoiceOpen: false,
   }))
 
   return (

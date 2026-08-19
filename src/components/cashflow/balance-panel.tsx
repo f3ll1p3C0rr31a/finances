@@ -85,7 +85,7 @@ export function BalancePanel({
           <dt>
             <span className="block font-medium">Entradas Futuras</span>
             <span className="text-xs text-muted-foreground">
-              Entradas do mês ainda não recebidas
+              Entradas do mês ainda não recebidas (sem as incertas)
             </span>
           </dt>
           <dd className="self-center text-right">
@@ -103,7 +103,7 @@ export function BalancePanel({
           <dt>
             <span className="block font-medium">Saídas Futuras</span>
             <span className="text-xs text-muted-foreground">
-              Despesas, cartões e assinaturas ainda em aberto
+              Despesas, cartões e assinaturas ainda em aberto (sem as incertas)
             </span>
           </dt>
           <dd className="self-center text-right">
@@ -118,7 +118,12 @@ export function BalancePanel({
           <dd className="self-center text-right">
             <MoneyText value={difference} />
           </dd>
-          <dt className="font-medium">Saldo planejado</dt>
+          <dt>
+            <span className="block font-medium">Saldo planejado</span>
+            <span className="text-xs text-muted-foreground">
+              Saldo atual + entradas futuras − saídas futuras
+            </span>
+          </dt>
           <dd className="text-right font-medium self-center">
             <MoneyText value={plannedBalance} />
           </dd>
@@ -143,19 +148,39 @@ export function BalancePanel({
             </p>
           )}
         </div>
-        <dl className="grid grid-cols-2 gap-2 border-t pt-3 text-sm">
-          <dt className="font-medium">Prévia com valores incertos</dt>
-          <dd className="text-right font-medium">
-            <MoneyText value={previewBalance} />
-          </dd>
-        </dl>
-        {pendingUncertainIncome > 0 || pendingUncertainExpense > 0 ? (
-          <p className="text-xs text-muted-foreground">
-            A prévia considera <MoneyText value={pendingUncertainIncome} /> a receber e{" "}
-            <MoneyText value={-pendingUncertainExpense} /> a pagar. Esses valores ainda não
-            fazem parte do saldo planejado ou real.
+        {/* Bloco à parte, em azul/roxo: nada aqui entra no saldo planejado nem
+            no saldo atual, e a cor evita confundir com o dinheiro confirmado. */}
+        <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 dark:border-sky-400/25">
+          <dl className="grid grid-cols-2 gap-2 text-sm">
+            <dt className="font-medium text-sky-700 dark:text-sky-300">
+              Prévia com valores incertos
+            </dt>
+            <dd className="text-right font-medium">
+              <MoneyText value={previewBalance} tone="uncertain" />
+            </dd>
+            {pendingUncertainIncome > 0 ? (
+              <>
+                <dt className="text-xs text-muted-foreground">A receber (incerto)</dt>
+                <dd className="text-right text-xs">
+                  <MoneyText value={pendingUncertainIncome} tone="uncertain" />
+                </dd>
+              </>
+            ) : null}
+            {pendingUncertainExpense > 0 ? (
+              <>
+                <dt className="text-xs text-muted-foreground">A pagar (incerto)</dt>
+                <dd className="text-right text-xs">
+                  <MoneyText value={-pendingUncertainExpense} tone="uncertain" />
+                </dd>
+              </>
+            ) : null}
+          </dl>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {pendingUncertainIncome > 0 || pendingUncertainExpense > 0
+              ? "Valores incertos ficam fora do saldo planejado e do saldo atual até serem marcados como recebidos ou pagos."
+              : "Nenhum valor incerto pendente neste mês."}
           </p>
-        ) : null}
+        </div>
       </CardContent>
     </Card>
   )

@@ -48,6 +48,11 @@ export type SerializedCardSummary = {
   bestPurchaseDay: number | null
   paymentDay: number | null
   cardNumber: string | null
+  /** Mês (AAAA-MM) da fatura cujo total está em `total`. */
+  invoiceMonth: string
+  invoiceMonthLabel: string
+  /** A fatura exibida ainda está acumulando compras (não fechou). */
+  invoiceOpen: boolean
 }
 
 export type SerializedSubscription = {

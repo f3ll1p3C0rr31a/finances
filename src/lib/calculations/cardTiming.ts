@@ -76,3 +76,18 @@ export function chargeDateForBillingMonth(
   }
   return null
 }
+
+/**
+ * Mês de faturamento da fatura que está aberta hoje — a que ainda recebe
+ * compras. É o mesmo destino que uma compra feita agora teria, então antes do
+ * fechamento é a fatura que vence neste ciclo e, a partir do dia seguinte ao
+ * fechamento, já é a próxima.
+ *
+ * Cartão sem fechamento clássico cai no mês corrente, como no resto do app.
+ */
+export function openInvoiceMonth(card: CardCycle, reference: Date = new Date()): Date {
+  const today = new Date(
+    Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), reference.getUTCDate())
+  )
+  return invoiceMonthForPurchase(card, today)
+}

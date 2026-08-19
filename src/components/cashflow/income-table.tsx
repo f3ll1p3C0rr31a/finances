@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import type { SerializedIncomeEntry } from "@/lib/types"
 import type { TagOption } from "@/components/tags/tag-multi-select"
 import { setIncomeReceived, deleteIncomeEntry } from "@/lib/actions/income"
-import { formatDueDay } from "@/lib/calculations/format"
+import { formatDueDay, UNCERTAIN_BADGE_CLASS } from "@/lib/calculations/format"
 import { MoneyText } from "@/components/ui/money-text"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
@@ -84,7 +84,9 @@ export function IncomeTable({
                   <div className="flex flex-wrap items-center gap-2">
                     {entry.name}
                     {entry.uncertain && !entry.received ? (
-                      <Badge variant="outline">Incerta · avança até receber</Badge>
+                      <Badge variant="outline" className={UNCERTAIN_BADGE_CLASS}>
+                        Incerta · avança até receber
+                      </Badge>
                     ) : null}
                   </div>
                 </TableCell>
@@ -103,7 +105,10 @@ export function IncomeTable({
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
-                  <MoneyText value={entry.amount} />
+                  <MoneyText
+                    value={entry.amount}
+                    tone={entry.uncertain && !entry.received ? "uncertain" : "default"}
+                  />
                 </TableCell>
                 <TableCell className="text-center">
                   <Switch

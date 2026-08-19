@@ -1,92 +1,95 @@
 # Continuidade
 
-Atualizado em: 2026-07-08
+Atualizado em: 2026-08-18
 
 ## Estado atual
 
 ### Objetivo
 
-Corrigir o mês de fatura das compras de cartão (compras de 07/07 no Nubank
-caíam em setembro em vez de agosto), transformar assinaturas em cobranças
-mensais datadas com histórico, e melhorar o visual (cartõezinhos de banco,
-número/CVV com copiar, bandeira, logos de assinaturas, ícone Pix, nova logo
-Fortuna em moeda romana).
+Descartar a integração Pluggy (open finance), reativar o deploy automático
+depois da migração do servidor Jupiter → Saturno, e corrigir três pontos de
+leitura do app: saldo planejado impreciso, cartões mostrando a fatura já
+fechada e valores incertos visualmente confundidos com os confirmados.
 
 ### Alterações realizadas
 
-- `invoiceMonthForPurchase()` passou a considerar `paymentDay`: fatura paga no
-  mesmo mês do fechamento quando `paymentDay > closingDay` (Nubank fecha dia 2
-  e vence dia 10 → compra 07/07 cai em agosto); mês seguinte quando
-  `paymentDay <= closingDay` ou nulo (comportamento anterior preservado).
-  Nova inversa `chargeDateForBillingMonth()` para recorrências.
-- Novo `scripts/recalculate-card-billing.ts` (idempotente) reaplica a regra a
-  todas as compras existentes e recalcula a cadeia de saldos.
-- Assinaturas: novos campos `chargeDay`, `cancelledAt` (data exata, migrado de
-  `cancelledMonth` = último dia do mês; coluna antiga removida) e
-  `logoDomain`. Novo modelo `SubscriptionCharge` materializa cada cobrança
-  mensal (valor congelado); meses futuros são projetados virtualmente.
-  Geração preguiçosa em `src/lib/services/subscriptionCharges.ts`, chamada nas
-  páginas Dashboard, Cartões, detalhe do cartão e Assinaturas.
-- Cancelar mantém cobranças até `cancelledAt`; reativar limpa o cancelamento e
-  move `startMonth` para frente (sem cobrar o período cancelado). Editar
-  dia/cartão/valor rematerializa do mês corrente em diante; editar o ciclo do
-  cartão rematerializa compras e assinaturas daquele cartão.
-- `subscriptionSummary.ts` reescrito (materializado + projeção); consumidores
-  atualizados: `cardSummary`, `monthly`, `chart` (fluxo de caixa usa o dia da
-  cobrança), `spendingByTag`.
-- Cartões ganharam `cardNumber`, `cvv`, `expiryMonth`, `expiryYear`;
-  `src/lib/cardBrand.ts` detecta a bandeira pelo número (Elo antes de
-  Visa/Master) e o tema visual pelo nome do emissor. `BankCardVisual` renderiza
-  o cartãozinho: lista compacta em /cards e versão completa no detalhe com
-  máscara (últimos 4 visíveis), olho para revelar, cópia por bloco de 4
-  dígitos, cópia do número completo e CVV oculto/copiável.
-- Cobranças de assinatura aparecem como linhas somente leitura na fatura do
-  cartão (logo + badge Assinatura/Cancelada, link Gerenciar).
-- Logos de assinaturas via favicon do `logoDomain` (Google s2), com sugestão
-  automática por nome (`subscription-logo.tsx`) e campo no diálogo; ícone Pix
-  (`pix-icon.tsx`) na lista de chaves, formas de pagamento de despesas e
-  assinaturas; nova logo Fortuna como moeda romana (dourada, borda perlada,
-  louros e F serifado) mantendo o halo verde/violeta.
-- Migration `20260708120000_card_details_subscription_charges` aplicada
-  localmente.
+- **Pluggy descartado.** O commit `eab114a` já havia sido revertido em
+  `f284148`; nenhuma referência restou no código. Motivo do descarte: as
+  conexões com os bancos caíam o tempo todo e exigiam reconexão manual.
+  - O revert apagou também a pasta da migration `20260709120000_pluggy_integration`,
+    que **já estava aplicada em produção** — o histórico do banco ficou
+    divergente do diretório de migrations. Corrigido do jeito padrão do Prisma:
+    a migration foi restaurada no repositório e uma nova,
+    `20260818120000_drop_pluggy_integration`, remove as três tabelas
+    (`PluggyConnection`, `PluggyAccountLink`, `PluggyImportedTransaction`) e os
+    dois enums. Aquela migration só criava objetos novos, então nada de dados
+    reais depende dela.
+  - O `.env` de produção ainda tem `PLUGGY_CLIENT_ID`, `PLUGGY_CLIENT_SECRET`,
+    `PLUGGY_WEBHOOK_SECRET` e `APP_PUBLIC_URL` — remover e revogar as
+    credenciais no painel do Pluggy.
+- **Deploy para o Saturno.** `docker-compose.production.yml` reescrito para o
+  que roda hoje no CT 101 (`container_name`, rede `interna`, `TZ`, volume
+  `finances_postgres_data` como `external`, caminhos via `FINANCES_APP_DIR`);
+  `scripts/deploy-production.sh` passou de `/home/fellipecorreia/sites/finances`
+  para `/dados/sites/finances`, sincroniza o compose com
+  `/opt/stacks/finances` (Dockge), poda imagens e mantém 10 backups;
+  `.github/workflows/deploy.yml` trocou o label `finances-jupiter` por
+  `finances-saturno` e o `actions/checkout` por `git fetch` puro (o
+  `codeload.github.com` devolve 429 neste servidor, como no site-fatima).
+- **Saldo planejado.** `computePlannedBalance()` mudou de
+  `abertura + entradas - saídas` para
+  `saldo atual + entradas futuras - saídas futuras`. Nova
+  `getMonthOpenCashflow()` centraliza a composição das futuras. A cadeia de
+  saldos passou a herdar sempre o fechamento planejado (antes usava
+  `actualBalance` cru, ignorando o que ficara em aberto).
+- **Incertos fora das futuras.** `computeOpenCashflow()` deixou de somar
+  incertos pendentes; sem isso o novo planejado os contaria e a prévia os
+  contaria de novo.
+- **Fatura em aberto nos cartões.** Nova `openInvoiceMonth()` e
+  `getCardsOpenInvoiceSummary()`. `/cards` sem `month` mostra, por cartão, a
+  fatura que ainda acumula compras (cada um no seu ciclo);
+  `/cards/[cardId]` sem `month` abre nela. Com `month` na URL, tudo volta a
+  seguir o mês escolhido. Dashboard inalterado de propósito.
+- **Cores.** `MoneyTone` em `format.ts`: incerto pendente em azul (positivo) /
+  roxo (negativo), conta de terceiro em cinza apagado. `MoneyText` ganhou
+  `tone`; tabelas de entrada/despesa e o bloco de prévia do painel de saldo
+  usam os novos tons, e as badges "Incerta" e de terceiro acompanham a cor.
 
 ### Decisões e motivos
 
-- Cobranças passadas são materializadas (histórico imutável a cancelamentos e
-  edições de preço) e futuras são projetadas (planejamento/reserva/gráficos
-  continuam funcionando) — híbrido escolhido para satisfazer "cancelar não
-  apaga o que já foi cobrado" sem quebrar projeções de 12 meses.
-- `chargeDay` de assinaturas existentes ficou com default 1; o usuário deve
-  ajustar o dia real de cada assinatura (a edição rematerializa o mês
-  corrente em diante).
-- Número/CVV ficam em texto no banco (app pessoal, single-user, atrás de
-  autenticação); a UI sempre mascara por padrão.
+- O dashboard continua exibindo a fatura que **vence** no mês: ali o número é
+  saída de caixa do mês, e mudá-lo descasaria fluxo de caixa, saídas futuras e
+  meta de gastos.
+- Conta de terceiro ganhou cinza mas **continua somando** nos totais do mês
+  (comportamento anterior preservado); se a intenção for excluí-la do saldo,
+  é outra mudança, de regra.
+- Volume do Postgres declarado como `external`: com `-p finances` e volume
+  interno, o Compose criaria `finances_finances_postgres_data` e o app subiria
+  com banco vazio.
 
 ### Validações executadas
 
-- `npx tsc --noEmit`, `npm run lint` e `npm run build`: passaram em
-  2026-07-08 (Next.js 16.2.9).
-- `scripts/test-card-billing-domain.ts` (novo, roda com `npx tsx` e dados
-  temporários): regra de fatura pura (Nubank 07/07→ago, 01/07→jul; fecha
-  23/vence 1: 20/07→ago, 24/07→set; sem vencimento preserva regra antiga),
-  inversa consistente para vários ciclos/dias, rematerialização corrige compra
-  set→ago, assinatura dia 8 no cartão Nubank cobra 08/07 na fatura de agosto,
-  cancelamento preserva cobrança feita e corta futuras, edição de dia refaz o
-  mês corrente, assinatura fora de cartão conta no mês civil. Tudo passou em
-  2026-07-08.
-- Smoke test com `npm run start` + login de sessão real: /dashboard, /cards,
-  /assinaturas e /informacoes responderam 200 autenticados; /login 200 e
-  /dashboard 307 sem sessão.
+- `npx tsc --noEmit`, `npm run lint`, `npm run build` (Next.js 16.2.9):
+  passaram em 2026-08-18.
+- `npx tsx scripts/test-balance-domain.ts` (novo, puro, sem banco): 28
+  asserções sobre saldo planejado (mês intocado equivale à regra antiga; valor
+  pago diferente do previsto; saldo corrigido à mão; incertos entrando só na
+  prévia; mês liquidado devolvendo o próprio saldo atual) e sobre a fatura em
+  aberto (Nubank antes/no dia/depois do fechamento, virada de ano, ciclo
+  23/1, fechamento 31 em fevereiro, cartão sem fechamento). Todas passaram.
+- Sem Docker na máquina de desenvolvimento: não houve smoke test local com
+  banco. A verificação com dados reais depende do deploy.
 
 ### Pendências ou próximo passo
 
-- Produção (após deploy, com pedido explícito do usuário): rodar
-  `npx tsx scripts/recalculate-card-billing.ts` uma vez para realinhar as
-  faturas existentes (a migration roda sozinha no deploy).
-- Usuário deve revisar cada assinatura e definir o `chargeDay` real (default
-  ficou 1) e, se quiser, o site da logo.
-- Cadastrar número/CVV/validade dos cartões pela edição do cartão para ativar
-  bandeira e cópia por blocos.
+- Registrar o runner `Saturno-Finances` no CT 101 (label `finances-saturno`) e
+  disparar o primeiro deploy pelo workflow — passo a passo em `workflow.md`.
+- Depois do primeiro deploy, conferir no app real: saldo planejado do mês
+  corrente, faturas em aberto em `/cards` e as novas cores.
+- Limpar as variáveis do Pluggy do `.env` de produção e revogar as credenciais
+  (o `.env` não é tocado pelo deploy; é edição manual no servidor).
+- A imagem em produção subiu na migração com `APP_COMMIT_SHA=unknown`; o
+  primeiro deploy pelo workflow corrige isso.
 
 ## Débitos documentais confirmados
 

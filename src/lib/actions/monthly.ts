@@ -106,19 +106,55 @@ async function rollPendingUncertainEntries(userId: string): Promise<void> {
   ])
 }
 
+type BalanceRow = {
+  month: Date
+  openingBalance: Prisma.Decimal
+  actualBalance: Prisma.Decimal | null
+}
+
+/**
+ * Tudo que ainda falta acontecer no mês: entradas não recebidas, despesas não
+ * pagas, faturas de cartão em aberto, a reserva da meta dos cartões e as
+ * assinaturas fora de cartão. É a única parte que o saldo planejado aplica
+ * sobre o saldo atual, então a mesma composição precisa valer para a cadeia de
+ * saldos e para o painel do mês.
+ */
+export async function getMonthOpenCashflow(userId: string, month: Date) {
+  const [incomes, expenses, cards, nonCardSubscriptions] = await Promise.all([
+    prisma.incomeEntry.findMany({ where: { userId, month } }),
+    prisma.expenseEntry.findMany({ where: { userId, month } }),
+    getCardMonthBudget(userId, month),
+    getNonCardSubscriptionsTotal(userId, month),
+  ])
+  const openCashflow = computeOpenCashflow(incomes, expenses)
+  const pendingCardInvoices = sumAmounts(
+    cards.summaries.filter((summary) => !summary.paid).map((summary) => summary.total)
+  )
+
+  return {
+    futureIncome: openCashflow.futureIncome,
+    futureExpense: openCashflow.futureExpense
+      .add(pendingCardInvoices)
+      .add(cards.appliedReserve)
+      .add(nonCardSubscriptions),
+  }
+}
+
+/**
+ * Saldo com que o mês deve fechar. Parte do saldo atual quando ele já foi
+ * informado — só assim o saldo herdado pelo mês seguinte reflete o dinheiro
+ * que existe de verdade mais o que ainda está em aberto.
+ */
 async function plannedClosingBalance(
   userId: string,
-  balanceRow: { month: Date; openingBalance: Prisma.Decimal }
+  balanceRow: BalanceRow
 ): Promise<Prisma.Decimal> {
-  const [incomes, expenses, cards, nonCardSubscriptions] = await Promise.all([
-    prisma.incomeEntry.findMany({ where: { userId, month: balanceRow.month } }),
-    prisma.expenseEntry.findMany({ where: { userId, month: balanceRow.month } }),
-    getCardMonthBudget(userId, balanceRow.month),
-    getNonCardSubscriptionsTotal(userId, balanceRow.month),
-  ])
-  const { totalIncome, totalExpense: entriesExpense } = computeMonthTotals(incomes, expenses)
-  const totalExpense = entriesExpense.add(cards.plannedTotal).add(nonCardSubscriptions)
-  return computePlannedBalance(balanceRow.openingBalance, totalIncome, totalExpense)
+  const { futureIncome, futureExpense } = await getMonthOpenCashflow(userId, balanceRow.month)
+  return computePlannedBalance(
+    balanceRow.actualBalance ?? balanceRow.openingBalance,
+    futureIncome,
+    futureExpense
+  )
 }
 
 /**
@@ -148,8 +184,7 @@ export async function ensureMonthGenerated(userId: string, month: Date): Promise
   }
 
   let cursor = addMonths(previousAnchor.month, 1)
-  let runningOpening =
-    previousAnchor.actualBalance ?? (await plannedClosingBalance(userId, previousAnchor))
+  let runningOpening = await plannedClosingBalance(userId, previousAnchor)
 
   for (;;) {
     await ensureTemplateEntries(userId, cursor)
@@ -159,15 +194,15 @@ export async function ensureMonthGenerated(userId: string, month: Date): Promise
       create: { userId, month: cursor, openingBalance: runningOpening },
     })
     if (cursor.getTime() === month.getTime()) break
-    runningOpening = row.actualBalance ?? (await plannedClosingBalance(userId, row))
+    runningOpening = await plannedClosingBalance(userId, row)
     cursor = addMonths(cursor, 1)
   }
 }
 
 /**
- * Propagates a month's actual (or planned) closing balance forward into the
- * opening balance of already-materialized future months, stopping as soon as
- * a month's opening balance doesn't need to change.
+ * Propagates a month's planned closing balance forward into the opening
+ * balance of already-materialized future months, stopping as soon as a
+ * month's opening balance doesn't need to change.
  */
 export async function recalcOpeningBalanceChain(userId: string, fromMonth: Date): Promise<void> {
   let cursor = fromMonth
@@ -184,7 +219,7 @@ export async function recalcOpeningBalanceChain(userId: string, fromMonth: Date)
     })
     if (!next) return
 
-    const newOpening = current.actualBalance ?? (await plannedClosingBalance(userId, current))
+    const newOpening = await plannedClosingBalance(userId, current)
     if (next.openingBalance.equals(newOpening)) return
 
     await prisma.monthlyBalance.update({
@@ -253,7 +288,11 @@ export async function getMonthData(userId: string, month: Date) {
     .add(cards.appliedReserve)
     .add(nonCardSubscriptions)
   const difference = totalIncome.sub(totalExpense)
-  const plannedBalance = computePlannedBalance(balance.openingBalance, totalIncome, totalExpense)
+  const plannedBalance = computePlannedBalance(
+    balance.actualBalance ?? balance.openingBalance,
+    openCashflow.futureIncome,
+    futureExpense
+  )
   const previewBalance = plannedBalance.add(uncertainPreview.net)
   const closingBalance = balance.actualBalance ?? plannedBalance
 

@@ -8,7 +8,7 @@ import { getCardMonthlyHistory, getCardMonthlyWindow } from "@/lib/actions/chart
 import { getCardSubscriptionChargesForMonth } from "@/lib/actions/subscriptionSummary"
 import { ensureSubscriptionChargesGenerated } from "@/lib/services/subscriptionCharges"
 import { currentMonth, monthFromKey } from "@/lib/calculations/month"
-import { bestPurchaseDateForCard } from "@/lib/calculations/cardTiming"
+import { bestPurchaseDateForCard, openInvoiceMonth } from "@/lib/calculations/cardTiming"
 import type { SerializedCardPurchase } from "@/lib/types"
 import { MoneyText } from "@/components/ui/money-text"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,16 +30,20 @@ export default async function CardDetailPage({
 }) {
   const { cardId } = await params
   const queryMonth = (await searchParams).month
-  const selectedMonth =
-    typeof queryMonth === "string" && MONTH_KEY_PATTERN.test(queryMonth)
-      ? monthFromKey(queryMonth)
-      : currentMonth()
   const userId = await requireUserId()
 
   const card = await prisma.card.findUnique({ where: { id: cardId, userId }, include: { account: true } })
   if (!card) {
     notFound()
   }
+
+  // Sem mês na URL, abre na fatura que ainda está acumulando compras, e não na
+  // que já fechou.
+  const openMonth = openInvoiceMonth(card)
+  const selectedMonth =
+    typeof queryMonth === "string" && MONTH_KEY_PATTERN.test(queryMonth)
+      ? monthFromKey(queryMonth)
+      : openMonth
 
   await ensureSubscriptionChargesGenerated(userId)
 
@@ -219,7 +223,12 @@ export default async function CardDetailPage({
           </Card>
         ) : null}
       </div>
-      <CardMonthNav month={selectedMonth} basePath={`/cards/${card.id}`} />
+      <CardMonthNav
+        month={selectedMonth}
+        basePath={`/cards/${card.id}`}
+        homeMonth={openMonth}
+        homeLabel="Fatura em aberto"
+      />
       <PurchaseList
         purchases={[...serialized, ...subscriptionRows]}
         allTags={tagRefs}

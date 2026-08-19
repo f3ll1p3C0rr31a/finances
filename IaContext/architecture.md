@@ -100,7 +100,12 @@ O alias `@/*` aponta para `src/*`.
 - Enquanto pendente, o lançamento fica apenas no mês civil atual e é movido
   para o mês seguinte quando o dashboard passa a operar nesse mês.
 - Entradas incertas não recebidas e despesas incertas não pagas ficam fora dos
-  totais oficiais, do saldo planejado e dos gráficos.
+  totais oficiais, das entradas/saídas futuras, do saldo planejado e dos
+  gráficos.
+- Na interface, valor incerto pendente é azul (positivo) ou roxo (negativo) e
+  conta de terceiro é cinza apagado, para não se confundirem com o
+  verde/vermelho do dinheiro confirmado (`MoneyTone` em
+  `src/lib/calculations/format.ts`).
 - A prévia de saldo é `saldo planejado + entradas incertas - despesas incertas`.
 - Ao marcar como recebido/pago, o lançamento passa a integrar os totais do mês
   em que foi liquidado, deixa a prévia pendente e não avança mais.
@@ -109,13 +114,26 @@ O alias `@/*` aponta para `src/*`.
 ### Cadeia de saldo
 
 - `openingBalance` vem do fechamento do mês anterior.
-- Se `actualBalance` existir, ele é a fonte de verdade para o próximo mês.
-- Sem saldo real, o fechamento planejado é
-  `abertura + entradas - despesas`.
-- Despesas totais incluem lançamentos, cartões e assinaturas fora de cartão.
-- A interface também mostra valores futuros/em aberto: entradas ainda não
-  recebidas e saídas ainda não pagas. Saídas futuras somam despesas em aberto,
-  faturas de cartões não pagas, reserva da meta e assinaturas fora de cartão.
+- O fechamento planejado do mês é
+  `computePlannedBalance(actualBalance ?? openingBalance, entradas futuras, saídas futuras)`,
+  ou seja **saldo atual + o que ainda falta acontecer**. Regra alterada em
+  2026-08-18: antes era `abertura + entradas totais - saídas totais`, o que
+  reconstruía o mês inteiro e repetia toda imprecisão já liquidada (valor pago
+  diferente do previsto, correção manual do saldo real).
+- Entradas futuras = entradas não recebidas e não incertas. Saídas futuras =
+  despesas não pagas e não incertas + faturas de cartão não pagas + reserva da
+  meta dos cartões + assinaturas fora de cartão. A composição vive em
+  `getMonthOpenCashflow()` e precisa ser a mesma no painel do mês, na cadeia de
+  saldos e nos gráficos.
+- Consequências da regra: em mês futuro intocado ela devolve exatamente o mesmo
+  valor da regra antiga; em mês totalmente liquidado devolve o próprio saldo
+  atual.
+- Despesas totais (linha "Total de Saídas") continuam somando lançamentos,
+  cartões e assinaturas fora de cartão — elas descrevem o mês inteiro, não o
+  que falta.
+- O mês seguinte herda sempre o fechamento planejado, não o `actualBalance`
+  cru: assim o que ficou em aberto no mês atual é descontado da abertura do
+  próximo.
 - Alterações que afetam um mês materializado podem exigir
   `recalcOpeningBalanceChain()`.
 - Marcar uma entrada recebida ou despesa paga ajusta o Saldo Atual.
@@ -171,11 +189,21 @@ O alias `@/*` aponta para `src/*`.
 - `CardInvoicePayment` guarda o estado pago por cartão e mês. Ao marcar uma
   fatura como paga, seu total é descontado do saldo real e salvo em
   `paidAmount`; desmarcar reverte exatamente esse valor.
-- A página `/cards` seleciona o mês por `searchParams.month`; totais, meta,
-  reserva e estado pago devem sempre usar esse mês, não implicitamente o atual.
-- A página `/cards/[cardId]` também seleciona uma fatura por
-  `searchParams.month`; a tabela lista somente compras/parcelas que caem nesse
-  mês, mantendo a data real da compra apenas como informação.
+- `openInvoiceMonth(card)` devolve o mês de faturamento da fatura que ainda
+  está aberta hoje — é `invoiceMonthForPurchase()` aplicado à data atual, logo
+  antes do fechamento é a fatura deste ciclo e a partir do dia seguinte já é a
+  próxima.
+- A página `/cards` sem `searchParams.month` mostra, para cada cartão, a
+  própria fatura em aberto (`getCardsOpenInvoiceSummary()`), porque cada cartão
+  tem o seu ciclo. Com `month` na URL, todos os cartões passam a mostrar a
+  fatura daquele mês. O painel de meta e a navegação continuam ancorados no mês
+  civil selecionado.
+- A página `/cards/[cardId]` sem `month` abre na fatura em aberto do cartão;
+  com `month`, na fatura daquele mês. A tabela lista somente compras/parcelas
+  que caem no mês selecionado, mantendo a data real da compra apenas como
+  informação.
+- No dashboard, o resumo de cartões continua sendo a fatura que **vence** no
+  mês exibido, porque ali o número representa saída de caixa do mês.
 - Compras de cartão podem alterar a abertura de meses futuros; criação, edição e
   exclusão recalculam a cadeia a partir do mês afetado e do mês anterior, pois a
   reserva da meta depende da próxima fatura.

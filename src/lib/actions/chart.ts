@@ -113,9 +113,9 @@ export async function getBalanceChartRanges(
         .add(cards.appliedReserve)
         .add(subscriptionsTotal)
       const plannedBalance = computePlannedBalance(
-        balanceRow.openingBalance,
-        totalIncome,
-        totalExpense
+        balanceRow.actualBalance ?? balanceRow.openingBalance,
+        openCashflow.futureIncome,
+        futureExpense
       )
       const balance = balanceRow.actualBalance ?? plannedBalance
       const breakdown: MonthlyBreakdownItem[] = [

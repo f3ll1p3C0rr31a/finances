@@ -12,7 +12,11 @@ export function CardList({ cards }: { cards: SerializedCardSummary[] }) {
   return (
     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((card) => (
-        <Link key={card.id} href={`/cards/${card.id}`} className="group flex flex-col gap-2">
+        <Link
+          key={card.id}
+          href={`/cards/${card.id}?month=${card.invoiceMonth}`}
+          className="group flex flex-col gap-2"
+        >
           <BankCardVisual
             compact
             name={card.name}
@@ -21,7 +25,9 @@ export function CardList({ cards }: { cards: SerializedCardSummary[] }) {
           />
           <div className="flex items-baseline justify-between px-1">
             <div>
-              <p className="text-xs text-muted-foreground">Fatura do mês</p>
+              <p className="text-xs text-muted-foreground">
+                {card.invoiceOpen ? "Fatura em aberto" : "Fatura"} · {card.invoiceMonthLabel}
+              </p>
               <p className="text-lg font-semibold">
                 <MoneyText value={-card.total} />
               </p>
@@ -29,6 +35,10 @@ export function CardList({ cards }: { cards: SerializedCardSummary[] }) {
             {card.paid ? (
               <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                 Paga
+              </span>
+            ) : card.invoiceOpen ? (
+              <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-xs font-medium text-sky-600 dark:text-sky-400">
+                Aberta
               </span>
             ) : null}
           </div>
