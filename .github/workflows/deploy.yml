@@ -9,17 +9,41 @@ concurrency:
   group: finances-production
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   deploy:
-    name: Deploy production
-    runs-on: [self-hosted, linux, x64, finances-jupiter]
+    name: Deploy production on Saturno
+    runs-on: [self-hosted, linux, x64, finances-saturno]
 
     steps:
+      # Checkout com git puro em vez de actions/checkout: baixar a action passa
+      # por codeload.github.com, que vive devolvendo 429 (Too Many Requests) e
+      # derruba o job antes de rodar qualquer coisa nossa. git fetch usa
+      # github.com, que não sofre desse limite.
       - name: Checkout
-        uses: actions/checkout@v4
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          if [ ! -d .git ]; then
+            git init -q
+            git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          else
+            git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          fi
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git -c http.extraheader="AUTHORIZATION: basic ${AUTH}" \
+            fetch --depth 1 --no-tags origin "$GITHUB_SHA"
+          git checkout -q --force FETCH_HEAD
+          git clean -ffdxq
+          git log --oneline -1
 
       - name: Deploy
         run: bash scripts/deploy-production.sh
