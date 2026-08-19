@@ -78,18 +78,24 @@ fechada e valores incertos visualmente confundidos com os confirmados.
   aberto (Nubank antes/no dia/depois do fechamento, virada de ano, ciclo
   23/1, fechamento 31 em fevereiro, cartão sem fechamento). Todas passaram.
 - Sem Docker na máquina de desenvolvimento: não houve smoke test local com
-  banco. A verificação com dados reais depende do deploy.
+  banco.
+- Deploy em produção executado em 2026-08-19 pelo workflow (run 32245438171,
+  51s, commit `23a077d`): backup gerado, build, containers recriados, health
+  check do `/api/version` batendo com o SHA e `/login` 200. Confirmado no
+  servidor: volume `finances_postgres_data` preservado (69 despesas, 48
+  compras, 22 meses), migration `20260818120000_drop_pluggy_integration`
+  aplicada, tabelas Pluggy removidas (24 → 21 tabelas) e
+  `https://finances.fellipecorreia.com/login` respondendo 200.
+- Runner `Saturno-Finances` (label `finances-saturno`) ativo como serviço
+  systemd no CT 101; o registro antigo `Jupiter-finances` foi removido.
 
 ### Pendências ou próximo passo
 
-- Registrar o runner `Saturno-Finances` no CT 101 (label `finances-saturno`) e
-  disparar o primeiro deploy pelo workflow — passo a passo em `workflow.md`.
-- Depois do primeiro deploy, conferir no app real: saldo planejado do mês
-  corrente, faturas em aberto em `/cards` e as novas cores.
-- Limpar as variáveis do Pluggy do `.env` de produção e revogar as credenciais
-  (o `.env` não é tocado pelo deploy; é edição manual no servidor).
-- A imagem em produção subiu na migração com `APP_COMMIT_SHA=unknown`; o
-  primeiro deploy pelo workflow corrige isso.
+- Conferir no app real, com dados de verdade: saldo planejado do mês corrente,
+  faturas em aberto em `/cards` e as novas cores. Só o usuário pode validar o
+  significado dos números.
+- Revisar se alguma conta de terceiro deveria sair dos totais do mês (hoje só
+  mudou de cor).
 
 ## Débitos documentais confirmados
 
