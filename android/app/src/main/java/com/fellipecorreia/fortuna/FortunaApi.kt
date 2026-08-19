@@ -2,8 +2,11 @@ package com.fellipecorreia.fortuna
 
 import android.content.Context
 import org.json.JSONObject
+import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
+import java.net.UnknownHostException
 
 /**
  * Cliente das rotas sob `/api/widget`.
@@ -188,7 +191,16 @@ object FortunaApi {
                 else -> Result.Ok(JSONObject(text))
             }
         } catch (error: Exception) {
-            Result.Error(error.message ?: "Falha de rede")
+            // "Unable to resolve host ..." nao diz nada a quem esta olhando a
+            // tela inicial; o que importa e que faltou rede naquele momento.
+            Result.Error(
+                when (error) {
+                    is UnknownHostException -> "Sem conexão"
+                    is SocketTimeoutException -> "Servidor não respondeu"
+                    is IOException -> "Falha de rede"
+                    else -> error.message ?: "Falha de rede"
+                }
+            )
         } finally {
             connection.disconnect()
         }
