@@ -131,9 +131,16 @@ O alias `@/*` aponta para `src/*`.
 - Despesas totais (linha "Total de Saídas") continuam somando lançamentos,
   cartões e assinaturas fora de cartão — elas descrevem o mês inteiro, não o
   que falta.
-- O mês seguinte herda sempre o fechamento planejado, não o `actualBalance`
-  cru: assim o que ficou em aberto no mês atual é descontado da abertura do
-  próximo.
+- O `openingBalance` do mês seguinte é o **saldo atual** do mês corrente
+  (`openingForNextMonth()`), e acompanha cada Pago/Recebido enquanto o mês
+  corre. Quando o mês acaba, o saldo atual dele para de se mover e o valor
+  herdado fica fixo por consequência — não há congelamento explícito.
+- O saldo inicial deliberadamente **não** desconta o que ficou em aberto: ele
+  representa o dinheiro que virou o mês, não uma projeção. A projeção é o saldo
+  planejado, exibido à parte.
+- Só meses que nunca tiveram saldo atual (tipicamente os futuros) herdam o
+  fechamento planejado; sem isso, todos os meses à frente teriam a mesma
+  abertura e a projeção de 12 meses ficaria plana.
 - Alterações que afetam um mês materializado podem exigir
   `recalcOpeningBalanceChain()`.
 - Marcar uma entrada recebida ou despesa paga ajusta o Saldo Atual.

@@ -9,6 +9,7 @@ import {
   computeMonthTotals,
   computePlannedBalance,
   computeUncertainPreview,
+  openingForNextMonth,
 } from "@/lib/calculations/balanceChain"
 import { getCardMonthBudget } from "@/lib/actions/cardSummary"
 import { getNonCardSubscriptionsTotal } from "@/lib/actions/subscriptionSummary"
@@ -141,9 +142,8 @@ export async function getMonthOpenCashflow(userId: string, month: Date) {
 }
 
 /**
- * Saldo com que o mês deve fechar. Parte do saldo atual quando ele já foi
- * informado — só assim o saldo herdado pelo mês seguinte reflete o dinheiro
- * que existe de verdade mais o que ainda está em aberto.
+ * Projeção de fechamento do mês: saldo atual (ou inicial, se ainda não houver)
+ * mais o que falta acontecer. É o que o painel mostra como "Saldo planejado".
  */
 async function plannedClosingBalance(
   userId: string,
@@ -155,6 +155,21 @@ async function plannedClosingBalance(
     futureIncome,
     futureExpense
   )
+}
+
+/**
+ * Saldo inicial que `balanceRow` entrega ao mês seguinte; a regra está em
+ * `openingForNextMonth()`. Aqui só se resolve a alternativa — o fechamento
+ * planejado custa várias consultas e não entra na conta quando o mês já tem
+ * saldo atual, então só é buscado nesse caso.
+ */
+async function carryOverBalance(
+  userId: string,
+  balanceRow: BalanceRow
+): Promise<Prisma.Decimal> {
+  const { actualBalance } = balanceRow
+  const plannedClosing = actualBalance ?? (await plannedClosingBalance(userId, balanceRow))
+  return openingForNextMonth(actualBalance, plannedClosing)
 }
 
 /**
@@ -184,7 +199,7 @@ export async function ensureMonthGenerated(userId: string, month: Date): Promise
   }
 
   let cursor = addMonths(previousAnchor.month, 1)
-  let runningOpening = await plannedClosingBalance(userId, previousAnchor)
+  let runningOpening = await carryOverBalance(userId, previousAnchor)
 
   for (;;) {
     await ensureTemplateEntries(userId, cursor)
@@ -194,15 +209,14 @@ export async function ensureMonthGenerated(userId: string, month: Date): Promise
       create: { userId, month: cursor, openingBalance: runningOpening },
     })
     if (cursor.getTime() === month.getTime()) break
-    runningOpening = await plannedClosingBalance(userId, row)
+    runningOpening = await carryOverBalance(userId, row)
     cursor = addMonths(cursor, 1)
   }
 }
 
 /**
- * Propagates a month's planned closing balance forward into the opening
- * balance of already-materialized future months, stopping as soon as a
- * month's opening balance doesn't need to change.
+ * Propaga o saldo de virada de um mês para a abertura dos meses futuros já
+ * materializados, parando assim que uma abertura não precisa mudar.
  */
 export async function recalcOpeningBalanceChain(userId: string, fromMonth: Date): Promise<void> {
   let cursor = fromMonth
@@ -219,7 +233,7 @@ export async function recalcOpeningBalanceChain(userId: string, fromMonth: Date)
     })
     if (!next) return
 
-    const newOpening = await plannedClosingBalance(userId, current)
+    const newOpening = await carryOverBalance(userId, current)
     if (next.openingBalance.equals(newOpening)) return
 
     await prisma.monthlyBalance.update({

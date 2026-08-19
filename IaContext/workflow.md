@@ -47,7 +47,7 @@ Ainda não existe runner de testes. Há scripts de domínio executáveis com
 `npx tsx`:
 
 ```bash
-npx tsx scripts/test-balance-domain.ts        # saldo planejado e fatura em aberto (puro, sem banco)
+npx tsx scripts/test-balance-domain.ts        # saldo planejado, saldo herdado e fatura em aberto (puro, sem banco)
 npx tsx scripts/test-card-billing-domain.ts   # ciclo de fatura (precisa de banco)
 ```
 

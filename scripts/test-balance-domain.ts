@@ -10,6 +10,7 @@ import {
   computeOpenCashflow,
   computePlannedBalance,
   computeUncertainPreview,
+  openingForNextMonth,
 } from "../src/lib/calculations/balanceChain"
 import { openInvoiceMonth } from "../src/lib/calculations/cardTiming"
 
@@ -154,6 +155,51 @@ function plannedBalanceTests() {
   }
 }
 
+function carryOverTests() {
+  console.log("\n== saldo herdado pelo mes seguinte ==")
+
+  // O mes seguinte herda o saldo atual, nao o fechamento planejado: o saldo
+  // inicial representa o dinheiro que virou o mes, nao uma projecao.
+  {
+    const actual = dec(5200)
+    const plannedClosing = dec(4400) // 800 ainda em aberto no mes
+    assertEqual(
+      openingForNextMonth(actual, plannedClosing),
+      dec(5200),
+      "com saldo atual: herda o saldo atual, nao o planejado"
+    )
+  }
+
+  // Cada Pago/Recebido move o saldo atual e o mes seguinte acompanha.
+  {
+    const antes = openingForNextMonth(dec(5200), dec(4400))
+    const depois = openingForNextMonth(dec(4800), dec(4400)) // pagou 400
+    assertEqual(depois.sub(antes), dec(-400), "acompanha o saldo atual ao longo do mes")
+  }
+
+  // Mes que nunca teve saldo atual (futuro) cai no fechamento planejado, senao
+  // todos os meses a frente herdariam o mesmo valor.
+  assertEqual(
+    openingForNextMonth(null, dec(4400)),
+    dec(4400),
+    "sem saldo atual: herda o fechamento planejado"
+  )
+
+  // Saldo atual zerado e um valor legitimo e nao pode cair no fallback.
+  assertEqual(
+    openingForNextMonth(dec(0), dec(4400)),
+    dec(0),
+    "saldo atual zero nao vira fallback"
+  )
+
+  // Saldo atual negativo (conta no vermelho) tambem e herdado como esta.
+  assertEqual(
+    openingForNextMonth(dec(-320.55), dec(1000)),
+    dec(-320.55),
+    "saldo atual negativo e herdado como esta"
+  )
+}
+
 function openInvoiceTests() {
   console.log("\n== fatura em aberto ==")
 
@@ -183,6 +229,7 @@ function openInvoiceTests() {
 }
 
 plannedBalanceTests()
+carryOverTests()
 openInvoiceTests()
 
 if (failures > 0) {

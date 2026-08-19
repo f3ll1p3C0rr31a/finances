@@ -89,6 +89,25 @@ fechada e valores incertos visualmente confundidos com os confirmados.
 - Runner `Saturno-Finances` (label `finances-saturno`) ativo como serviço
   systemd no CT 101; o registro antigo `Jupiter-finances` foi removido.
 
+### Ajuste posterior (2026-08-19)
+
+O usuário corrigiu a regra da cadeia: o saldo inicial do mês seguinte deve ser
+o **saldo atual** do mês vigente, acompanhando-o até o fim do mês, e não o
+fechamento planejado que eu havia adotado (que descontava o que ficava em
+aberto). A regra ganhou nome e testes em `openingForNextMonth()` justamente
+porque é fácil de inverter sem perceber. O congelamento no último dia do mês é
+consequência natural: um mês passado não tem mais Pago/Recebido a marcar, então
+o valor herdado para de se mover sozinho.
+
+Novo `scripts/recalculate-balance-chain.ts` reaplica a regra aos meses já
+gravados (idempotente); sem ele, os meses parados manteriam o valor antigo até
+alguém editá-los.
+
+Ponto em aberto: corrigir deliberadamente um mês já encerrado (marcar como paga
+uma despesa antiga, por exemplo) ainda propaga para a abertura do mês seguinte.
+Isso é desejável na maioria dos casos, mas se o usuário quiser um travamento
+duro seria preciso persistir o saldo de virada em coluna própria.
+
 ### Pendências ou próximo passo
 
 - Conferir no app real, com dados de verdade: saldo planejado do mês corrente,
