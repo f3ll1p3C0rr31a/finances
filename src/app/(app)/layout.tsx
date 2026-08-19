@@ -27,24 +27,26 @@ export default async function AppLayout({
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-violet-950/10 bg-card/85 backdrop-blur supports-[backdrop-filter]:bg-card/70">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="shrink-0">
-              <FortunaLogo />
-            </Link>
-            <nav className="flex items-center gap-1">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(buttonVariants({ variant: "ghost" }))}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-          <form action={logout}>
+        {/* Em 360px o cabeçalho inteiro não cabe. Em vez de deixar a página
+            rolar de lado — que desalinha tudo —, a marca perde o nome, o menu
+            rola sozinho na horizontal e só o Sair fica fixo à direita. */}
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2 sm:gap-4 sm:px-4 sm:py-3">
+          <Link href="/dashboard" className="shrink-0">
+            <FortunaLogo showWordmark={false} className="sm:hidden" />
+            <FortunaLogo className="hidden sm:inline-flex" />
+          </Link>
+          <nav className="-mx-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(buttonVariants({ variant: "ghost" }), "shrink-0")}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          <form action={logout} className="shrink-0">
             <Button variant="outline" type="submit">
               Sair
             </Button>

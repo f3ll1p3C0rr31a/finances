@@ -28,25 +28,34 @@ export function CardMonthNav({
   const next = monthKeyFromDate(addMonths(month, 1))
   const home = homeHref ?? `${basePath}?month=${monthKeyFromDate(homeMonth ?? currentMonth())}`
 
+  // Mesma grade do MonthNav: setas presas nas bordas, miolo empilhando no
+  // celular. Ver o comentário lá para o porquê de não usar flex-wrap.
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-3">
       <Link
         href={`${basePath}?month=${previous}`}
-        className={cn(buttonVariants({ variant: "outline" }))}
+        className={cn(buttonVariants({ variant: "outline" }), "shrink-0")}
+        aria-label="Mês anterior"
       >
-        ← Anterior
+        ←<span className="ml-1 hidden sm:inline">Anterior</span>
       </Link>
-      <div className="flex flex-col items-center gap-2 sm:flex-row">
-        <h2 className="text-xl font-semibold tracking-tight">{formatMonthLabel(month)}</h2>
-        <Link href={home} className={cn(buttonVariants({ variant: "secondary" }))}>
+      <div className="flex min-w-0 flex-col items-center gap-1.5 sm:flex-row sm:justify-center sm:gap-3">
+        <h2 className="truncate text-lg font-semibold tracking-tight sm:text-xl">
+          {formatMonthLabel(month)}
+        </h2>
+        <Link
+          href={home}
+          className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "shrink-0")}
+        >
           {homeLabel}
         </Link>
       </div>
       <Link
         href={`${basePath}?month=${next}`}
-        className={cn(buttonVariants({ variant: "outline" }))}
+        className={cn(buttonVariants({ variant: "outline" }), "shrink-0")}
+        aria-label="Próximo mês"
       >
-        Próximo →
+        <span className="mr-1 hidden sm:inline">Próximo</span>→
       </Link>
     </div>
   )
