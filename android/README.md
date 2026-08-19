@@ -95,6 +95,38 @@ separando por vírgula.
 A verificação acontece na instalação: se a barra continuar aparecendo,
 desinstale antes de reinstalar, porque o Android guarda o resultado.
 
+## Atualizar o app pelo Obtainium
+
+O [Obtainium](https://github.com/ImranR98/Obtainium) vigia uma fonte de APK e
+avisa quando sai versão nova — é o mais perto de uma loja sem precisar manter
+repositório F-Droid próprio. A fonte aqui são as **Releases do GitHub**.
+
+Configurar uma vez, no celular:
+
+1. Instale o Obtainium (ele mesmo está na F-Droid, ou pelo APK do GitHub).
+2. **Add App** e cole a URL do repositório:
+   `https://github.com/f3ll1p3C0rr31a/finances`
+3. Em **Filter APKs by Regular Expression**, use `fortuna-.*\.apk` — o
+   repositório é do site inteiro, e sem o filtro o Obtainium tentaria adivinhar
+   qual anexo é o app.
+4. Marque para receber notificação de atualização.
+
+Publicar uma versão nova, aqui na máquina:
+
+```bash
+# 1. suba versionCode e versionName em android/app/build.gradle.kts
+# 2. publique
+./scripts/release-android.sh --notes "o que mudou"
+```
+
+O script compila, confere que o APK saiu assinado (APK sem assinatura instala
+uma vez e nunca mais atualiza) e cria a release com o APK anexado. Em poucos
+minutos o Obtainium avisa no celular.
+
+O build é local de propósito: a chave de assinatura nunca sai desta máquina.
+Automatizar no GitHub Actions exigiria guardar o keystore nos Secrets, e o
+repositório é público.
+
 ## Configurar o aparelho
 
 1. No site, **Informações → Dispositivos**, gere um token e copie (ele só
