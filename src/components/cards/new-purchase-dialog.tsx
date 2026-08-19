@@ -152,7 +152,7 @@ export function NewPurchaseDialog({
       >
         {triggerLabel ?? (purchase ? "Editar" : "Nova compra")}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{purchase ? "Editar compra" : "Nova compra"}</DialogTitle>
         </DialogHeader>

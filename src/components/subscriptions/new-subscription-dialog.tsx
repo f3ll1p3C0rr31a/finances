@@ -160,7 +160,7 @@ export function NewSubscriptionDialog({
       <DialogTrigger render={<Button variant={triggerVariant} size={triggerSize} />}>
         {triggerLabel}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Editar assinatura" : "Nova assinatura"}</DialogTitle>
         </DialogHeader>

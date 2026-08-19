@@ -8,6 +8,7 @@ import { requireUserId } from "@/lib/session"
 import { currentMonth, monthKeyFromDate } from "@/lib/calculations/month"
 import { resolveDueDate } from "@/lib/calculations/businessDay"
 import { adjustActualBalance, recalcOpeningBalanceChain } from "@/lib/actions/monthly"
+import { propagateIncomeTraits } from "@/lib/services/recurringEntries"
 import { incomeEntrySchema, type IncomeEntryInput } from "@/lib/validation/schemas"
 
 function revalidateMonth(month: Date) {
@@ -65,6 +66,7 @@ export async function createIncomeEntry(month: Date, input: IncomeEntryInput) {
     entryId = entry.id
   }
 
+  await recalcOpeningBalanceChain(userId, entryMonth)
   revalidateMonth(entryMonth)
   return { id: entryId }
 }
@@ -99,6 +101,24 @@ export async function updateIncomeEntry(id: string, input: IncomeEntryInput) {
     await adjustActualBalance(userId, entry.month, new Prisma.Decimal(data.amount).sub(existing.amount))
   }
 
+  // Entrada recorrente leva as novas características para os meses seguintes
+  // ainda abertos, e o template acompanha para os meses ainda não gerados.
+  if (entry.templateId) {
+    await propagateIncomeTraits(userId, entry)
+    await prisma.incomeTemplate.update({
+      where: { id: entry.templateId },
+      data: {
+        name: data.name,
+        defaultAmount: data.amount,
+        dayOfMonth: data.dueDay ?? null,
+        dueDayType: data.dueDayType,
+      },
+    })
+  }
+
+  await recalcOpeningBalanceChain(userId, entry.month)
+
+  revalidatePath("/dashboard", "layout")
   revalidateMonth(entry.month)
 }
 

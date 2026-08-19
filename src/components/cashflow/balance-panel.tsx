@@ -67,7 +67,7 @@ export function BalancePanel({
           <dt>
             <span className="block font-medium">Saldo Inicial</span>
             <span className="text-xs text-muted-foreground">
-              Saldo atual com que o mês anterior virou
+              Saldo planejado com que o mês anterior fechou
             </span>
           </dt>
           <dd className="self-center text-right">

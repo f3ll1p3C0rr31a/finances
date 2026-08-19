@@ -54,6 +54,15 @@ npx tsx scripts/test-card-billing-domain.ts   # ciclo de fatura (precisa de banc
 Para mudanças de cálculos, estenda esses scripts antes de ampliar regras de
 alto risco.
 
+Scripts de manutenção (idempotentes, rodam contra o banco apontado por
+`DATABASE_URL`):
+
+```bash
+npx tsx scripts/recalculate-balance-chain.ts     # reaplica a regra de saldo herdado
+npx tsx scripts/apply-recurring-inheritance.ts   # empurra o mês corrente das recorrentes para os meses abertos
+npx tsx scripts/recalculate-card-billing.ts      # realinha o mês de fatura das compras
+```
+
 ## Checklist de implementação
 
 - Validação Zod cobre a entrada e mensagens ao usuário.

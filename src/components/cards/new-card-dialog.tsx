@@ -117,7 +117,7 @@ export function NewCardDialog({
       <DialogTrigger render={<Button variant={triggerVariant} size={triggerSize} />}>
         {triggerLabel ?? (card ? "Editar cartão" : "Novo cartão")}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{card ? "Editar cartão" : "Novo cartão"}</DialogTitle>
           <DialogDescription>

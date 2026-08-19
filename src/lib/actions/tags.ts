@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { prisma } from "@/lib/prisma"
 import { requireUserId } from "@/lib/session"
+import { propagateExpenseTags, propagateIncomeTags } from "@/lib/services/recurringEntries"
 
 export async function listTags(userId: string) {
   return prisma.tag.findMany({ where: { userId }, orderBy: { name: "asc" } })
@@ -70,23 +71,25 @@ export async function bulkSetCardPurchaseTags(purchaseIds: string[], tagIds: str
 
 export async function setIncomeEntryTags(entryId: string, tagIds: string[]) {
   const userId = await requireUserId()
-  await prisma.incomeEntry.findUniqueOrThrow({ where: { id: entryId, userId } })
+  const entry = await prisma.incomeEntry.findUniqueOrThrow({ where: { id: entryId, userId } })
 
   await prisma.$transaction([
     prisma.incomeEntryTag.deleteMany({ where: { entryId } }),
     prisma.incomeEntryTag.createMany({ data: tagIds.map((tagId) => ({ entryId, tagId })) }),
   ])
+  await propagateIncomeTags(userId, entry, tagIds)
   revalidatePath("/dashboard", "layout")
 }
 
 export async function setExpenseEntryTags(entryId: string, tagIds: string[]) {
   const userId = await requireUserId()
-  await prisma.expenseEntry.findUniqueOrThrow({ where: { id: entryId, userId } })
+  const entry = await prisma.expenseEntry.findUniqueOrThrow({ where: { id: entryId, userId } })
 
   await prisma.$transaction([
     prisma.expenseEntryTag.deleteMany({ where: { entryId } }),
     prisma.expenseEntryTag.createMany({ data: tagIds.map((tagId) => ({ entryId, tagId })) }),
   ])
+  await propagateExpenseTags(userId, entry, tagIds)
   revalidatePath("/dashboard", "layout")
 }
 

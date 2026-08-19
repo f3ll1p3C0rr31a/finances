@@ -2,18 +2,17 @@ import { Prisma } from "@/generated/prisma/client"
 
 import { prisma } from "@/lib/prisma"
 import { addMonths, currentMonth } from "@/lib/calculations/month"
-import { resolveDueDate } from "@/lib/calculations/businessDay"
 import { sumAmounts } from "@/lib/calculations/money"
 import {
   computeOpenCashflow,
   computeMonthTotals,
   computePlannedBalance,
   computeUncertainPreview,
-  openingForNextMonth,
 } from "@/lib/calculations/balanceChain"
 import { getCardMonthBudget } from "@/lib/actions/cardSummary"
 import { getNonCardSubscriptionsTotal } from "@/lib/actions/subscriptionSummary"
 import { ensureSubscriptionChargesGenerated } from "@/lib/services/subscriptionCharges"
+import { expenseSeedForMonth, incomeSeedForMonth } from "@/lib/services/recurringEntries"
 
 async function ensureTemplateEntries(userId: string, month: Date) {
   const incomeTemplates = await prisma.incomeTemplate.findMany({
@@ -26,21 +25,15 @@ async function ensureTemplateEntries(userId: string, month: Date) {
   })
 
   for (const template of incomeTemplates) {
-    await prisma.incomeEntry.upsert({
+    // O mês novo nasce copiando o mês anterior (ver recurringEntries.ts); o
+    // template só entra quando não existe nenhum mês anterior.
+    const existing = await prisma.incomeEntry.findUnique({
       where: { templateId_month: { templateId: template.id, month } },
-      update: {},
-      create: {
-        userId,
-        templateId: template.id,
-        name: template.name,
-        month,
-        dueDate: template.dayOfMonth
-          ? resolveDueDate(month, template.dueDayType, template.dayOfMonth)
-          : null,
-        dueDayType: template.dueDayType,
-        dueDayValue: template.dayOfMonth,
-        amount: template.defaultAmount,
-      },
+      select: { id: true },
+    })
+    if (existing) continue
+    await prisma.incomeEntry.create({
+      data: await incomeSeedForMonth(userId, template, month),
     })
   }
 
@@ -54,22 +47,13 @@ async function ensureTemplateEntries(userId: string, month: Date) {
   })
 
   for (const template of expenseTemplates) {
-    await prisma.expenseEntry.upsert({
+    const existing = await prisma.expenseEntry.findUnique({
       where: { templateId_month: { templateId: template.id, month } },
-      update: {},
-      create: {
-        userId,
-        templateId: template.id,
-        name: template.name,
-        category: template.category,
-        month,
-        dueDate: template.dayOfMonth
-          ? resolveDueDate(month, template.dueDayType, template.dayOfMonth)
-          : null,
-        dueDayType: template.dueDayType,
-        dueDayValue: template.dayOfMonth,
-        amount: template.defaultAmount ?? new Prisma.Decimal(0),
-      },
+      select: { id: true },
+    })
+    if (existing) continue
+    await prisma.expenseEntry.create({
+      data: await expenseSeedForMonth(userId, template, month),
     })
   }
 }
@@ -142,8 +126,16 @@ export async function getMonthOpenCashflow(userId: string, month: Date) {
 }
 
 /**
- * Projeção de fechamento do mês: saldo atual (ou inicial, se ainda não houver)
- * mais o que falta acontecer. É o que o painel mostra como "Saldo planejado".
+ * Fechamento projetado do mês: saldo atual (ou inicial, quando ainda não há)
+ * mais o que falta acontecer. É o "Saldo planejado" do painel e também o
+ * **saldo inicial que o mês seguinte herda**.
+ *
+ * Herdar a projeção, e não o saldo atual cru, é deliberado: no meio do mês o
+ * saldo atual ainda não sofreu os descontos e recebimentos que vão acontecer
+ * até o dia 31, então passá-lo adiante faria o mês seguinte abrir com dinheiro
+ * que já está comprometido. Esta decisão foi revista duas vezes (a alternativa
+ * era herdar o saldo atual); antes de inverter de novo, confirme com o
+ * usuário.
  */
 async function plannedClosingBalance(
   userId: string,
@@ -155,21 +147,6 @@ async function plannedClosingBalance(
     futureIncome,
     futureExpense
   )
-}
-
-/**
- * Saldo inicial que `balanceRow` entrega ao mês seguinte; a regra está em
- * `openingForNextMonth()`. Aqui só se resolve a alternativa — o fechamento
- * planejado custa várias consultas e não entra na conta quando o mês já tem
- * saldo atual, então só é buscado nesse caso.
- */
-async function carryOverBalance(
-  userId: string,
-  balanceRow: BalanceRow
-): Promise<Prisma.Decimal> {
-  const { actualBalance } = balanceRow
-  const plannedClosing = actualBalance ?? (await plannedClosingBalance(userId, balanceRow))
-  return openingForNextMonth(actualBalance, plannedClosing)
 }
 
 /**
@@ -199,7 +176,7 @@ export async function ensureMonthGenerated(userId: string, month: Date): Promise
   }
 
   let cursor = addMonths(previousAnchor.month, 1)
-  let runningOpening = await carryOverBalance(userId, previousAnchor)
+  let runningOpening = await plannedClosingBalance(userId, previousAnchor)
 
   for (;;) {
     await ensureTemplateEntries(userId, cursor)
@@ -209,7 +186,7 @@ export async function ensureMonthGenerated(userId: string, month: Date): Promise
       create: { userId, month: cursor, openingBalance: runningOpening },
     })
     if (cursor.getTime() === month.getTime()) break
-    runningOpening = await carryOverBalance(userId, row)
+    runningOpening = await plannedClosingBalance(userId, row)
     cursor = addMonths(cursor, 1)
   }
 }
@@ -233,7 +210,7 @@ export async function recalcOpeningBalanceChain(userId: string, fromMonth: Date)
     })
     if (!next) return
 
-    const newOpening = await carryOverBalance(userId, current)
+    const newOpening = await plannedClosingBalance(userId, current)
     if (next.openingBalance.equals(newOpening)) return
 
     await prisma.monthlyBalance.update({

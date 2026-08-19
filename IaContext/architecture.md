@@ -131,16 +131,16 @@ O alias `@/*` aponta para `src/*`.
 - Despesas totais (linha "Total de Saídas") continuam somando lançamentos,
   cartões e assinaturas fora de cartão — elas descrevem o mês inteiro, não o
   que falta.
-- O `openingBalance` do mês seguinte é o **saldo atual** do mês corrente
-  (`openingForNextMonth()`), e acompanha cada Pago/Recebido enquanto o mês
-  corre. Quando o mês acaba, o saldo atual dele para de se mover e o valor
-  herdado fica fixo por consequência — não há congelamento explícito.
-- O saldo inicial deliberadamente **não** desconta o que ficou em aberto: ele
-  representa o dinheiro que virou o mês, não uma projeção. A projeção é o saldo
-  planejado, exibido à parte.
-- Só meses que nunca tiveram saldo atual (tipicamente os futuros) herdam o
-  fechamento planejado; sem isso, todos os meses à frente teriam a mesma
-  abertura e a projeção de 12 meses ficaria plana.
+- O `openingBalance` do mês seguinte é o **fechamento planejado** do mês
+  corrente, não o saldo atual cru. No meio do mês o saldo atual ainda não
+  sofreu os descontos e recebimentos que vão acontecer até o dia 31; passá-lo
+  adiante faria o mês seguinte abrir com dinheiro já comprometido.
+- Consequência útil: marcar uma conta como paga derruba o saldo atual e tira o
+  mesmo valor das saídas futuras, então o valor herdado **não se mexe** — ele
+  já está estável muito antes do fim do mês, e no último dia converge para o
+  saldo atual se nada ficou em aberto.
+- Esta decisão já foi revertida duas vezes (a alternativa era herdar o saldo
+  atual). Confirme com o usuário antes de invertê-la de novo.
 - Alterações que afetam um mês materializado podem exigir
   `recalcOpeningBalanceChain()`.
 - Marcar uma entrada recebida ou despesa paga ajusta o Saldo Atual.
@@ -152,6 +152,30 @@ O alias `@/*` aponta para `src/*`.
   anexado por ocorrência mensal. PDFs ficam fora de `public/`, em
   `storage/boletos`, e são baixados por rota autenticada que verifica o dono da
   despesa.
+
+### Recorrentes e herança
+
+- Um mês novo de lançamento recorrente nasce copiando o **mês anterior mais
+  recente** daquele template (`expenseSeedForMonth()` / `incomeSeedForMonth()`),
+  não os valores congelados no template. O template só entra quando não existe
+  nenhum mês anterior; ele continua sendo atualizado nas edições para servir a
+  esse caso.
+- Editar um lançamento recorrente propaga as características para os meses
+  seguintes **ainda abertos** (`propagateExpenseTraits()` /
+  `propagateIncomeTraits()`): nome, valor, categoria, dia/tipo de vencimento,
+  pago por, forma de pagamento, chave Pix e link externo. As etiquetas seguem o
+  mesmo caminho (`propagateExpenseTags()` / `propagateIncomeTags()`), senão o
+  gráfico por etiqueta perderia a conta a partir do mês seguinte.
+- Nunca são reescritos: meses já encerrados (`month >= currentMonth()` é
+  condição para herdar) e lançamentos já pagos/recebidos — o pagamento já mexeu
+  no saldo real e alterar o valor por baixo deixaria a conta inconsistente.
+- `dueDate` é recalculado mês a mês na propagação, porque dia útil cai em datas
+  diferentes em cada mês.
+- Faturas de cartão ficam fora dessa herança de propósito: mudam de valor todo
+  mês e são calculadas a partir das compras.
+- Editar ou criar um lançamento recalcula a cadeia de saldos a partir daquele
+  mês: o valor entra no fechamento planejado, que é o saldo inicial do mês
+  seguinte.
 
 ### Cartões
 

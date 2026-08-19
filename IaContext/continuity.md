@@ -89,24 +89,32 @@ fechada e valores incertos visualmente confundidos com os confirmados.
 - Runner `Saturno-Finances` (label `finances-saturno`) ativo como serviço
   systemd no CT 101; o registro antigo `Jupiter-finances` foi removido.
 
-### Ajuste posterior (2026-08-19)
+### Ajustes posteriores (2026-08-19)
 
-O usuário corrigiu a regra da cadeia: o saldo inicial do mês seguinte deve ser
-o **saldo atual** do mês vigente, acompanhando-o até o fim do mês, e não o
-fechamento planejado que eu havia adotado (que descontava o que ficava em
-aberto). A regra ganhou nome e testes em `openingForNextMonth()` justamente
-porque é fácil de inverter sem perceber. O congelamento no último dia do mês é
-consequência natural: um mês passado não tem mais Pago/Recebido a marcar, então
-o valor herdado para de se mover sozinho.
+**Saldo herdado — decidido em definitivo.** O usuário pediu primeiro para o mês
+seguinte herdar o saldo atual, e em seguida reverteu: o saldo inicial é o
+**fechamento planejado** do mês corrente, porque no meio do mês o saldo atual
+ainda não sofreu os descontos e recebimentos que faltam até o dia 31. A ida e
+volta está registrada na docstring de `plannedClosingBalance()` — confirmar com
+o usuário antes de inverter de novo. Efeito colateral bom: como pagar uma conta
+derruba o saldo atual e tira o mesmo valor das saídas futuras, o valor herdado
+não se mexe, então já está estável antes do fim do mês.
 
-Novo `scripts/recalculate-balance-chain.ts` reaplica a regra aos meses já
-gravados (idempotente); sem ele, os meses parados manteriam o valor antigo até
-alguém editá-los.
+**Herança de recorrentes** (`src/lib/services/recurringEntries.ts`): mês novo
+nasce copiando o mês anterior em vez do template, e editar um recorrente
+propaga para os meses seguintes ainda abertos. Motivador: mudar a van escolar
+de 400 para 600 em agosto não chegava em setembro, e trocar a NeoEnergia para
+"Terceiros" também não. Meses encerrados e lançamentos pagos nunca são
+reescritos.
 
-Ponto em aberto: corrigir deliberadamente um mês já encerrado (marcar como paga
-uma despesa antiga, por exemplo) ainda propaga para a abertura do mês seguinte.
-Isso é desejável na maioria dos casos, mas se o usuário quiser um travamento
-duro seria preciso persistir o saldo de virada em coluna própria.
+**Diálogos**: `DialogContent` ganhou `max-h-[calc(100dvh-2rem)]` +
+`overflow-y-auto` — sem isso um formulário alto passava da viewport e o botão
+de salvar ficava inalcançável, porque o popup é `fixed` e não rolava. Os
+formulários longos também ficaram mais largos no desktop
+(`sm:max-w-lg`/`xl`/`2xl`), o que reduz a altura.
+
+**Scripts de manutenção** novos: `recalculate-balance-chain.ts` e
+`apply-recurring-inheritance.ts`.
 
 ### Pendências ou próximo passo
 

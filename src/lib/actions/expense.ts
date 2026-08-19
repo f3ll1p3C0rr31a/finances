@@ -12,6 +12,7 @@ import { currentMonth } from "@/lib/calculations/month"
 import { resolveDueDate } from "@/lib/calculations/businessDay"
 import { adjustActualBalance, recalcOpeningBalanceChain } from "@/lib/actions/monthly"
 import { deleteExpenseForUser } from "@/lib/services/deleteExpense"
+import { propagateExpenseTraits } from "@/lib/services/recurringEntries"
 import { expenseEntrySchema, type ExpenseEntryInput } from "@/lib/validation/schemas"
 
 function revalidateMonth(month: Date) {
@@ -91,6 +92,7 @@ export async function createExpenseEntry(month: Date, input: ExpenseEntryInput) 
     entryId = entry.id
   }
 
+  await recalcOpeningBalanceChain(userId, entryMonth)
   revalidateMonth(entryMonth)
   return { id: entryId }
 }
@@ -134,6 +136,27 @@ export async function updateExpenseEntry(id: string, input: ExpenseEntryInput) {
     )
   }
 
+  // Conta recorrente carrega as novas características para os meses seguintes
+  // ainda abertos, e o template acompanha para os meses ainda não gerados.
+  if (entry.templateId) {
+    await propagateExpenseTraits(userId, entry)
+    await prisma.expenseTemplate.update({
+      where: { id: entry.templateId },
+      data: {
+        name: data.name,
+        category: data.category,
+        defaultAmount: data.amount,
+        dayOfMonth: data.dueDay ?? null,
+        dueDayType: data.dueDayType,
+      },
+    })
+  }
+
+  // O valor do mês entra no fechamento planejado, que é o saldo inicial do mês
+  // seguinte: sem recalcular, as aberturas à frente ficariam desatualizadas.
+  await recalcOpeningBalanceChain(userId, entry.month)
+
+  revalidatePath("/dashboard", "layout")
   revalidateMonth(entry.month)
 }
 

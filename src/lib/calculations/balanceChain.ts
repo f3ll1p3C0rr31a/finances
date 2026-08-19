@@ -90,28 +90,3 @@ export function computePlannedBalance(
 ): Prisma.Decimal {
   return currentBalance.add(futureIncome).sub(futureExpense)
 }
-
-/**
- * Saldo que o mês seguinte herda como saldo inicial.
- *
- * Enquanto o mês tem saldo atual informado, o mês seguinte herda exatamente
- * esse valor: o saldo inicial de setembro é o saldo atual de agosto, e
- * acompanha cada Pago/Recebido marcado ao longo de agosto. Quando agosto
- * termina, o saldo atual dele para de se mover e o valor herdado fica fixo por
- * consequência — não é preciso congelar nada explicitamente.
- *
- * Deliberadamente **não** desconta o que ficou em aberto: o saldo inicial
- * representa o dinheiro que de fato virou o mês, não uma projeção. Quem
- * projeta é `computePlannedBalance()`.
- *
- * O fechamento planejado só entra como alternativa para meses que nunca
- * tiveram saldo atual (tipicamente os futuros, onde nada foi liquidado). Sem
- * isso, todos os meses à frente herdariam o mesmo valor e a projeção de 12
- * meses ficaria plana.
- */
-export function openingForNextMonth(
-  actualBalance: Prisma.Decimal | null,
-  plannedClosing: Prisma.Decimal
-): Prisma.Decimal {
-  return actualBalance ?? plannedClosing
-}

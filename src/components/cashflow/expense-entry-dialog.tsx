@@ -164,7 +164,7 @@ export function ExpenseEntryDialog({
       <DialogTrigger render={<Button variant={triggerVariant} size={triggerSize} />}>
         {triggerLabel}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{entry ? "Editar despesa" : "Nova despesa"}</DialogTitle>
           <DialogDescription>

@@ -10,7 +10,6 @@ import {
   computeOpenCashflow,
   computePlannedBalance,
   computeUncertainPreview,
-  openingForNextMonth,
 } from "../src/lib/calculations/balanceChain"
 import { openInvoiceMonth } from "../src/lib/calculations/cardTiming"
 
@@ -158,45 +157,50 @@ function plannedBalanceTests() {
 function carryOverTests() {
   console.log("\n== saldo herdado pelo mes seguinte ==")
 
-  // O mes seguinte herda o saldo atual, nao o fechamento planejado: o saldo
-  // inicial representa o dinheiro que virou o mes, nao uma projecao.
+  // O mes seguinte herda o fechamento planejado, nao o saldo atual cru: no
+  // meio do mes o saldo atual ainda nao sofreu o que falta acontecer ate o
+  // dia 31, e abrir o mes seguinte com dinheiro ja comprometido inflaria a
+  // projecao inteira.
   {
     const actual = dec(5200)
-    const plannedClosing = dec(4400) // 800 ainda em aberto no mes
+    const futureIncome = dec(0)
+    const futureExpense = dec(800) // ainda em aberto no mes
     assertEqual(
-      openingForNextMonth(actual, plannedClosing),
-      dec(5200),
-      "com saldo atual: herda o saldo atual, nao o planejado"
+      computePlannedBalance(actual, futureIncome, futureExpense),
+      dec(4400),
+      "herda o saldo atual menos o que ainda vai sair"
     )
   }
 
-  // Cada Pago/Recebido move o saldo atual e o mes seguinte acompanha.
+  // Entradas que ainda vao cair tambem entram na conta.
+  assertEqual(
+    computePlannedBalance(dec(1000), dec(3000), dec(800)),
+    dec(3200),
+    "herda tambem as entradas que faltam receber"
+  )
+
+  // Ao longo do mes, pagar algo derruba o saldo atual e tira o mesmo valor das
+  // saidas futuras: o valor herdado nao se mexe. E por isso que ele ja esta
+  // estavel muito antes do ultimo dia do mes.
   {
-    const antes = openingForNextMonth(dec(5200), dec(4400))
-    const depois = openingForNextMonth(dec(4800), dec(4400)) // pagou 400
-    assertEqual(depois.sub(antes), dec(-400), "acompanha o saldo atual ao longo do mes")
+    const antes = computePlannedBalance(dec(5200), dec(0), dec(800))
+    const depois = computePlannedBalance(dec(4800), dec(0), dec(400)) // pagou 400
+    assertEqual(depois, antes, "pagar uma conta nao muda o saldo herdado")
   }
 
-  // Mes que nunca teve saldo atual (futuro) cai no fechamento planejado, senao
-  // todos os meses a frente herdariam o mesmo valor.
+  // Fim de mes sem pendencias: o herdado converge para o saldo atual.
   assertEqual(
-    openingForNextMonth(null, dec(4400)),
+    computePlannedBalance(dec(4400), dec(0), dec(0)),
     dec(4400),
-    "sem saldo atual: herda o fechamento planejado"
+    "mes liquidado: herdado == saldo atual"
   )
 
-  // Saldo atual zerado e um valor legitimo e nao pode cair no fallback.
+  // Mes futuro nunca teve saldo atual: parte da abertura, e a projecao de 12
+  // meses continua evoluindo em vez de ficar plana.
   assertEqual(
-    openingForNextMonth(dec(0), dec(4400)),
-    dec(0),
-    "saldo atual zero nao vira fallback"
-  )
-
-  // Saldo atual negativo (conta no vermelho) tambem e herdado como esta.
-  assertEqual(
-    openingForNextMonth(dec(-320.55), dec(1000)),
-    dec(-320.55),
-    "saldo atual negativo e herdado como esta"
+    computePlannedBalance(dec(4400), dec(6200), dec(1200)),
+    dec(9400),
+    "mes futuro projeta a partir da abertura"
   )
 }
 
