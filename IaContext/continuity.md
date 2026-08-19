@@ -139,15 +139,31 @@ formulários longos também ficaram mais largos no desktop
   validar as chaves estrangeiras que as Server Actions gravam (antes só a
   posse do registro editado era conferida).
 
+### Terceira leva (2026-08-19)
+
+- **Terceiros fora do saldo**: `movesOwnMoney()` é o predicado único; conta de
+  terceiro virou só controle. Cuidado registrado em `architecture.md`: trocar
+  quem paga numa despesa já paga precisa ajustar o saldo nos dois sentidos.
+- **Notificações**: `/api/widget/agenda` + `AgendaWorker` diário às 8h
+  (WorkManager, notificação local, sem Firebase).
+- **APK compilado e assinado**. Toolchain local em `~/android-toolchain`
+  (JDK 17, SDK 35, Gradle 8.10.2), instalada por
+  `scripts/android-toolchain-setup.sh` sem root. Chave em
+  `android/fortuna.keystore` + `android/keystore.properties`, ambos fora do
+  versionamento — **precisam de backup**, sem eles não dá para atualizar o app
+  instalado.
+- Impressão digital publicada em `ANDROID_APP_FINGERPRINT`;
+  `/.well-known/assetlinks.json` responde em produção.
+- Dois erros que só o compilador pegaria: `Result` próprio sombreando o
+  `kotlin.Result` do `runCatching`, e comentário de bloco **aninhado** (Kotlin
+  aceita) — o `/*` dentro de `` `/api/widget/*` `` num KDoc engolia o arquivo.
+
 ### Pendências ou próximo passo
 
-- Compilar o `android/` no Android Studio, gerar a chave, publicar a
-  impressão digital em `ANDROID_APP_FINGERPRINT` e conferir o assetlinks.
-- Confirmar com o usuário se o salário de agosto (4.700,69) era aumento ou
-  valor pontual: a herança o propagou para 14 meses.
-- Validar na tela os números do saldo planejado e das faturas em aberto.
-- Decidir se conta de terceiro deve sair dos totais do mês (hoje só muda de
-  cor).
+- Instalar o APK num aparelho: nada foi verificado rodando na tela. Widget,
+  notificação e lançamento rápido compilam, mas não foram vistos funcionando.
+- Confirmar se o salário de agosto (4.700,69) era aumento ou valor pontual.
+- Validar na tela os números de saldo planejado e faturas em aberto.
 
 ## Débitos documentais confirmados
 

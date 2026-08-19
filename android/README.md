@@ -5,10 +5,10 @@ App nativo fino em volta do site: uma **TWA** (Trusted Web Activity) que abre
 **widget** de tela inicial com o resumo do mês e um **lançamento rápido** de
 compra de cartão.
 
-> **Este projeto não foi compilado.** A máquina onde ele foi escrito não tem
-> JDK nem SDK do Android. O código está completo e segue as APIs padrão, mas
-> espere ajustes de versão de dependência no primeiro build — abra no Android
-> Studio, deixe ele sincronizar e corrija o que apontar.
+> **Compilado e assinado** em 2026-08-19 com JDK 17, SDK 35 e Gradle 8.10.2.
+> O APK de release sai em `app/build/outputs/apk/release/app-release.apk`.
+> Não foi instalado em aparelho nenhum: o comportamento em tela — widget,
+> notificação, lançamento rápido — ainda não foi visto rodando.
 
 ## Por que TWA e não um app nativo
 
@@ -25,7 +25,8 @@ lançamento.
 | `LauncherActivity` (da biblioteca) | Abre o site em tela cheia |
 | `OverviewWidget.kt` | Widget: saldo planejado, saldo atual, meta dos cartões e faturas em aberto |
 | `QuickPurchaseActivity.kt` | Formulário de compra: valor, modo, cartão, parcelas |
-| `SetupActivity.kt` | Cola o token do dispositivo |
+| `SetupActivity.kt` | Cola o token do dispositivo e pede a permissão de notificação |
+| `AgendaWorker.kt` | Aviso diário do que vence hoje e do que está em atraso |
 | `FortunaApi.kt` | Chama `/api/widget/overview` e `/api/widget/purchase` |
 | `TokenStore.kt` | Guarda token e endereço em SharedPreferences |
 
@@ -35,55 +36,64 @@ corta o acesso do aparelho sem derrubar o login da web.
 
 ## Build
 
-Pré-requisitos: Android Studio (ou JDK 17 + SDK do Android com plataforma 35).
+Pré-requisitos: JDK 17 e SDK do Android com a plataforma 35. Se não tiver,
+`~/android-toolchain/setup.sh` baixa tudo sem precisar de root (~900 MB) e não
+mexe no sistema.
 
 ```bash
 cd android
-./gradlew assembleDebug        # gera app/build/outputs/apk/debug/app-debug.apk
+JAVA_HOME=~/android-toolchain/jdk ANDROID_HOME=~/android-toolchain/sdk \
+  ./gradlew assembleRelease
 ```
 
-Instalar no aparelho conectado:
+Saídas:
+
+- `app/build/outputs/apk/release/app-release.apk` — assinado, é o que se
+  instala no aparelho
+- `app/build/outputs/apk/debug/app-debug.apk` — para depurar
+
+Instalar no aparelho conectado por USB (depuração USB ligada):
 
 ```bash
-./gradlew installDebug
+~/android-toolchain/sdk/platform-tools/adb install -r \
+  app/build/outputs/apk/release/app-release.apk
 ```
 
-Não há wrapper commitado; o Android Studio cria o `gradlew` na primeira
-abertura. Por linha de comando, gere com `gradle wrapper` (Gradle 8.9+).
+Sem cabo: copie o APK para o celular e abra o arquivo; o Android vai pedir
+para autorizar a instalação de fontes desconhecidas.
 
-## Release e Digital Asset Links
+## A chave de assinatura
 
-Sem os asset links o app funciona, mas abre com a barra do Chrome por cima do
-site. Para eliminá-la:
+`fortuna.keystore` e `keystore.properties` ficam neste diretório e **não são
+versionados**. Guarde uma cópia dos dois fora da máquina: sem essa chave o
+Android recusa qualquer atualização do app já instalado — a única saída seria
+desinstalar e perder a configuração.
 
-1. Crie a chave de assinatura, se ainda não existir:
+A impressão digital SHA-256 dela é o que está publicado em
+`ANDROID_APP_FINGERPRINT` no `.env` de produção.
 
-   ```bash
-   keytool -genkey -v -keystore fortuna.keystore -alias fortuna \
-     -keyalg RSA -keysize 2048 -validity 10000
-   ```
+## Digital Asset Links
 
-2. Pegue a impressão digital SHA-256:
+Já configurado: a impressão digital da chave está no `.env` de produção e
+`https://finances.fellipecorreia.com/.well-known/assetlinks.json` responde com
+ela. É isso que faz o app abrir sem a barra do Chrome por cima.
 
-   ```bash
-   keytool -list -v -keystore fortuna.keystore -alias fortuna | grep SHA256
-   ```
+Se um dia a chave mudar, refaça:
 
-3. Coloque no `.env` de produção do site e reinicie o container:
+```bash
+keytool -list -v -keystore fortuna.keystore -alias fortuna | grep SHA256
+```
 
-   ```
-   ANDROID_APP_FINGERPRINT="AA:BB:CC:..."
-   ```
+e atualize `ANDROID_APP_FINGERPRINT` no `.env` de produção — o container
+precisa ser **recriado**, não só reiniciado, porque o `env_file` é lido na
+criação.
 
-   Durante os testes vale incluir também a chave de debug
-   (`~/.android/debug.keystore`, alias `androiddebugkey`, senha `android`),
-   separando por vírgula.
+Para depurar com o APK de debug, some a impressão da chave de debug
+(`~/.android/debug.keystore`, alias `androiddebugkey`, senha `android`),
+separando por vírgula.
 
-4. Confirme que `https://finances.fellipecorreia.com/.well-known/assetlinks.json`
-   responde com o JSON — o site serve por um rewrite para `/api/assetlinks`.
-
-5. Reinstale o app. A verificação acontece na instalação; se a barra
-   continuar, desinstale antes de reinstalar (o Android guarda o resultado).
+A verificação acontece na instalação: se a barra continuar aparecendo,
+desinstale antes de reinstalar, porque o Android guarda o resultado.
 
 ## Configurar o aparelho
 
@@ -96,6 +106,10 @@ O widget se atualiza sozinho a cada 30 minutos — é o intervalo mínimo que o
 Android permite — e tem um botão de atualizar para quando você quiser o número
 na hora. Lançar uma compra também força a atualização.
 
+As notificações começam a valer no dia seguinte: o aviso sai às 8h e lista o
+que vence hoje e o que ficou em atraso. Se o Android pedir a permissão de
+notificação, é preciso aceitar — sem ela o worker roda e não mostra nada.
+
 ## Limites conhecidos
 
 - O `updatePeriodMillis` de 30 min é limite do sistema. Para tempo real seria
@@ -105,3 +119,8 @@ na hora. Lançar uma compra também força a atualização.
   site.
 - Sem cache offline: sem rede, o widget mostra a mensagem de erro em vez de um
   valor possivelmente desatualizado.
+- A notificação é local e diária, não push. Um lançamento criado hoje só
+  aparece no aviso de amanhã. Tempo real exigiria FCM, e com ele um projeto no
+  Firebase.
+- Nada foi verificado rodando em aparelho: o APK compila e está assinado, mas
+  widget, notificação e lançamento rápido ainda não foram vistos na tela.
