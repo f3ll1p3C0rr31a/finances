@@ -59,7 +59,13 @@ if [ -z "$FINGERPRINT" ]; then
 fi
 echo "==> Assinado por $FINGERPRINT"
 
-NOTES="${2:-Atualização do app Fortuna.}"
+# Aceita tanto `--notes "texto"` quanto o texto solto como primeiro argumento;
+# antes, qualquer forma diferente de `--notes` era ignorada em silêncio.
+if [ "${1:-}" = "--notes" ]; then
+  NOTES="${2:-Atualização do app Fortuna.}"
+else
+  NOTES="${1:-Atualização do app Fortuna.}"
+fi
 echo "==> Publicando release"
 gh release create "$TAG" "/tmp/$NAMED" \
   --title "Fortuna $VERSION_NAME (Android)" \
