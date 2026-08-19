@@ -51,12 +51,21 @@ function income(amount: number, opts: { received?: boolean; uncertain?: boolean;
   }
 }
 
-function expense(amount: number, opts: { paid?: boolean; uncertain?: boolean; paidAmount?: number } = {}) {
+function expense(
+  amount: number,
+  opts: {
+    paid?: boolean
+    uncertain?: boolean
+    paidAmount?: number
+    paidBy?: "SELF" | "THIRD_PARTY"
+  } = {}
+) {
   return {
     amount: dec(amount),
     paidAmount: opts.paidAmount == null ? null : dec(opts.paidAmount),
     paid: opts.paid ?? false,
     uncertain: opts.uncertain ?? false,
+    paidBy: opts.paidBy ?? ("SELF" as const),
   }
 }
 
@@ -153,6 +162,42 @@ function plannedBalanceTests() {
       dec(5200),
       "mês liquidado: planejado == saldo atual"
     )
+  }
+}
+
+function thirdPartyTests() {
+  console.log("\n== contas de terceiros ==")
+
+  // Conta de terceiro e so controle: aparece na lista, mas nao entra em
+  // nenhum total nem no saldo.
+  {
+    const incomes = [income(3000)]
+    const expenses = [expense(500), expense(800, { paidBy: "THIRD_PARTY" })]
+    const totals = computeMonthTotals(incomes, expenses)
+    assertEqual(totals.totalExpense, dec(500), "total de saidas ignora o terceiro")
+
+    const open = computeOpenCashflow(incomes, expenses)
+    assertEqual(open.futureExpense, dec(500), "saidas futuras ignoram o terceiro")
+
+    assertEqual(
+      computePlannedBalance(dec(1000), open.futureIncome, open.futureExpense),
+      dec(3500),
+      "planejado nao desconta o terceiro"
+    )
+  }
+
+  // Terceiro paga o que estava incerto: continua fora, inclusive da previa.
+  {
+    const expenses = [expense(800, { paidBy: "THIRD_PARTY", uncertain: true })]
+    const preview = computeUncertainPreview([], expenses)
+    assertEqual(preview.pendingExpense, dec(0), "previa ignora incerta de terceiro")
+  }
+
+  // Terceiro ja pago tambem nao entra: o dinheiro nunca foi seu.
+  {
+    const expenses = [expense(800, { paidBy: "THIRD_PARTY", paid: true })]
+    const totals = computeMonthTotals([], expenses)
+    assertEqual(totals.totalExpense, dec(0), "terceiro pago continua fora do total")
   }
 }
 
@@ -315,6 +360,7 @@ function inheritanceTests() {
 }
 
 plannedBalanceTests()
+thirdPartyTests()
 carryOverTests()
 inheritanceTests()
 timeZoneTests()

@@ -6,7 +6,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Cliente das rotas `/api/widget/*`.
+ * Cliente das rotas sob `/api/widget`.
  *
  * HttpURLConnection e org.json em vez de OkHttp/Retrofit de propósito: são
  * duas chamadas, e menos dependência é menos coisa para quebrar num app que
@@ -23,6 +23,14 @@ object FortunaApi {
 
     data class Card(val id: String, val name: String, val total: Double, val invoiceLabel: String)
 
+    data class AgendaItem(
+        val kind: String,
+        val title: String,
+        val amount: Double,
+        val overdue: Boolean,
+        val thirdParty: Boolean,
+    )
+
     data class Overview(
         val monthLabel: String,
         val plannedBalance: Double,
@@ -37,16 +45,52 @@ object FortunaApi {
         val token = TokenStore.token(context)
             ?: return Result.Error(context.getString(R.string.error_no_token))
 
-        return request(
+        // `when` direto em vez de runCatching: este arquivo declara o proprio
+        // `Result`, que sombreia o `kotlin.Result` devolvido por runCatching e
+        // atrapalha a inferencia.
+        return when (val result = request(
             url = "${TokenStore.baseUrl(context)}/api/widget/overview",
             token = token,
             method = "GET",
             body = null,
-        ).let { result ->
-            when (result) {
-                is Result.Error -> result
-                is Result.Ok -> runCatching { Result.Ok(parseOverview(result.value)) }
-                    .getOrElse { Result.Error(context.getString(R.string.error_unexpected_response)) }
+        )) {
+            is Result.Error -> result
+            is Result.Ok -> try {
+                Result.Ok(parseOverview(result.value))
+            } catch (error: Exception) {
+                Result.Error(context.getString(R.string.error_unexpected_response))
+            }
+        }
+    }
+
+    fun agenda(context: Context): Result<List<AgendaItem>> {
+        val token = TokenStore.token(context)
+            ?: return Result.Error(context.getString(R.string.error_no_token))
+
+        return when (val result = request(
+            url = "${TokenStore.baseUrl(context)}/api/widget/agenda",
+            token = token,
+            method = "GET",
+            body = null,
+        )) {
+            is Result.Error -> result
+            is Result.Ok -> {
+                val array = result.value.optJSONArray("items")
+                val items = buildList {
+                    for (i in 0 until (array?.length() ?: 0)) {
+                        val item = array!!.getJSONObject(i)
+                        add(
+                            AgendaItem(
+                                kind = item.optString("kind"),
+                                title = item.optString("title"),
+                                amount = item.optDouble("amount", 0.0),
+                                overdue = item.optBoolean("overdue"),
+                                thirdParty = item.optBoolean("thirdParty"),
+                            )
+                        )
+                    }
+                }
+                Result.Ok(items)
             }
         }
     }
@@ -151,6 +195,9 @@ object FortunaApi {
     }
 
     private fun errorMessage(text: String, code: Int): String =
-        runCatching { JSONObject(text).optString("error").ifBlank { "HTTP $code" } }
-            .getOrDefault("HTTP $code")
+        try {
+            JSONObject(text).optString("error").ifBlank { "HTTP $code" }
+        } catch (error: Exception) {
+            "HTTP $code"
+        }
 }

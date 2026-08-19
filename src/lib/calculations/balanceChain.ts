@@ -13,6 +13,19 @@ type ExpenseLike = {
   paidAmount: Prisma.Decimal | null
   paid: boolean
   uncertain: boolean
+  paidBy: "SELF" | "THIRD_PARTY"
+}
+
+/**
+ * Se a despesa move o *seu* dinheiro.
+ *
+ * Conta paga por terceiro fica registrada só para controle: aparece na lista,
+ * em cinza, mas não entra em total, saída futura, saldo planejado nem saldo
+ * real. Somá-la faria o app cobrar de você um dinheiro que nunca sai da sua
+ * conta.
+ */
+export function movesOwnMoney(expense: { paidBy: "SELF" | "THIRD_PARTY" }): boolean {
+  return expense.paidBy !== "THIRD_PARTY"
 }
 
 export function computeMonthTotals(incomes: IncomeLike[], expenses: ExpenseLike[]) {
@@ -23,7 +36,7 @@ export function computeMonthTotals(incomes: IncomeLike[], expenses: ExpenseLike[
   )
   const totalExpense = sumAmounts(
     expenses
-      .filter((expense) => !expense.uncertain || expense.paid)
+      .filter((expense) => movesOwnMoney(expense) && (!expense.uncertain || expense.paid))
       .map((expense) => expense.paidAmount ?? expense.amount)
   )
   const difference = totalIncome.sub(totalExpense)
@@ -38,7 +51,7 @@ export function computeUncertainPreview(incomes: IncomeLike[], expenses: Expense
   )
   const pendingExpense = sumAmounts(
     expenses
-      .filter((expense) => expense.uncertain && !expense.paid)
+      .filter((expense) => movesOwnMoney(expense) && expense.uncertain && !expense.paid)
       .map((expense) => expense.amount)
   )
 
@@ -63,7 +76,7 @@ export function computeOpenCashflow(incomes: IncomeLike[], expenses: ExpenseLike
   )
   const futureExpense = sumAmounts(
     expenses
-      .filter((expense) => !expense.paid && !expense.uncertain)
+      .filter((expense) => movesOwnMoney(expense) && !expense.paid && !expense.uncertain)
       .map((expense) => expense.amount)
   )
 

@@ -3,6 +3,7 @@ import {
   computeMonthTotals,
   computeOpenCashflow,
   computePlannedBalance,
+  movesOwnMoney,
 } from "@/lib/calculations/balanceChain"
 import { getCardMonthBudget, getCardMonthTotal } from "@/lib/actions/cardSummary"
 import { getNonCardSubscriptionsForMonth } from "@/lib/actions/subscriptionSummary"
@@ -144,7 +145,7 @@ export async function getBalanceChartRanges(
             value: (income.receivedAmount ?? income.amount).toNumber(),
           })),
         ...expenses
-          .filter((expense) => !expense.uncertain || expense.paid)
+          .filter((expense) => movesOwnMoney(expense) && (!expense.uncertain || expense.paid))
           .map((expense) => ({
             key: `expense:${expense.name}`,
             label: expense.name,

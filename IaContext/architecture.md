@@ -106,6 +106,21 @@ O alias `@/*` aponta para `src/*`.
   conta de terceiro é cinza apagado, para não se confundirem com o
   verde/vermelho do dinheiro confirmado (`MoneyTone` em
   `src/lib/calculations/format.ts`).
+
+### Contas de terceiros
+
+- `paidBy = THIRD_PARTY` significa **só controle**: a despesa aparece na lista,
+  em cinza, mas não entra em total, saída futura, prévia, saldo planejado nem
+  saldo real. O predicado único é `movesOwnMoney()` em `balanceChain.ts`.
+- Consequências: marcar como paga não mexe no Saldo Atual, excluir não devolve
+  nada, e o gráfico por etiqueta a ignora (ele responde "quanto *você*
+  gastou").
+- Caso que exige cuidado: **trocar quem paga numa despesa já paga**. O ajuste
+  do saldo compara o impacto antes e depois — virar terceiro devolve o valor,
+  voltar para você desconta de novo. Só olhar mudança de valor deixaria o
+  saldo errado.
+- As notificações continuam incluindo terceiros, marcados: não é seu dinheiro,
+  mas em geral é você quem repassa ou cobra.
 - A prévia de saldo é `saldo planejado + entradas incertas - despesas incertas`.
 - Ao marcar como recebido/pago, o lançamento passa a integrar os totais do mês
   em que foi liquidado, deixa a prévia pendente e não avança mais.
@@ -171,12 +186,18 @@ O alias `@/*` aponta para `src/*`.
   valor em claro aparece uma vez na criação e é revogável em Informações →
   Dispositivos.
 - Rotas do widget: `GET /api/widget/overview` (resumo do mês + meta + faturas
-  em aberto) e `POST /api/widget/purchase` (lançamento rápido). A compra passa
+  em aberto), `POST /api/widget/purchase` (lançamento rápido) e
+  `GET /api/widget/agenda` (o que vence hoje e o que ficou em atraso, fonte das
+  notificações). A compra passa
   pelo mesmo `createCardPurchaseForUser()` e pelo mesmo schema Zod do diálogo
   da web — a regra de parcelamento e de mês de fatura não é duplicada.
 - `/.well-known/assetlinks.json` é servido por rewrite para `/api/assetlinks`,
   a partir de `ANDROID_APP_FINGERPRINT`. Sem ele o app abre com a barra do
   Chrome por cima.
+- Notificações são **locais**, não push: um `AgendaWorker` (WorkManager) chama
+  `/api/widget/agenda` uma vez por dia, às 8h, e notifica o que vence. Evita
+  depender do Firebase num app de um usuário só; o custo é que o aviso sai na
+  janela do agendamento, não no instante em que algo muda.
 
 ### Fuso horário
 

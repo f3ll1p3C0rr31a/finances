@@ -14,16 +14,17 @@ const CARD_INVOICE_TAG = "Fatura do Cartão"
  * Raw (tag, payment method) -> amount rows for the month, meant to be
  * grouped/filtered client-side so the payment-method filter doesn't
  * need a server round trip. Untagged manual expenses and subscriptions
- * are ignored because this chart is explicitly "by tag". Card spending
- * mirrors the dashboard's invoice row and is always grouped under
- * "Fatura do Cartão".
+ * are ignored because this chart is explicitly "by tag". Third-party bills
+ * are ignored too — they never leave your account. Card spending mirrors the
+ * dashboard's invoice row and is always grouped under "Fatura do Cartão".
  */
 export async function getSpendingByTagRows(userId: string, month: Date): Promise<SpendingRow[]> {
   const rows: SpendingRow[] = []
 
   const [expenses, subscriptionCharges, cardSummary] = await Promise.all([
+    // Conta de terceiro fica de fora: o gráfico é de quanto *você* gastou.
     prisma.expenseEntry.findMany({
-      where: { userId, month, uncertain: false },
+      where: { userId, month, uncertain: false, paidBy: "SELF" },
       include: { tags: { include: { tag: true } } },
     }),
     getNonCardSubscriptionsForMonth(userId, month),

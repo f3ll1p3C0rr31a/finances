@@ -225,7 +225,11 @@ export function ExpenseTable({
                 </TableCell>
                 <TableCell>
                   {entry.paidBy === "THIRD_PARTY" ? (
-                    <Badge variant="outline" className={THIRD_PARTY_BADGE_CLASS}>
+                    <Badge
+                      variant="outline"
+                      className={THIRD_PARTY_BADGE_CLASS}
+                      title="Conta de terceiro: fica só como controle, não entra nos totais nem no saldo"
+                    >
                       {entry.paidByName || "Terceiro"}
                     </Badge>
                   ) : (

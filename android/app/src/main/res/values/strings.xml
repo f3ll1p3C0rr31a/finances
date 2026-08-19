@@ -33,6 +33,15 @@
     <string name="error_no_token">Conecte o app ao site</string>
     <string name="error_unexpected_response">Resposta inesperada do servidor</string>
 
+    <string name="notif_channel">Vencimentos</string>
+    <string name="notif_channel_description">Avisa uma vez por dia o que vence hoje e o que ficou em aberto</string>
+    <string name="notif_today">Vence hoje:</string>
+    <string name="notif_overdue">Em atraso:</string>
+    <string name="notif_income">Entra hoje:</string>
+    <string name="notif_third_party">" (terceiro)"</string>
+    <string name="notif_summary_title">%1$d lançamento(s) para hoje</string>
+    <string name="notifications_blocked">Ative as notificações para receber os avisos de vencimento</string>
+
     <!-- Digital Asset Links: sem isso o TWA abre com a barra do Chrome. -->
     <string name="asset_statements" translatable="false">
         [{

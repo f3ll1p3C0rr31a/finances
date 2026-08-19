@@ -1,6 +1,7 @@
 import { Prisma } from "@/generated/prisma/client"
 import { adjustActualBalance, recalcOpeningBalanceChain } from "@/lib/actions/monthly"
 import { monthKeyFromDate } from "@/lib/calculations/month"
+import { movesOwnMoney } from "@/lib/calculations/balanceChain"
 import { prisma } from "@/lib/prisma"
 
 export type DeleteExpenseResult = {
@@ -38,7 +39,8 @@ export async function deleteExpenseForUser(
       if (entry.month < recalculateFrom) {
         recalculateFrom = entry.month
       }
-      if (!entry.paid) continue
+      // Terceiro nunca entrou no saldo, então apagar não devolve nada.
+      if (!entry.paid || !movesOwnMoney(entry)) continue
 
       const key = monthKeyFromDate(entry.month)
       const amount = entry.paidAmount ?? entry.amount
@@ -56,7 +58,7 @@ export async function deleteExpenseForUser(
     }
   } else {
     const entry = await prisma.expenseEntry.delete({ where: { id, userId } })
-    if (entry.paid) {
+    if (entry.paid && movesOwnMoney(entry)) {
       const amount = entry.paidAmount ?? entry.amount
       await adjustActualBalance(userId, entry.month, amount)
     }

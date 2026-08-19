@@ -14,6 +14,7 @@ import { adjustActualBalance, recalcOpeningBalanceChain } from "@/lib/actions/mo
 import { deleteExpenseForUser } from "@/lib/services/deleteExpense"
 import { propagateExpenseTraits } from "@/lib/services/recurringEntries"
 import { assertOwnedPixKey } from "@/lib/services/ownership"
+import { movesOwnMoney } from "@/lib/calculations/balanceChain"
 import { expenseEntrySchema, type ExpenseEntryInput } from "@/lib/validation/schemas"
 
 function revalidateMonth(month: Date) {
@@ -132,12 +133,19 @@ export async function updateExpenseEntry(id: string, input: ExpenseEntryInput) {
     },
   })
 
-  if (existing.paid && !existing.amount.equals(data.amount)) {
-    await adjustActualBalance(
-      userId,
-      entry.month,
-      new Prisma.Decimal(data.amount).sub(existing.amount).neg()
-    )
+  // O saldo real só carrega despesa paga que seja sua. Muda tanto ao editar o
+  // valor quanto ao trocar quem paga: virar "terceiro" devolve o valor ao
+  // saldo, e voltar para "eu" desconta de novo.
+  const impactBefore =
+    existing.paid && existing.paidBy !== "THIRD_PARTY"
+      ? existing.paidAmount ?? existing.amount
+      : new Prisma.Decimal(0)
+  const impactAfter =
+    existing.paid && data.paidBy !== "THIRD_PARTY"
+      ? existing.paidAmount ?? new Prisma.Decimal(data.amount)
+      : new Prisma.Decimal(0)
+  if (!impactBefore.equals(impactAfter)) {
+    await adjustActualBalance(userId, entry.month, impactBefore.sub(impactAfter))
   }
 
   // Conta recorrente carrega as novas características para os meses seguintes
@@ -177,8 +185,11 @@ export async function setExpensePaid(id: string, paid: boolean) {
     },
   })
 
-  const amount = entry.paidAmount ?? entry.amount
-  await adjustActualBalance(userId, entry.month, paid ? amount.neg() : amount)
+  // Terceiro é só controle: marcar como paga não tira nada do seu saldo.
+  if (movesOwnMoney(entry)) {
+    const amount = entry.paidAmount ?? entry.amount
+    await adjustActualBalance(userId, entry.month, paid ? amount.neg() : amount)
+  }
   if (entry.uncertain) {
     await recalcOpeningBalanceChain(userId, entry.month)
   }

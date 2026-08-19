@@ -94,7 +94,7 @@ export function BalancePanel({
           <dt>
             <span className="block font-medium">Total de Saídas</span>
             <span className="text-xs text-muted-foreground">
-              Todas as saídas do mês
+              Todas as saídas do mês (sem contas de terceiros)
             </span>
           </dt>
           <dd className="self-center text-right">

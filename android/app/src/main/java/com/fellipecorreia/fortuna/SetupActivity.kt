@@ -1,6 +1,9 @@
 package com.fellipecorreia.fortuna
 
+import android.Manifest
 import android.app.Activity
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
@@ -28,8 +31,24 @@ class SetupActivity : Activity() {
             }
             TokenStore.save(this, value, baseUrl.text.toString())
             OverviewWidget.requestRefresh(this)
+            requestNotificationPermission()
+            AgendaWorker.schedule(this)
             Toast.makeText(this, R.string.token_saved, Toast.LENGTH_SHORT).show()
             finish()
         }
+    }
+
+    /**
+     * Sem a permissão o worker roda e não mostra nada, então vale pedir junto
+     * com o token — é o único momento em que o usuário está configurando.
+     */
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
     }
 }
