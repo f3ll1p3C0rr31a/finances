@@ -158,12 +158,33 @@ formulários longos também ficaram mais largos no desktop
   `kotlin.Result` do `runCatching`, e comentário de bloco **aninhado** (Kotlin
   aceita) — o `/*` dentro de `` `/api/widget/*` `` num KDoc engolia o arquivo.
 
+### Quarta leva (2026-08-20)
+
+- **Widget redesenhado** no padrão Material 3: mesmas informações, hierarquia
+  de leitura (rótulo pequeno / número grande / apoio), divisórias e barra de
+  progresso na meta. `RemoteViews` não troca a cor do progresso em tempo de
+  execução, então são **duas barras sobrepostas** — a vermelha substitui a roxa
+  quando a meta estoura. Paleta com `values-night`: o widget segue o modo
+  escuro do sistema, não o do app.
+- **Lançamento rápido reescrito** com `TextInputLayout` outlined, dropdowns do
+  Material e chips de filtro para etiquetas. As duas activities passaram a
+  estender `AppCompatActivity` — componentes do Material 3 dependem do inflater
+  do AppCompat e num `Activity` puro caem no fallback do framework, que era a
+  causa do visual antigo.
+- **Etiquetas no widget**: `/api/widget/overview` devolve a lista junto (evita
+  segunda chamada) e `/api/widget/purchase` aceita `tagIds`, conferindo a posse
+  antes de gravar.
+- Distribuição por **Obtainium** lendo as Releases do GitHub;
+  `scripts/release-android.sh` compila, confere a assinatura e publica.
+  Releases `android-v1.1` e `android-v1.2` no ar.
+
 ### Pendências ou próximo passo
 
-- Instalar o APK num aparelho: nada foi verificado rodando na tela. Widget,
-  notificação e lançamento rápido compilam, mas não foram vistos funcionando.
-- Confirmar se o salário de agosto (4.700,69) era aumento ou valor pontual.
-- Validar na tela os números de saldo planejado e faturas em aberto.
+- Instalada a 1.2, conferir na tela: barra da meta (hoje em 116%, deve sair
+  vermelha), chips de etiqueta e o visual do formulário.
+- Com 23 etiquetas cadastradas, o ChipGroup ocupa bastante altura. Se
+  incomodar, vale ordenar por mais usadas ou dar um campo de busca.
+- A notificação de vencimento (`AgendaWorker`) nunca foi vista disparando.
 
 ## Débitos documentais confirmados
 
