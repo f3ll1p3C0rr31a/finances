@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache"
 
 import { userIdFromRequest } from "@/lib/services/deviceTokens"
+import { prisma } from "@/lib/prisma"
 import { createCardPurchaseForUser } from "@/lib/services/cardPurchase"
 import { cardPurchaseSchema } from "@/lib/validation/cardSchemas"
 import { formatMonthLabel, today } from "@/lib/calculations/month"
@@ -53,8 +54,27 @@ export async function POST(request: Request) {
     )
   }
 
+  const requestedTagIds = Array.isArray(payload.tagIds)
+    ? payload.tagIds.filter((id): id is string => typeof id === "string")
+    : []
+
   try {
     const purchase = await createCardPurchaseForUser(userId, cardId, parsed.data)
+
+    if (requestedTagIds.length > 0) {
+      // Só as etiquetas que são mesmo do usuário: o id vem do aparelho e não
+      // dá para confiar nele sem conferir.
+      const owned = await prisma.tag.findMany({
+        where: { userId, id: { in: requestedTagIds } },
+        select: { id: true },
+      })
+      if (owned.length > 0) {
+        await prisma.cardPurchaseTag.createMany({
+          data: owned.map(({ id }) => ({ purchaseId: purchase.id, tagId: id })),
+        })
+      }
+    }
+
     revalidatePath("/cards", "layout")
     revalidatePath("/dashboard", "layout")
 

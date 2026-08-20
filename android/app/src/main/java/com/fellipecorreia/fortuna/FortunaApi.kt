@@ -38,11 +38,16 @@ object FortunaApi {
         val monthLabel: String,
         val plannedBalance: Double,
         val currentBalance: Double,
+        val goal: Double?,
+        val goalProjected: Double,
         val goalRemaining: Double?,
         val goalPerDay: Double?,
         val goalDaysLeft: Int?,
         val cards: List<Card>,
+        val tags: List<Tag>,
     )
+
+    data class Tag(val id: String, val name: String)
 
     fun overview(context: Context): Result<Overview> {
         val token = TokenStore.token(context)
@@ -105,6 +110,7 @@ object FortunaApi {
         amount: Double,
         installmentCount: Int,
         amountMode: String,
+        tagIds: List<String>,
     ): Result<String> {
         val token = TokenStore.token(context)
             ?: return Result.Error(context.getString(R.string.error_no_token))
@@ -116,6 +122,7 @@ object FortunaApi {
             put("installmentCount", installmentCount)
             put("amountMode", amountMode)
             put("hasInterest", false)
+            put("tagIds", org.json.JSONArray(tagIds))
         }
 
         return when (val result = request(
@@ -148,14 +155,27 @@ object FortunaApi {
             }
         }
 
+        val tagsJson = json.optJSONArray("tags")
+        val tags = buildList {
+            for (i in 0 until (tagsJson?.length() ?: 0)) {
+                val tag = tagsJson!!.getJSONObject(i)
+                add(Tag(id = tag.getString("id"), name = tag.getString("name")))
+            }
+        }
+
         return Overview(
             monthLabel = json.optString("monthLabel"),
             plannedBalance = json.optDouble("plannedBalance", 0.0),
             currentBalance = json.optDouble("currentBalance", 0.0),
+            // `goal` vem nulo quando não há meta cadastrada; sem ela não há
+            // barra de progresso a desenhar.
+            goal = if (goal?.isNull("goal") == false) goal.optDouble("goal") else null,
+            goalProjected = goal?.optDouble("projectedSpent", 0.0) ?: 0.0,
             goalRemaining = goal?.optDouble("remaining"),
             goalPerDay = goal?.optDouble("perDay"),
             goalDaysLeft = goal?.optInt("daysLeft"),
             cards = cards,
+            tags = tags,
         )
     }
 

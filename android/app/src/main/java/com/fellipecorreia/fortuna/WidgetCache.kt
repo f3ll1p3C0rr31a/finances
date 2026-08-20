@@ -14,13 +14,26 @@ import android.content.Context
 object WidgetCache {
     private const val PREFS = "fortuna-widget"
 
-    fun save(context: Context, monthLabel: String, planned: String, current: String, goal: String, cards: String) {
+    fun save(
+        context: Context,
+        monthLabel: String,
+        planned: String,
+        current: String,
+        goal: String,
+        cards: String,
+        goalPercent: Int,
+        goalOver: Boolean,
+        hasGoal: Boolean,
+    ) {
         prefs(context).edit()
             .putString("monthLabel", monthLabel)
             .putString("planned", planned)
             .putString("current", current)
             .putString("goal", goal)
             .putString("cards", cards)
+            .putInt("goalPercent", goalPercent)
+            .putBoolean("goalOver", goalOver)
+            .putBoolean("hasGoal", hasGoal)
             .putLong("updatedAt", System.currentTimeMillis())
             .apply()
     }
@@ -30,6 +43,9 @@ object WidgetCache {
     fun current(context: Context): String = prefs(context).getString("current", "") ?: ""
     fun goal(context: Context): String = prefs(context).getString("goal", "") ?: ""
     fun cards(context: Context): String = prefs(context).getString("cards", "") ?: ""
+    fun goalPercent(context: Context): Int = prefs(context).getInt("goalPercent", 0)
+    fun goalOver(context: Context): Boolean = prefs(context).getBoolean("goalOver", false)
+    fun hasGoal(context: Context): Boolean = prefs(context).getBoolean("hasGoal", false)
     fun updatedAt(context: Context): Long = prefs(context).getLong("updatedAt", 0L)
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

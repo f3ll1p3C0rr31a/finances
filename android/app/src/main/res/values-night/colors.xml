@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widgetSurface">#141218</color>
+    <color name="widgetOutline">#2B2930</color>
+    <color name="widgetOnSurface">#E6E0E9</color>
+    <color name="widgetOnSurfaceVariant">#CAC4D0</color>
+    <color name="widgetAccent">#A78BFA</color>
+    <color name="widgetTrack">#332D41</color>
+    <color name="widgetDanger">#F2B8B5</color>
+</resources>

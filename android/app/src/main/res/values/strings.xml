@@ -12,6 +12,10 @@
     <string name="quick_purchase_default">Compra rápida</string>
     <string name="field_amount">Valor</string>
     <string name="field_installments">Parcelas</string>
+    <string name="field_mode">O valor digitado é</string>
+    <string name="field_card">Cartão</string>
+    <string name="field_tags">Etiquetas</string>
+    <string name="no_tags">Nenhuma etiqueta cadastrada</string>
     <string name="field_description">Descrição (opcional)</string>
     <string name="mode_total">Valor total da compra</string>
     <string name="mode_installment">Valor de cada parcela</string>
@@ -26,8 +30,11 @@
 
     <string name="widget_loading">Atualizando…</string>
     <string name="widget_refresh">Atualizar</string>
-    <string name="widget_current">Saldo atual %1$s</string>
-    <string name="widget_goal">Meta: %1$s restantes · %2$s/dia · %3$d dias</string>
+    <string name="widget_planned_label">Saldo planejado</string>
+    <string name="widget_goal_label">Meta dos cartões</string>
+    <string name="widget_current">Atual %1$s</string>
+    <string name="widget_goal">%1$s restantes · %2$s/dia · %3$d dias</string>
+    <string name="widget_goal_over">%1$s acima da meta · %2$d dias</string>
     <string name="widget_goal_unset">Meta dos cartões não definida</string>
     <string name="widget_quick_purchase">+ Lançar compra no cartão</string>
     <string name="error_no_token">Conecte o app ao site</string>

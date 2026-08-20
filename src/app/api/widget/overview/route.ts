@@ -2,6 +2,7 @@ import { userIdFromRequest } from "@/lib/services/deviceTokens"
 import { getMonthData } from "@/lib/actions/monthly"
 import { getCardGoalData, getCardsOpenInvoiceSummary } from "@/lib/actions/cardSummary"
 import { currentMonth, formatMonthLabel, monthKeyFromDate } from "@/lib/calculations/month"
+import { listTags } from "@/lib/actions/tags"
 
 export const dynamic = "force-dynamic"
 
@@ -17,10 +18,11 @@ export async function GET(request: Request) {
   }
 
   const month = currentMonth()
-  const [data, goal, openInvoices] = await Promise.all([
+  const [data, goal, openInvoices, tags] = await Promise.all([
     getMonthData(userId, month),
     getCardGoalData(userId, month),
     getCardsOpenInvoiceSummary(userId),
+    listTags(userId),
   ])
 
   return Response.json(
@@ -52,6 +54,9 @@ export async function GET(request: Request) {
         closingDay: summary.card.closingDay,
         paymentDay: summary.card.paymentDay,
       })),
+      // Etiquetas vão junto para o lançamento rápido não precisar de uma
+      // segunda chamada antes de mostrar o formulário.
+      tags: tags.map((tag) => ({ id: tag.id, name: tag.name })),
       updatedAt: new Date().toISOString(),
     },
     { headers: { "Cache-Control": "no-store" } }

@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Hierarquia à la Material 3: rótulo pequeno em maiúsculas, o número que
+  importa em display, o resto em body/label. As mesmas informações de antes,
+  mas agrupadas em blocos com respiro entre eles em vez de linhas soltas.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@drawable/widget_background"
-    android:padding="14dp">
+    android:padding="16dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -18,67 +23,126 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:textColor="#a5b4fc"
-            android:textSize="12sp"
+            android:textColor="@color/widgetAccent"
+            android:textSize="11sp"
+            android:textStyle="bold"
             android:textAllCaps="true"
-            android:letterSpacing="0.08"
+            android:letterSpacing="0.1"
+            android:maxLines="1"
+            android:ellipsize="end"
             android:text="@string/app_name" />
 
         <ImageView
             android:id="@+id/widget_refresh"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:src="@drawable/ic_refresh"
             android:contentDescription="@string/widget_refresh" />
     </LinearLayout>
 
     <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/widget_planned_label"
+        android:textColor="@color/widgetOnSurfaceVariant"
+        android:textSize="11sp" />
+
+    <TextView
         android:id="@+id/widget_planned"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textColor="#f8fafc"
-        android:textSize="26sp"
+        android:textColor="@color/widgetOnSurface"
+        android:textSize="28sp"
         android:textStyle="bold"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:text="—" />
 
     <TextView
         android:id="@+id/widget_current"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#94a3b8"
+        android:layout_marginTop="1dp"
+        android:textColor="@color/widgetOnSurfaceVariant"
         android:textSize="12sp"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:text="" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/widget_divider" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/widget_goal_label"
+        android:textColor="@color/widgetOnSurfaceVariant"
+        android:textSize="11sp" />
+
+    <!-- Duas barras sobrepostas em vez de uma: RemoteViews nao troca a cor do
+         progresso em tempo de execucao, entao a vermelha aparece no lugar da
+         roxa quando a meta estoura. -->
+    <ProgressBar
+        android:id="@+id/widget_goal_bar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="6dp"
+        android:layout_marginTop="6dp"
+        android:max="100"
+        android:progress="0"
+        android:progressTint="@color/widgetAccent"
+        android:progressBackgroundTint="@color/widgetTrack" />
+
+    <ProgressBar
+        android:id="@+id/widget_goal_bar_over"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="6dp"
+        android:layout_marginTop="6dp"
+        android:max="100"
+        android:progress="100"
+        android:visibility="gone"
+        android:progressTint="@color/widgetDanger"
+        android:progressBackgroundTint="@color/widgetTrack" />
 
     <TextView
         android:id="@+id/widget_goal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:textColor="#cbd5e1"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/widgetOnSurfaceVariant"
         android:textSize="12sp"
+        android:maxLines="2"
+        android:ellipsize="end"
         android:text="" />
 
     <TextView
         android:id="@+id/widget_status"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:maxLines="2"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:maxLines="3"
         android:ellipsize="end"
-        android:textColor="#64748b"
+        android:textColor="@color/widgetOnSurfaceVariant"
         android:textSize="11sp"
         android:text="" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="10dp"
         android:gravity="center"
         android:background="@drawable/widget_button"
-        android:padding="8dp"
-        android:textColor="#f8fafc"
-        android:textSize="12sp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
         android:textStyle="bold"
         android:text="@string/widget_quick_purchase" />
 </LinearLayout>

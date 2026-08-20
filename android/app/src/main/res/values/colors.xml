@@ -4,4 +4,14 @@
     <color name="backgroundColor">#0b0b0f</color>
     <!-- Fundo do ícone adaptativo; a moeda entra por cima como foreground. -->
     <color name="iconBackground">#6d28d9</color>
+
+    <!-- Paleta do widget. Há uma versão em values-night: o widget segue o modo
+         escuro do sistema, não o do app. -->
+    <color name="widgetSurface">#FFFFFF</color>
+    <color name="widgetOutline">#E2E0E9</color>
+    <color name="widgetOnSurface">#1C1B1F</color>
+    <color name="widgetOnSurfaceVariant">#49454F</color>
+    <color name="widgetAccent">#6d28d9</color>
+    <color name="widgetTrack">#E7E0EC</color>
+    <color name="widgetDanger">#B3261E</color>
 </resources>

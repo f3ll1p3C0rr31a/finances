@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.view.View
 import android.widget.RemoteViews
 import java.text.NumberFormat
 import java.util.Locale
@@ -60,6 +61,23 @@ class OverviewWidget : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_planned, WidgetCache.planned(context))
             views.setTextViewText(R.id.widget_current, WidgetCache.current(context))
             views.setTextViewText(R.id.widget_goal, WidgetCache.goal(context))
+
+            // Barra da meta: a roxa mostra o quanto já foi; quando estoura,
+            // some e dá lugar à vermelha cheia. Sem meta cadastrada, nenhuma
+            // das duas aparece.
+            val hasGoal = WidgetCache.hasGoal(context)
+            val over = WidgetCache.goalOver(context)
+            views.setViewVisibility(
+                R.id.widget_goal_bar,
+                if (hasGoal && !over) View.VISIBLE else View.GONE,
+            )
+            views.setViewVisibility(
+                R.id.widget_goal_bar_over,
+                if (hasGoal && over) View.VISIBLE else View.GONE,
+            )
+            if (hasGoal && !over) {
+                views.setProgressBar(R.id.widget_goal_bar, 100, WidgetCache.goalPercent(context), false)
+            }
             views.setTextViewText(R.id.widget_status, status ?: WidgetCache.cards(context))
 
             views.setOnClickPendingIntent(
