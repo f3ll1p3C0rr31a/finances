@@ -32,6 +32,7 @@
     <string name="widget_refresh">Atualizar</string>
     <string name="widget_planned_label">Saldo planejado</string>
     <string name="widget_goal_label">Meta dos cartões</string>
+    <string name="widget_goal_label_month">Meta dos cartões · %1$s</string>
     <string name="widget_current">Atual %1$s</string>
     <string name="widget_goal">%1$s restantes · %2$s/dia · %3$d dias</string>
     <string name="widget_goal_over">%1$s acima da meta · %2$d dias</string>

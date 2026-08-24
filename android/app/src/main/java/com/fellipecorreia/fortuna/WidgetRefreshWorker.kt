@@ -47,6 +47,7 @@ class WidgetRefreshWorker(context: Context, params: WorkerParameters) : Worker(c
                         OverviewWidget.money(data.currentBalance),
                     ),
                     goal = goalLine(context, data, over),
+                    goalMonth = data.goalMonthLabel,
                     cards = data.cards.joinToString(" · ") {
                         "${it.name} ${OverviewWidget.money(it.total)}"
                     },

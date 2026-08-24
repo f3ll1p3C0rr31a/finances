@@ -40,6 +40,11 @@ if gh release view "$TAG" >/dev/null 2>&1; then
   exit 1
 fi
 
+# O compilador nao valida layout de widget: view fora da lista do RemoteViews
+# so falha no aparelho, na hora de adicionar a widget.
+echo "==> Conferindo layouts de widget"
+node scripts/check-widget-layout.mjs
+
 echo "==> Compilando"
 (cd "$ANDROID_DIR" && ./gradlew --quiet assembleRelease)
 

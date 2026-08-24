@@ -21,6 +21,7 @@ object WidgetCache {
         current: String,
         goal: String,
         cards: String,
+        goalMonth: String,
         goalPercent: Int,
         goalOver: Boolean,
         hasGoal: Boolean,
@@ -31,6 +32,7 @@ object WidgetCache {
             .putString("current", current)
             .putString("goal", goal)
             .putString("cards", cards)
+            .putString("goalMonth", goalMonth)
             .putInt("goalPercent", goalPercent)
             .putBoolean("goalOver", goalOver)
             .putBoolean("hasGoal", hasGoal)
@@ -43,6 +45,7 @@ object WidgetCache {
     fun current(context: Context): String = prefs(context).getString("current", "") ?: ""
     fun goal(context: Context): String = prefs(context).getString("goal", "") ?: ""
     fun cards(context: Context): String = prefs(context).getString("cards", "") ?: ""
+    fun goalMonth(context: Context): String = prefs(context).getString("goalMonth", "") ?: ""
     fun goalPercent(context: Context): Int = prefs(context).getInt("goalPercent", 0)
     fun goalOver(context: Context): Boolean = prefs(context).getBoolean("goalOver", false)
     fun hasGoal(context: Context): Boolean = prefs(context).getBoolean("hasGoal", false)

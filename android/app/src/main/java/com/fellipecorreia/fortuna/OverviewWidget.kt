@@ -61,6 +61,16 @@ class OverviewWidget : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_planned, WidgetCache.planned(context))
             views.setTextViewText(R.id.widget_current, WidgetCache.current(context))
             views.setTextViewText(R.id.widget_goal, WidgetCache.goal(context))
+            // O mês da meta acompanha o ciclo dos cartões, então vai escrito.
+            val goalMonth = WidgetCache.goalMonth(context)
+            views.setTextViewText(
+                R.id.widget_goal_label,
+                if (goalMonth.isBlank()) {
+                    context.getString(R.string.widget_goal_label)
+                } else {
+                    context.getString(R.string.widget_goal_label_month, goalMonth)
+                },
+            )
 
             // Barra da meta: a roxa mostra o quanto já foi; quando estoura,
             // some e dá lugar à vermelha cheia. Sem meta cadastrada, nenhuma

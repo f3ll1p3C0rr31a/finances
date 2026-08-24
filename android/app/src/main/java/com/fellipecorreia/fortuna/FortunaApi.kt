@@ -39,6 +39,7 @@ object FortunaApi {
         val plannedBalance: Double,
         val currentBalance: Double,
         val goal: Double?,
+        val goalMonthLabel: String,
         val goalProjected: Double,
         val goalRemaining: Double?,
         val goalPerDay: Double?,
@@ -170,6 +171,7 @@ object FortunaApi {
             // `goal` vem nulo quando não há meta cadastrada; sem ela não há
             // barra de progresso a desenhar.
             goal = if (goal?.isNull("goal") == false) goal.optDouble("goal") else null,
+            goalMonthLabel = goal?.optString("monthLabel").orEmpty(),
             goalProjected = goal?.optDouble("projectedSpent", 0.0) ?: 0.0,
             goalRemaining = goal?.optDouble("remaining"),
             goalPerDay = goal?.optDouble("perDay"),

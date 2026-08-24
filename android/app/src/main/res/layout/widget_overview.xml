@@ -70,16 +70,21 @@
         android:ellipsize="end"
         android:text="" />
 
-    <View
+    <!-- FrameLayout de 1dp no lugar de <View>: RemoteViews so aceita uma
+         lista fechada de classes, e View puro nao esta nela. -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="12dp"
         android:background="@drawable/widget_divider" />
 
     <TextView
+        android:id="@+id/widget_goal_label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:text="@string/widget_goal_label"
         android:textColor="@color/widgetOnSurfaceVariant"
         android:textSize="11sp" />
@@ -89,7 +94,7 @@
          roxa quando a meta estoura. -->
     <ProgressBar
         android:id="@+id/widget_goal_bar"
-        style="?android:attr/progressBarStyleHorizontal"
+        style="@android:style/Widget.ProgressBar.Horizontal"
         android:layout_width="match_parent"
         android:layout_height="6dp"
         android:layout_marginTop="6dp"
@@ -100,7 +105,7 @@
 
     <ProgressBar
         android:id="@+id/widget_goal_bar_over"
-        style="?android:attr/progressBarStyleHorizontal"
+        style="@android:style/Widget.ProgressBar.Horizontal"
         android:layout_width="match_parent"
         android:layout_height="6dp"
         android:layout_marginTop="6dp"

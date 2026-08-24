@@ -1,7 +1,7 @@
 import { userIdFromRequest } from "@/lib/services/deviceTokens"
 import { getMonthData } from "@/lib/actions/monthly"
 import { getCardGoalData, getCardsOpenInvoiceSummary } from "@/lib/actions/cardSummary"
-import { currentMonth, formatMonthLabel, monthKeyFromDate } from "@/lib/calculations/month"
+import { addMonths, currentMonth, formatMonthLabel, monthKeyFromDate } from "@/lib/calculations/month"
 import { listTags } from "@/lib/actions/tags"
 
 export const dynamic = "force-dynamic"
@@ -18,12 +18,28 @@ export async function GET(request: Request) {
   }
 
   const month = currentMonth()
-  const [data, goal, openInvoices, tags] = await Promise.all([
+  const [data, openInvoices, tags] = await Promise.all([
     getMonthData(userId, month),
-    getCardGoalData(userId, month),
     getCardsOpenInvoiceSummary(userId),
     listTags(userId),
   ])
+
+  // Qual meta rege o que se gasta HOJE.
+  //
+  // A meta cadastrada no mês M é comparada com a fatura de M+1. Uma compra
+  // feita agora cai na fatura em aberto do cartão, que depois do fechamento já
+  // é a do mês seguinte — então a meta que a governa é `fatura aberta - 1`.
+  //
+  // Entre os cartões vale o que já virou (fatura aberta mais distante): é nele
+  // que as compras novas caem. Com o Inter fechando dia 23, a partir do dia 24
+  // o widget passa sozinho a mostrar a meta do mês seguinte, e volta ao mês
+  // corrente na virada. Um "+1" fixo acertaria só esses últimos dias do mês.
+  const latestOpenInvoice = openInvoices.summaries.reduce<Date>(
+    (latest, summary) => (summary.month > latest ? summary.month : latest),
+    month
+  )
+  const goalMonth = addMonths(latestOpenInvoice, -1)
+  const goal = await getCardGoalData(userId, goalMonth)
 
   return Response.json(
     {
@@ -35,6 +51,10 @@ export async function GET(request: Request) {
       futureIncome: data.futureIncome.toNumber(),
       futureExpense: data.futureExpense.toNumber(),
       cardGoal: {
+        // O mês da meta muda ao longo do mês; sem rótulo o número trocaria de
+        // significado sem avisar.
+        month: monthKeyFromDate(goalMonth),
+        monthLabel: formatMonthLabel(goalMonth),
         goal: goal.goal?.toNumber() ?? null,
         projectionMonth: monthKeyFromDate(goal.projectionMonth),
         projectedSpent: goal.projectedCombinedTotal.toNumber(),
