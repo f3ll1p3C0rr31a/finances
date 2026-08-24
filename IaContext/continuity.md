@@ -178,12 +178,29 @@ formulários longos também ficaram mais largos no desktop
   `scripts/release-android.sh` compila, confere a assinatura e publica.
   Releases `android-v1.1` e `android-v1.2` no ar.
 
+### Quinta leva (2026-08-24)
+
+- **Widget 1.2 quebrou** ("não foi possível adicionar o widget"): `RemoteViews`
+  só infla uma lista fechada de classes, e a divisória usava `<View>` puro; as
+  ProgressBars ainda referenciavam estilo por `?android:attr`, resolvido contra
+  o tema da launcher. Nada disso falha em tempo de compilação.
+  `scripts/check-widget-layout.mjs` passou a recusar as duas coisas e roda
+  dentro de `release-android.sh`.
+- **Meta do widget segue o ciclo dos cartões**: exibe `fatura em aberto - 1`,
+  tomando o cartão que já virou. Com o Inter fechando dia 23, do dia 24 em
+  diante o widget mostra sozinho a meta do mês seguinte e volta ao mês corrente
+  na virada. Um "+1" fixo foi simulado e descartado — acerta só os últimos dias
+  do mês. O mês vai escrito no rótulo, porque o significado do número muda ao
+  longo do mês.
+- Releases `android-v1.3` (correção) e `android-v1.4` (meta pelo ciclo).
+
 ### Pendências ou próximo passo
 
-- Instalada a 1.2, conferir na tela: barra da meta (hoje em 116%, deve sair
-  vermelha), chips de etiqueta e o visual do formulário.
-- Com 23 etiquetas cadastradas, o ChipGroup ocupa bastante altura. Se
-  incomodar, vale ordenar por mais usadas ou dar um campo de busca.
+- Confirmar no aparelho que o widget da 1.4 adiciona e desenha certo. Nenhuma
+  versão foi verificada rodando — só compilação e a trava de layout.
+- Se um dia os gastos voltarem a se dividir entre cartões, a meta combinada
+  perde sentido: o certo passaria a ser meta por cartão.
+- Com 23 etiquetas, o ChipGroup ocupa bastante altura no lançamento rápido.
 - A notificação de vencimento (`AgendaWorker`) nunca foi vista disparando.
 
 ## Débitos documentais confirmados
