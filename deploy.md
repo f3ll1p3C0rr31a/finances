@@ -1,3 +1,14 @@
+> **OBSOLETO — não siga este documento.**
+>
+> Ele descreve a infraestrutura do **ClassLog**, não a deste projeto, e ficou
+> desatualizado depois da migração de servidor de agosto/2026. Está mantido
+> apenas como referência histórica.
+>
+> O guia correto e atual é **[github-actions-deploy.md](github-actions-deploy.md)**.
+> Para a operação específica deste sistema, veja `IaContext/workflow.md`.
+
+---
+
 # Guia de Deploy — Infraestrutura Reutilizável
 
 Este guia explica a arquitetura de deploy usada no ClassLog e como replicá-la para

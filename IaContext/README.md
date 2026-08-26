@@ -19,9 +19,12 @@ Leia também:
 - o guia relevante em `node_modules/next/dist/docs/`, antes de escrever código
   Next.js;
 - `prisma/schema.prisma`, antes de alterar persistência ou regras financeiras;
-- `.env.example` e `deploy.md`, somente como referências operacionais. O
-  `deploy.md` contém trechos herdados do ClassLog e não deve ser tratado como
-  descrição exata deste sistema.
+- `.env.example`, como referência das variáveis;
+- `github-actions-deploy.md` (raiz), guia reutilizável de deploy automático
+  com GitHub Actions e runner self-hosted — escrito para servir de base em
+  outros projetos;
+- `deploy.md` está **obsoleto** (descreve o ClassLog) e foi mantido só como
+  histórico.
 
 ## Contrato de manutenção
 
@@ -42,3 +45,4 @@ Leia também:
 | `architecture.md` | Estrutura técnica e invariantes |
 | `workflow.md` | Setup, comandos, validações e entrega |
 | `continuity.md` | Estado corrente e passagem de bastão |
+| `../github-actions-deploy.md` | Como replicar a esteira de deploy em outro projeto |

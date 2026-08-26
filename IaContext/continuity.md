@@ -206,8 +206,9 @@ formulários longos também ficaram mais largos no desktop
 ## Débitos documentais confirmados
 
 - Substituir o `README.md` genérico por instruções reais do Finances.
-- Revisar `deploy.md`: ele ainda cita ClassLog e contém exemplos que não
-  descrevem exatamente o deploy atual.
+- `deploy.md` foi marcado como obsoleto e substituído por
+  `github-actions-deploy.md` na raiz. Resta decidir se o antigo pode ser
+  apagado de vez.
 
 ## Pontos de atenção para próximas mudanças
 

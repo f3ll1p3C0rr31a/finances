@@ -140,6 +140,11 @@ tar xzf runner.tar.gz && rm runner.tar.gz
 ./svc.sh install root && ./svc.sh start
 ```
 
+Para replicar esta esteira em **outro projeto**, veja
+[`github-actions-deploy.md`](../github-actions-deploy.md) na raiz: ele explica
+a decisão de arquitetura, o registro do runner, as armadilhas do Compose e os
+erros reais que apareceram aqui.
+
 Arquivos de referência:
 
 - `.github/workflows/deploy.yml`;
