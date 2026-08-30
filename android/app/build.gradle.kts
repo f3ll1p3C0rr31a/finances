@@ -21,8 +21,8 @@ android {
         applicationId = "com.fellipecorreia.fortuna"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.5"
 
         // O host precisa bater com o assetlinks.json publicado pelo site,
         // senão o TWA abre com a barra de endereço do Chrome por cima.

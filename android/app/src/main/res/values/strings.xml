@@ -18,6 +18,10 @@
     <string name="no_tags">Nenhuma etiqueta cadastrada</string>
     <string name="field_description">Descrição (opcional)</string>
     <string name="mode_total">Valor total da compra</string>
+    <string name="mode_total_short">Valor total</string>
+    <string name="mode_installment_short">Valor da parcela</string>
+    <string name="preview_single">Total %1$s · fatura de %2$s</string>
+    <string name="preview_installments">%1$d× de %2$s · total %3$s · fatura de %4$s</string>
     <string name="mode_installment">Valor de cada parcela</string>
     <string name="loading_cards">Carregando cartões…</string>
     <string name="no_cards">Nenhum cartão ativo</string>
