@@ -260,7 +260,7 @@ export async function getMonthData(userId: string, month: Date) {
     prisma.expenseEntry.findMany({
       where: { userId, month },
       orderBy: { name: "asc" },
-      include: { tags: { include: { tag: true } }, pixKey: true },
+      include: { tags: { include: { tag: true } }, pixKey: true, installmentPlan: true },
     }),
     prisma.monthlyBalance.findUniqueOrThrow({ where: { userId_month: { userId, month } } }),
     getCardMonthBudget(userId, month),

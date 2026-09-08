@@ -75,3 +75,32 @@ export function formatDueDay(
   if (dueDay == null) return "—"
   return dueDayType === "BUSINESS_DAY" ? `${dueDay}º dia útil` : `Dia ${dueDay}`
 }
+
+/**
+ * Renders a boleto's "linha digitável" in the blocks printed on the slip so it
+ * can be read out loud or checked against the paper: 47 digits for bank slips
+ * (5.5 / 5.6 / 5.6 / 1 / 14) and 48 for "convênio" slips (4 blocks of 11+1).
+ * Anything else is returned untouched.
+ */
+export function formatBoletoNumber(value: string): string {
+  const digits = value.replace(/\D/g, "")
+  if (digits.length !== value.length) return value
+
+  if (digits.length === 47) {
+    return [
+      `${digits.slice(0, 5)}.${digits.slice(5, 10)}`,
+      `${digits.slice(10, 15)}.${digits.slice(15, 21)}`,
+      `${digits.slice(21, 26)}.${digits.slice(26, 32)}`,
+      digits.slice(32, 33),
+      digits.slice(33),
+    ].join(" ")
+  }
+
+  if (digits.length === 48) {
+    return [0, 12, 24, 36]
+      .map((start) => `${digits.slice(start, start + 11)}-${digits.slice(start + 11, start + 12)}`)
+      .join(" ")
+  }
+
+  return value
+}

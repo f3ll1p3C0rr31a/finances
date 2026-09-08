@@ -10,6 +10,7 @@ import { setExpensePaid, deleteExpenseEntry } from "@/lib/actions/expense"
 import { setCardInvoicePaid } from "@/lib/actions/cardPayments"
 import { monthFromKey } from "@/lib/calculations/month"
 import {
+  formatCurrency,
   formatDueDay,
   THIRD_PARTY_BADGE_CLASS,
   UNCERTAIN_BADGE_CLASS,
@@ -98,11 +99,13 @@ export function ExpenseTable({
     startTransition(async () => {
       try {
         const result = await deleteExpenseEntry(id)
-        toast.success(
-          result.recurring
-            ? `Despesa recorrente removida (${result.deletedEntries} meses).`
-            : "Despesa removida."
-        )
+        if (result.recurring) {
+          toast.success(`Despesa recorrente removida (${result.deletedEntries} meses).`)
+        } else if (result.installmentPlan) {
+          toast.success(`Parcelamento removido (${result.deletedEntries} parcelas).`)
+        } else {
+          toast.success("Despesa removida.")
+        }
       } catch {
         toast.error("Não foi possível remover.")
       }
@@ -208,6 +211,11 @@ export function ExpenseTable({
                 <TableCell className="font-medium">
                   <div className="flex flex-wrap items-center gap-2">
                     {entry.name}
+                    {entry.installment ? (
+                      <Badge variant="outline" title={`Total: ${formatCurrency(entry.installment.totalAmount)}`}>
+                        Parcela {entry.installment.number}/{entry.installment.count}
+                      </Badge>
+                    ) : null}
                     {entry.uncertain && !entry.paid ? (
                       <Badge variant="outline" className={UNCERTAIN_BADGE_CLASS}>
                         Incerta · avança até pagar

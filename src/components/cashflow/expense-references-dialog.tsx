@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRef, useState, useTransition } from "react"
-import { FileText, Link2 } from "lucide-react"
+import { Copy, FileText, Link2 } from "lucide-react"
 import { toast } from "sonner"
 
 import type { SerializedExpenseEntry } from "@/lib/types"
@@ -11,6 +11,7 @@ import {
   saveExpenseReferences,
   uploadExpenseAttachment,
 } from "@/lib/actions/expense"
+import { formatBoletoNumber } from "@/lib/calculations/format"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,21 +27,32 @@ import {
 export function ExpenseReferencesDialog({ entry }: { entry: SerializedExpenseEntry }) {
   const [open, setOpen] = useState(false)
   const [externalLink, setExternalLink] = useState(entry.externalLink ?? "")
+  const [boletoNumber, setBoletoNumber] = useState(entry.boletoNumber ?? "")
   const [pending, startTransition] = useTransition()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const hasReference = Boolean(entry.externalLink || entry.hasAttachment)
+  const hasReference = Boolean(entry.externalLink || entry.boletoNumber || entry.hasAttachment)
 
   function save() {
     startTransition(async () => {
       try {
-        await saveExpenseReferences(entry.id, { externalLink })
+        await saveExpenseReferences(entry.id, { externalLink, boletoNumber })
         toast.success("Referências salvas.")
         setOpen(false)
       } catch {
         toast.error("Não foi possível salvar as referências.")
       }
     })
+  }
+
+  async function copyBoletoNumber() {
+    if (!entry.boletoNumber) return
+    try {
+      await navigator.clipboard.writeText(entry.boletoNumber)
+      toast.success("Número do boleto copiado.")
+    } catch {
+      toast.error("Não foi possível copiar.")
+    }
   }
 
   function upload() {
@@ -76,7 +88,10 @@ export function ExpenseReferencesDialog({ entry }: { entry: SerializedExpenseEnt
       open={open}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen)
-        if (nextOpen) setExternalLink(entry.externalLink ?? "")
+        if (nextOpen) {
+          setExternalLink(entry.externalLink ?? "")
+          setBoletoNumber(entry.boletoNumber ?? "")
+        }
       }}
     >
       <DialogTrigger
@@ -116,6 +131,35 @@ export function ExpenseReferencesDialog({ entry }: { entry: SerializedExpenseEnt
                 </Button>
               ) : null}
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor={`boleto-number-${entry.id}`}>Número do boleto</Label>
+            <div className="flex gap-2">
+              <Input
+                id={`boleto-number-${entry.id}`}
+                value={boletoNumber}
+                onChange={(event) => setBoletoNumber(event.target.value)}
+                inputMode="numeric"
+                placeholder="Linha digitável, com ou sem pontos"
+              />
+              {entry.boletoNumber ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  title="Copiar número"
+                  onClick={copyBoletoNumber}
+                >
+                  <Copy />
+                </Button>
+              ) : null}
+            </div>
+            {entry.boletoNumber ? (
+              <p className="font-mono text-xs break-all text-muted-foreground">
+                {formatBoletoNumber(entry.boletoNumber)}
+              </p>
+            ) : null}
           </div>
 
           <div className="rounded-lg border p-3">
@@ -159,7 +203,7 @@ export function ExpenseReferencesDialog({ entry }: { entry: SerializedExpenseEnt
 
         <DialogFooter>
           <Button onClick={save} disabled={pending}>
-            {pending ? "Salvando..." : "Salvar link"}
+            {pending ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>
       </DialogContent>

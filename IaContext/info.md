@@ -28,6 +28,8 @@ As versões exatas estão em `package.json` e `package-lock.json`.
 - Login por e-mail e senha.
 - Dashboard mensal em `/dashboard/[month]`.
 - Entradas e despesas avulsas ou recorrentes.
+- Despesa avulsa parcelada em N pagamentos mensais, informando o valor total da
+  dívida ou o valor da parcela.
 - Entradas e despesas incertas, carregadas para o mês atual até a liquidação.
 - Vencimento por dia corrido ou por enésimo dia útil brasileiro.
 - Marcação de recebido/pago com ajuste do saldo real.
@@ -45,6 +47,7 @@ As versões exatas estão em `package.json` e `package-lock.json`.
 - Cadastro informativo de bancos/contas com agência, número, tipo, titular,
   vínculo com cartões e vínculo com chaves Pix próprias/de favorecidos.
 - Formas de pagamento: dinheiro, Pix, transferência, boleto, cartão e outro.
+- Boleto com link do portal, número (linha digitável) e PDF anexado.
 - Deploy automático da branch `main` em runner self-hosted.
 
 ## Rotas principais

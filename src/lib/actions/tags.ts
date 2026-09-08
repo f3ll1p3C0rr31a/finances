@@ -85,6 +85,11 @@ export async function setIncomeEntryTags(entryId: string, tagIds: string[]) {
   revalidatePath("/dashboard", "layout")
 }
 
+/**
+ * Tags an expense. Installments of the same plan are one debt, so tagging any
+ * of them tags all of them — otherwise the same debt would show up under
+ * different categories from month to month.
+ */
 export async function setExpenseEntryTags(entryId: string, tagIds: string[]) {
   const userId = await requireUserId()
   const entry = await prisma.expenseEntry.findUniqueOrThrow({
@@ -93,9 +98,22 @@ export async function setExpenseEntryTags(entryId: string, tagIds: string[]) {
   })
   const previousTagIds = entry.tags.map(({ tagId }) => tagId)
 
+  // Parcelas do mesmo plano são uma dívida só: etiquetar uma etiqueta todas,
+  // senão a mesma dívida apareceria em categorias diferentes a cada mês.
+  const entryIds = entry.installmentPlanId
+    ? (
+        await prisma.expenseEntry.findMany({
+          where: { userId, installmentPlanId: entry.installmentPlanId },
+          select: { id: true },
+        })
+      ).map((row) => row.id)
+    : [entryId]
+
   await prisma.$transaction([
-    prisma.expenseEntryTag.deleteMany({ where: { entryId } }),
-    prisma.expenseEntryTag.createMany({ data: tagIds.map((tagId) => ({ entryId, tagId })) }),
+    prisma.expenseEntryTag.deleteMany({ where: { entryId: { in: entryIds } } }),
+    prisma.expenseEntryTag.createMany({
+      data: entryIds.flatMap((id) => tagIds.map((tagId) => ({ entryId: id, tagId }))),
+    }),
   ])
   await propagateExpenseTags(userId, entry, previousTagIds, tagIds)
   revalidatePath("/dashboard", "layout")

@@ -60,6 +60,9 @@ O alias `@/*` aponta para `src/*`.
   são removidas para que M passe a valer para M e todos os meses seguintes,
   sem alterar meses anteriores.
 - `Subscription` é uma cobrança recorrente sem fim predefinido.
+- `ExpenseInstallmentPlan` é uma dívida avulsa com fim conhecido; suas parcelas
+  são `ExpenseEntry` materializadas na criação (`installmentPlanId`,
+  `installmentNo`).
 - `Tag` se relaciona N:N com entradas, despesas, compras e assinaturas.
 - `Account` representa banco/conta com dados como banco, agência, número, tipo
   e titular. `PixKey` própria e `Card` podem se vincular a uma `Account`; uma
@@ -92,6 +95,31 @@ O alias `@/*` aponta para `src/*`.
 - Despesa `ONE_OFF` não deve gerar template recorrente.
 - Excluir uma despesa recorrente remove o template e todas as ocorrências
   materializadas; saldos reais previamente ajustados são compensados.
+
+### Despesas parceladas
+
+- `ExpenseInstallmentPlan` representa uma dívida avulsa dividida em um número
+  fixo de pagamentos mensais (ex.: sucumbência paga em 4 boletos).
+- Diferente de um `ExpenseTemplate`, o plano tem fim conhecido: todas as
+  parcelas são materializadas como `ExpenseEntry` na criação, a partir do mês
+  aberto, uma por mês — mesma estratégia de `CardPurchase`/`CardInstallment`.
+  Por isso totais, gráficos, matriz e fluxo de caixa funcionam sem geração
+  preguiçosa.
+- `ExpenseEntry.installmentPlanId` e `installmentNo` (1-based) ligam a parcela
+  ao plano; entradas de pagamento único têm ambos nulos.
+- No modo `TOTAL`, o valor digitado é a dívida inteira e é dividido com o
+  centavo residual na última parcela; no modo `INSTALLMENT`, o valor digitado é
+  o de cada parcela e o total é a multiplicação. A regra é compartilhada com
+  cartões em `resolveInstallmentAmounts()` (`calculations/installments.ts`).
+- Parcelamento é mutuamente exclusivo com recorrência e com pendência incerta.
+- O nome e a categoria valem para o plano inteiro (editar uma parcela propaga);
+  valor, link, número de boleto e anexo são por parcela.
+- Etiquetas são uniformes no plano: `setExpenseEntryTags()` aplica a todas as
+  parcelas.
+- Excluir uma parcela exclui o plano inteiro, compensando no Saldo Atual os
+  pagamentos já marcados, como acontece ao excluir uma despesa recorrente.
+- `plan.totalAmount` é recalculado a partir das parcelas quando o valor de uma
+  delas muda.
 
 ### Pendências incertas
 
@@ -163,10 +191,19 @@ O alias `@/*` aponta para `src/*`.
   somam, pagamentos subtraem e desmarcar aplica o movimento inverso.
 - Se o Saldo Atual ainda não existir, o primeiro movimento parte de
   `openingBalance`; ele nunca deve ser silenciosamente ignorado.
-- Despesas podem ter um `externalLink` para portal/geração de boleto e um PDF
-  anexado por ocorrência mensal. PDFs ficam fora de `public/`, em
-  `storage/boletos`, e são baixados por rota autenticada que verifica o dono da
-  despesa.
+- Despesas podem ter um `externalLink` para portal/geração de boleto, um
+  `boletoNumber` (linha digitável) e um PDF anexado por ocorrência mensal.
+  Entrada só de dígitos/pontos/espaços é normalizada para dígitos puros, para
+  poder ser copiada direto no app do banco; `formatBoletoNumber()` reexibe os
+  blocos impressos no boleto (47 dígitos bancário, 48 de convênio). PDFs ficam
+  fora de `public/`, em `storage/boletos`, e são baixados por rota autenticada
+  que verifica o dono da despesa.
+- Número do boleto e anexo são editáveis tanto no diálogo da despesa (seção que
+  aparece quando a forma de pagamento é Boleto) quanto no diálogo Refs. da
+  linha.
+- Criar, editar e excluir despesas recalcula a cadeia de saldos a partir do mês
+  afetado, porque o fechamento planejado do mês alimenta a abertura do
+  seguinte.
 
 ### App instalável e widget do Android
 

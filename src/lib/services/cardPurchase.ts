@@ -3,7 +3,7 @@ import { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { addMonths } from "@/lib/calculations/month"
 import { invoiceMonthForPurchase } from "@/lib/calculations/cardTiming"
-import { splitIntoInstallments } from "@/lib/calculations/installments"
+import { resolveInstallmentAmounts } from "@/lib/calculations/installments"
 import { recalcOpeningBalanceChain } from "@/lib/actions/monthly"
 import { cardPurchaseSchema, type CardPurchaseInput } from "@/lib/validation/cardSchemas"
 
@@ -26,19 +26,7 @@ export function resolvePurchaseAmounts(
   amountMode: "TOTAL" | "INSTALLMENT",
   installmentCount: number
 ): { totalAmount: Prisma.Decimal; slices: Prisma.Decimal[] } {
-  if (amountMode === "INSTALLMENT") {
-    const perInstallment = new Prisma.Decimal(amount)
-    return {
-      totalAmount: perInstallment.mul(installmentCount),
-      slices: Array.from({ length: installmentCount }, () => perInstallment),
-    }
-  }
-  const totalAmount = new Prisma.Decimal(amount)
-  return {
-    totalAmount,
-    slices:
-      installmentCount > 1 ? splitIntoInstallments(totalAmount, installmentCount) : [totalAmount],
-  }
+  return resolveInstallmentAmounts(amount, amountMode, installmentCount)
 }
 
 /**

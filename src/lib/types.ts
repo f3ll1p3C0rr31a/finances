@@ -33,8 +33,16 @@ export type SerializedExpenseEntry = {
   pixKeyId: string | null
   pixKeyLabel: string | null
   externalLink: string | null
+  boletoNumber: string | null
   attachmentFileName: string | null
   hasAttachment: boolean
+  /** Set when the entry is one parcel of a fixed installment plan. */
+  installment: {
+    planId: string
+    number: number
+    count: number
+    totalAmount: number
+  } | null
 }
 
 export type SerializedCardSummary = {

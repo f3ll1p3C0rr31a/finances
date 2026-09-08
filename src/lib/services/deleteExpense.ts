@@ -6,7 +6,54 @@ import { prisma } from "@/lib/prisma"
 
 export type DeleteExpenseResult = {
   recurring: boolean
+  installmentPlan: boolean
   deletedEntries: number
+}
+
+type DeletedEntry = {
+  month: Date
+  paid: boolean
+  paidBy: "SELF" | "THIRD_PARTY"
+  amount: Prisma.Decimal
+  paidAmount: Prisma.Decimal | null
+}
+
+/**
+ * Devolve ao saldo real, mês a mês, o que os lançamentos removidos já haviam
+ * pago, e responde qual foi o mês mais antigo afetado, para que a cadeia de
+ * aberturas seja recalculada a partir dele.
+ */
+async function compensatePaidEntries(
+  userId: string,
+  entries: DeletedEntry[],
+  earliestMonth: Date
+): Promise<Date> {
+  let recalculateFrom = earliestMonth
+  const paidByMonth = new Map<string, { month: Date; amount: Prisma.Decimal }>()
+
+  for (const entry of entries) {
+    if (entry.month < recalculateFrom) {
+      recalculateFrom = entry.month
+    }
+    // Terceiro nunca entrou no saldo, então apagar não devolve nada.
+    if (!entry.paid || !movesOwnMoney(entry)) continue
+
+    const key = monthKeyFromDate(entry.month)
+    const amount = entry.paidAmount ?? entry.amount
+    const current = paidByMonth.get(key)
+    paidByMonth.set(key, {
+      month: entry.month,
+      amount: current ? current.amount.add(amount) : amount,
+    })
+  }
+
+  for (const { month, amount } of [...paidByMonth.values()].sort(
+    (a, b) => a.month.getTime() - b.month.getTime()
+  )) {
+    await adjustActualBalance(userId, month, amount)
+  }
+
+  return recalculateFrom
 }
 
 export async function deleteExpenseForUser(
@@ -34,28 +81,21 @@ export async function deleteExpenseForUser(
       }),
     ])
 
-    const paidByMonth = new Map<string, { month: Date; amount: Prisma.Decimal }>()
-    for (const entry of recurringEntries) {
-      if (entry.month < recalculateFrom) {
-        recalculateFrom = entry.month
-      }
-      // Terceiro nunca entrou no saldo, então apagar não devolve nada.
-      if (!entry.paid || !movesOwnMoney(entry)) continue
+    recalculateFrom = await compensatePaidEntries(userId, recurringEntries, recalculateFrom)
+  } else if (existing.installmentPlanId) {
+    // Um parcelamento é uma dívida só: apagar uma parcela desfaz o acordo
+    // inteiro, como apagar uma despesa recorrente apaga a regra.
+    const planEntries = await prisma.expenseEntry.findMany({
+      where: { userId, installmentPlanId: existing.installmentPlanId },
+    })
+    deletedEntries = planEntries.length
 
-      const key = monthKeyFromDate(entry.month)
-      const amount = entry.paidAmount ?? entry.amount
-      const current = paidByMonth.get(key)
-      paidByMonth.set(key, {
-        month: entry.month,
-        amount: current ? current.amount.add(amount) : amount,
-      })
-    }
+    // As parcelas caem junto com o plano.
+    await prisma.expenseInstallmentPlan.delete({
+      where: { id: existing.installmentPlanId, userId },
+    })
 
-    for (const { month, amount } of [...paidByMonth.values()].sort(
-      (a, b) => a.month.getTime() - b.month.getTime()
-    )) {
-      await adjustActualBalance(userId, month, amount)
-    }
+    recalculateFrom = await compensatePaidEntries(userId, planEntries, recalculateFrom)
   } else {
     const entry = await prisma.expenseEntry.delete({ where: { id, userId } })
     if (entry.paid && movesOwnMoney(entry)) {
@@ -68,6 +108,7 @@ export async function deleteExpenseForUser(
 
   return {
     recurring: existing.templateId != null,
+    installmentPlan: existing.installmentPlanId != null,
     deletedEntries,
   }
 }

@@ -25,6 +25,7 @@ model User {
   pixKeys           PixKey[]
   subscriptions     Subscription[]
   deviceTokens      DeviceToken[]
+  expenseInstallmentPlans ExpenseInstallmentPlan[]
 }
 
 /// Credencial de leitura/escrita usada pelo widget do Android, que não tem
@@ -180,6 +181,11 @@ model ExpenseEntry {
   pixKeyId      String?
   pixKey        PixKey?          @relation(fields: [pixKeyId], references: [id], onDelete: SetNull)
   externalLink  String?
+  boletoNumber  String?
+  installmentPlanId String?
+  installmentPlan   ExpenseInstallmentPlan? @relation(fields: [installmentPlanId], references: [id], onDelete: Cascade)
+  /// 1-based position inside `installmentPlan`; null for single-payment expenses.
+  installmentNo Int?
   attachmentFileName String?
   attachmentPath     String?
   attachmentUploadedAt DateTime?
@@ -191,6 +197,28 @@ model ExpenseEntry {
 
   @@unique([templateId, month])
   @@index([userId, month])
+  @@index([installmentPlanId])
+}
+
+/// A one-off debt split into a fixed number of monthly payments (e.g. a
+/// court-ordered fee paid in 4 boletos). Unlike a recurring
+/// ExpenseTemplate it has a known end, so every installment is
+/// materialized as its own ExpenseEntry up front — the same way a
+/// CardPurchase materializes CardInstallment rows — which keeps the
+/// monthly totals, charts and matrix correct without lazy generation.
+model ExpenseInstallmentPlan {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  totalAmount      Decimal  @db.Decimal(12, 2)
+  installmentCount Int
+  startMonth       DateTime @db.Date
+  createdAt        DateTime @default(now())
+
+  entries ExpenseEntry[]
+
+  @@index([userId])
 }
 
 /// One row per month per user. openingBalance is derived from the prior

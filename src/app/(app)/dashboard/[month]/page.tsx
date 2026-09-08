@@ -83,8 +83,18 @@ export default async function DashboardMonthPage({
     pixKeyId: entry.pixKeyId,
     pixKeyLabel: entry.pixKey?.label ?? null,
     externalLink: entry.externalLink,
+    boletoNumber: entry.boletoNumber,
     attachmentFileName: entry.attachmentFileName,
     hasAttachment: Boolean(entry.attachmentPath),
+    installment:
+      entry.installmentPlan && entry.installmentNo
+        ? {
+            planId: entry.installmentPlan.id,
+            number: entry.installmentNo,
+            count: entry.installmentPlan.installmentCount,
+            totalAmount: entry.installmentPlan.totalAmount.toNumber(),
+          }
+        : null,
   }))
 
   const cardSummaries: SerializedCardSummary[] = data.cardSummaries.map((s) => ({
