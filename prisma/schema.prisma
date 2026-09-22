@@ -103,8 +103,22 @@ model IncomeTemplate {
   createdAt     DateTime   @default(now())
 
   entries IncomeEntry[]
+  skips   IncomeTemplateSkip[]
 
   @@index([userId])
+}
+
+/// Mês em que uma entrada recorrente foi excluída só naquele mês. Sem esse
+/// registro, `ensureTemplateEntries()` recriaria a ocorrência no próximo
+/// carregamento e a exclusão pareceria não ter funcionado.
+model IncomeTemplateSkip {
+  id         String         @id @default(cuid())
+  templateId String
+  template   IncomeTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  month      DateTime       @db.Date
+  createdAt  DateTime       @default(now())
+
+  @@unique([templateId, month])
 }
 
 /// One concrete month's income row, either generated from a template
@@ -152,8 +166,20 @@ model ExpenseTemplate {
   createdAt     DateTime        @default(now())
 
   entries ExpenseEntry[]
+  skips   ExpenseTemplateSkip[]
 
   @@index([userId])
+}
+
+/// Mesmo papel de `IncomeTemplateSkip`, para despesas recorrentes.
+model ExpenseTemplateSkip {
+  id         String          @id @default(cuid())
+  templateId String
+  template   ExpenseTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  month      DateTime        @db.Date
+  createdAt  DateTime        @default(now())
+
+  @@unique([templateId, month])
 }
 
 /// One concrete month's expense row, either generated from a template

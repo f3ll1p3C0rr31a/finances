@@ -5,6 +5,7 @@ import { useTransition } from "react"
 import { toast } from "sonner"
 
 import type { SerializedCardSummary, SerializedExpenseEntry } from "@/lib/types"
+import type { RecurrenceScope } from "@/lib/validation/schemas"
 import type { TagOption } from "@/components/tags/tag-multi-select"
 import { setExpensePaid, deleteExpenseEntry } from "@/lib/actions/expense"
 import { setCardInvoicePaid } from "@/lib/actions/cardPayments"
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/table"
 import { ExpenseEntryDialog } from "@/components/cashflow/expense-entry-dialog"
 import { ExpenseReferencesDialog } from "@/components/cashflow/expense-references-dialog"
+import { DeleteEntryButton } from "@/components/cashflow/delete-entry-button"
 import { PixIcon } from "@/components/brand/pix-icon"
 
 const CATEGORY_LABELS = {
@@ -95,12 +97,14 @@ export function ExpenseTable({
     })
   }
 
-  function remove(id: string) {
+  function remove(id: string, scope: RecurrenceScope) {
     startTransition(async () => {
       try {
-        const result = await deleteExpenseEntry(id)
-        if (result.recurring) {
-          toast.success(`Despesa recorrente removida (${result.deletedEntries} meses).`)
+        const result = await deleteExpenseEntry(id, scope)
+        if (result.recurring && result.scope === "THIS_AND_FUTURE") {
+          toast.success(`Recorrência encerrada (${result.deletedEntries} meses removidos).`)
+        } else if (result.recurring) {
+          toast.success("Despesa removida deste mês.")
         } else if (result.installmentPlan) {
           toast.success(`Parcelamento removido (${result.deletedEntries} parcelas).`)
         } else {
@@ -283,14 +287,14 @@ export function ExpenseTable({
                     pixPayees={pixPayees}
                   />
                   <ExpenseReferencesDialog entry={entry} />
-                  <Button
-                    variant="ghost"
-                    size="xs"
+                  <DeleteEntryButton
+                    month={month}
+                    name={entry.name}
+                    kind="expense"
+                    isRecurring={entry.isRecurring}
                     disabled={pending}
-                    onClick={() => remove(entry.id)}
-                  >
-                    Excluir
-                  </Button>
+                    onDelete={(scope) => remove(entry.id, scope)}
+                  />
                 </TableCell>
               </TableRow>
             ))

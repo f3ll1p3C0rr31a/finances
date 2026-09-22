@@ -20,7 +20,9 @@ import { movesOwnMoney } from "@/lib/calculations/balanceChain"
 import {
   expenseEntrySchema,
   expenseReferencesSchema,
+  recurrenceScopeSchema,
   type ExpenseEntryInput,
+  type RecurrenceScope,
 } from "@/lib/validation/schemas"
 
 function revalidateMonth(month: Date) {
@@ -295,9 +297,9 @@ export async function setExpensePaid(id: string, paid: boolean) {
   revalidateMonth(entry.month)
 }
 
-export async function deleteExpenseEntry(id: string) {
+export async function deleteExpenseEntry(id: string, scope: RecurrenceScope = "ONLY_THIS") {
   const userId = await requireUserId()
-  const result = await deleteExpenseForUser(userId, id)
+  const result = await deleteExpenseForUser(userId, id, recurrenceScopeSchema.parse(scope))
   revalidatePath("/dashboard", "layout")
   return result
 }

@@ -49,6 +49,7 @@ Ainda não existe runner de testes. Há scripts de domínio executáveis com
 ```bash
 npx tsx scripts/test-balance-domain.ts        # saldo planejado, saldo herdado e fatura em aberto (puro, sem banco)
 npx tsx scripts/test-card-billing-domain.ts   # ciclo de fatura (precisa de banco)
+npx tsx scripts/test-recurring-delete-domain.ts # escopo de exclusão de recorrentes (precisa de banco)
 ```
 
 Para mudanças de cálculos, estenda esses scripts antes de ampliar regras de

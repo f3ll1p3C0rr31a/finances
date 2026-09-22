@@ -68,3 +68,14 @@ export const expenseReferencesSchema = z.object({
   boletoNumber: boletoNumberSchema,
 })
 export type ExpenseReferencesInput = z.output<typeof expenseReferencesSchema>
+
+/**
+ * O que apagar quando o lançamento excluído é recorrente.
+ *
+ * - `ONLY_THIS`: só a ocorrência daquele mês. O mês fica registrado como
+ *   exceção do template, senão a materialização o traria de volta.
+ * - `THIS_AND_FUTURE`: aquele mês e todos os seguintes, encerrando o template
+ *   no mês anterior. O histórico já fechado é preservado.
+ */
+export const recurrenceScopeSchema = z.enum(["ONLY_THIS", "THIS_AND_FUTURE"])
+export type RecurrenceScope = z.output<typeof recurrenceScopeSchema>

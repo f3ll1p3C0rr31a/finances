@@ -40,7 +40,9 @@ O alias `@/*` aponta para `src/*`.
 ## Modelo mental do banco
 
 - `User` é o proprietário de todos os agregados.
-- `IncomeTemplate` e `ExpenseTemplate` representam recorrência.
+- `IncomeTemplate` e `ExpenseTemplate` representam recorrência;
+  `IncomeTemplateSkip` e `ExpenseTemplateSkip` guardam os meses em que a
+  recorrência foi excluída pontualmente.
 - `IncomeEntry` e `ExpenseEntry` são ocorrências concretas de um mês.
 - `MonthlyBalance` forma uma cadeia de saldos mensais.
 - `Card` contém `CardPurchase`; compras parceladas materializam
@@ -93,8 +95,17 @@ O alias `@/*` aponta para `src/*`.
 - A combinação `(templateId, month)` é única.
 - `ensureMonthGenerated()` é idempotente e não sobrescreve edições manuais.
 - Despesa `ONE_OFF` não deve gerar template recorrente.
-- Excluir uma despesa recorrente remove o template e todas as ocorrências
-  materializadas; saldos reais previamente ajustados são compensados.
+- Excluir um lançamento recorrente pergunta o escopo (`RecurrenceScope`):
+  - `ONLY_THIS` apaga só a ocorrência do mês aberto e grava o mês em
+    `IncomeTemplateSkip`/`ExpenseTemplateSkip`. Sem esse registro
+    `ensureTemplateEntries()` recriaria a linha no carregamento seguinte — era
+    exatamente o bug em que o botão Excluir parecia não funcionar.
+  - `THIS_AND_FUTURE` apaga o mês aberto e os seguintes e encerra o template em
+    `endMonth = mês - 1`, preservando o histórico. Quando a exclusão alcança o
+    próprio `startMonth` não sobra recorrência e o template é removido.
+  - Em ambos os casos, saldos reais previamente ajustados são compensados e a
+    cadeia de aberturas é recalculada a partir do mês mais antigo afetado.
+- Lançamento não recorrente é excluído direto, sem pergunta.
 
 ### Despesas parceladas
 

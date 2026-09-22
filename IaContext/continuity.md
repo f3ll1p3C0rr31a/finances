@@ -1,76 +1,64 @@
 # Continuidade
 
-Atualizado em: 2026-09-08
+Atualizado em: 2026-09-22
 
 ## Estado atual
 
 ### Objetivo
 
-Permitir parcelar uma despesa avulsa (dívida paga em N boletos mensais,
-informando o valor total ou o valor da parcela, como já era feito nas compras
-de cartão) e completar as referências de boleto com número da linha digitável
-além do link e do PDF.
+Corrigir o botão Excluir de lançamento recorrente, que parecia não funcionar, e
+passar a perguntar se a exclusão vale só para o mês aberto ou dali em diante.
 
 ### Alterações realizadas
 
-- Novo modelo `ExpenseInstallmentPlan` e colunas `installmentPlanId`,
-  `installmentNo` e `boletoNumber` em `ExpenseEntry`. Migration
-  `20260908120000_expense_installments_and_boleto`.
-- `createExpenseEntry()` materializa todas as parcelas na criação, uma
-  `ExpenseEntry` por mês a partir do mês aberto, como `CardPurchase` faz com
-  `CardInstallment`. Parcelar é excludente com recorrência e com pendência
-  incerta.
-- `updateExpenseEntry()` propaga nome e categoria para o plano inteiro e
-  recalcula `plan.totalAmount` quando o valor de uma parcela muda.
-- `deleteExpenseForUser()` trata plano como trata recorrência: apagar uma
-  parcela apaga o acordo inteiro. A compensação de pagamentos virou
-  `compensatePaidEntries()`, usada pelos dois caminhos, respeitando
-  `movesOwnMoney()`.
-- `setExpenseEntryTags()` aplica as etiquetas a todas as parcelas do plano,
-  além da propagação para recorrentes que já existia.
-- `resolvePurchaseAmounts()` (em `services/cardPurchase.ts`) passou a delegar
-  para `resolveInstallmentAmounts()` em `calculations/installments.ts`, para
-  que a regra total-vs-parcela seja uma só entre cartão e despesa.
-- Diálogo da despesa: bloco "Parcelar o pagamento" (quantidade, valor total ou
-  da parcela, prévia "4x de R$ 875,00 — Total R$ 3.500,00" e intervalo de
-  meses) e bloco de boleto (número + PDF) que aparece quando a forma de
-  pagamento é Boleto. Editando uma parcela, mostra "Parcela 2/4 de R$ ...".
-- Diálogo "Refs." ganhou o número do boleto com botão de copiar, exibido em
-  blocos por `formatBoletoNumber()` (47 dígitos bancário, 48 de convênio).
-- Tabela de despesas mostra a badge `Parcela n/N`; o toast de exclusão diz
-  quantas parcelas saíram.
+- Causa do bug: `deleteIncomeEntry()` apagava só a `IncomeEntry` e deixava o
+  `IncomeTemplate` ativo com `endMonth` nulo. No render seguinte,
+  `ensureTemplateEntries()` recriava a linha copiando o mês anterior, então a
+  exclusão parecia não ter efeito. Despesa recorrente não tinha esse bug, mas
+  ia ao outro extremo: apagava o template e **todas** as ocorrências, inclusive
+  meses passados já fechados.
+- Novo `RecurrenceScope` (`ONLY_THIS` | `THIS_AND_FUTURE`), validado por Zod na
+  server action e repassado aos serviços.
+- Novos modelos `IncomeTemplateSkip` e `ExpenseTemplateSkip` (migration
+  `20260922120000_recurring_delete_scope`) registram o mês excluído
+  pontualmente; `ensureTemplateEntries()` pula esses meses. Sem isso,
+  `ONLY_THIS` sofreria do mesmo bug.
+- Novo `src/lib/services/deleteIncome.ts`, espelhando `deleteExpense.ts`:
+  compensa no saldo real os recebimentos apagados e recalcula a cadeia de
+  aberturas a partir do mês mais antigo afetado.
+- `deleteExpenseForUser()` ganhou o mesmo escopo. `THIS_AND_FUTURE` agora
+  encerra o template em `endMonth = mês - 1` em vez de apagar o histórico.
+- Novo `DeleteEntryButton` compartilhado pelas duas tabelas: lançamento avulso
+  exclui direto; recorrente abre um diálogo com as duas opções, nomeando o mês
+  aberto.
 
 ### Decisões e motivos
 
-- Parcelas materializadas na criação, em vez de template com `endMonth`:
-  dashboard, matriz, gráficos, fluxo de caixa e gastos por etiqueta já leem
-  `ExpenseEntry` por mês, então tudo passa a funcionar sem geração preguiçosa,
-  e a regra "ONE_OFF não gera template" continua valendo.
-- Apagar uma parcela apaga o plano inteiro, espelhando a recorrência: um
-  parcelamento é uma dívida só.
-- Nome, categoria e etiquetas são do plano; valor, link, número de boleto e
-  anexo são da parcela, porque cada boleto tem número e PDF próprios. Por isso
-  o número digitado ao criar um plano fica só na 1ª parcela.
-- Número do boleto é normalizado para dígitos puros quando a entrada só tem
-  dígitos, pontos e espaços (para colar no app do banco) e reexibido em blocos;
-  qualquer outro texto é guardado como digitado.
+- `endMonth` já existia nos dois templates e é exatamente a semântica de
+  "encerrar daqui em diante", então `THIS_AND_FUTURE` não precisou de coluna
+  nova — só o caso `ONLY_THIS` exigiu a tabela de exceções.
+- Duas tabelas de exceção em vez de uma polimórfica: mantém a chave estrangeira
+  com cascade e segue o padrão do projeto, que já duplica as estruturas de
+  entrada e despesa lado a lado.
+- Excluir a partir do `startMonth` apaga o template inteiro: um `endMonth`
+  anterior ao `startMonth` deixaria uma recorrência que não gera nada.
 
 ### Validações executadas
 
-- `npx prisma generate`, `npx tsc --noEmit`, `npm run lint` e `npm run build`:
-  passaram em 2026-09-08 (Next.js 16.2.9).
-- Migration conferida contra o DDL que o Prisma geraria para o mesmo schema
-  (`prisma migrate diff --from-empty --to-schema`): idêntica.
-- Não foi testada contra banco nem no navegador: a máquina onde a mudança foi
-  escrita não tinha Node, Docker nem PostgreSQL (o Node foi baixado à parte só
-  para rodar as validações acima).
+- `npx tsc --noEmit`, `npm run lint` e `npm run build`: passaram em 2026-09-22.
+- Novo `scripts/test-recurring-delete-domain.ts` contra banco real: os dois
+  escopos em entrada e despesa, exclusão desde o primeiro mês, compensação do
+  saldo real e — o caso do bug — remontar o ano inteiro depois de excluir, sem
+  o lançamento ressuscitar. Todos passaram.
+- `scripts/test-balance-domain.ts`: passou.
 
 ### Pendências ou próximo passo
 
-- Testar no navegador depois do deploy: lançar uma despesa parcelada em 4x pelo
-  valor total, conferir as 4 parcelas nos meses seguintes, os totais, a matriz
-  e a cadeia de saldos; editar e apagar uma parcela; anexar PDF e número de
-  boleto.
+- `scripts/test-card-billing-domain.ts` falha em "cobrança de setembro é
+  projetada". É anterior a esta mudança (confirmado rodando no `main` limpo) e
+  não tem relação com ela: o teste fixa setembro/2026 como mês futuro e
+  envelheceu quando a data real passou do dia de cobrança. Vale reescrever o
+  caso em função do mês corrente em vez de uma data fixa.
 
 ## Débitos documentais confirmados
 

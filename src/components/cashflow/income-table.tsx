@@ -4,12 +4,12 @@ import { useTransition } from "react"
 import { toast } from "sonner"
 
 import type { SerializedIncomeEntry } from "@/lib/types"
+import type { RecurrenceScope } from "@/lib/validation/schemas"
 import type { TagOption } from "@/components/tags/tag-multi-select"
 import { setIncomeReceived, deleteIncomeEntry } from "@/lib/actions/income"
 import { formatDueDay, UNCERTAIN_BADGE_CLASS } from "@/lib/calculations/format"
 import { MoneyText } from "@/components/ui/money-text"
 import { Switch } from "@/components/ui/switch"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
   Table,
@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { IncomeEntryDialog } from "@/components/cashflow/income-entry-dialog"
+import { DeleteEntryButton } from "@/components/cashflow/delete-entry-button"
 
 export function IncomeTable({
   month,
@@ -42,11 +43,15 @@ export function IncomeTable({
     })
   }
 
-  function remove(id: string) {
+  function remove(id: string, scope: RecurrenceScope) {
     startTransition(async () => {
       try {
-        await deleteIncomeEntry(id)
-        toast.success("Entrada removida.")
+        const result = await deleteIncomeEntry(id, scope)
+        if (result.recurring && result.scope === "THIS_AND_FUTURE") {
+          toast.success(`Recorrência encerrada (${result.deletedEntries} meses removidos).`)
+        } else {
+          toast.success("Entrada removida.")
+        }
       } catch {
         toast.error("Não foi possível remover.")
       }
@@ -126,14 +131,14 @@ export function IncomeTable({
                     triggerSize="xs"
                     allTags={allTags}
                   />
-                  <Button
-                    variant="ghost"
-                    size="xs"
+                  <DeleteEntryButton
+                    month={month}
+                    name={entry.name}
+                    kind="income"
+                    isRecurring={entry.isRecurring}
                     disabled={pending}
-                    onClick={() => remove(entry.id)}
-                  >
-                    Excluir
-                  </Button>
+                    onDelete={(scope) => remove(entry.id, scope)}
+                  />
                 </TableCell>
               </TableRow>
             ))

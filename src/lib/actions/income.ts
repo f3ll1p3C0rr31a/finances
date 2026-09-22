@@ -9,7 +9,13 @@ import { currentMonth, monthKeyFromDate } from "@/lib/calculations/month"
 import { resolveDueDate } from "@/lib/calculations/businessDay"
 import { adjustActualBalance, recalcOpeningBalanceChain } from "@/lib/actions/monthly"
 import { propagateIncomeTraits } from "@/lib/services/recurringEntries"
-import { incomeEntrySchema, type IncomeEntryInput } from "@/lib/validation/schemas"
+import { deleteIncomeForUser } from "@/lib/services/deleteIncome"
+import {
+  incomeEntrySchema,
+  recurrenceScopeSchema,
+  type IncomeEntryInput,
+  type RecurrenceScope,
+} from "@/lib/validation/schemas"
 
 function revalidateMonth(month: Date) {
   revalidatePath(`/dashboard/${monthKeyFromDate(month)}`)
@@ -144,12 +150,10 @@ export async function setIncomeReceived(id: string, received: boolean) {
   revalidateMonth(entry.month)
 }
 
-export async function deleteIncomeEntry(id: string) {
+export async function deleteIncomeEntry(id: string, scope: RecurrenceScope = "ONLY_THIS") {
   const userId = await requireUserId()
-  const entry = await prisma.incomeEntry.delete({ where: { id, userId } })
-  if (entry.received) {
-    const amount = entry.receivedAmount ?? entry.amount
-    await adjustActualBalance(userId, entry.month, amount.neg())
-  }
-  revalidateMonth(entry.month)
+  const result = await deleteIncomeForUser(userId, id, recurrenceScopeSchema.parse(scope))
+  // A exclusão alcança vários meses e mexe na cadeia de saldos.
+  revalidatePath("/dashboard", "layout")
+  return result
 }

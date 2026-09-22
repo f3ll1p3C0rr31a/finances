@@ -22,9 +22,12 @@ async function ensureTemplateEntries(userId: string, month: Date) {
       startMonth: { lte: month },
       OR: [{ endMonth: null }, { endMonth: { gte: month } }],
     },
+    include: { skips: { where: { month }, select: { id: true } } },
   })
 
   for (const template of incomeTemplates) {
+    // Mês excluído só naquele mês não volta a ser gerado.
+    if (template.skips.length > 0) continue
     // O mês novo nasce copiando o mês anterior (ver recurringEntries.ts); o
     // template só entra quando não existe nenhum mês anterior.
     const existing = await prisma.incomeEntry.findUnique({
@@ -44,9 +47,11 @@ async function ensureTemplateEntries(userId: string, month: Date) {
       startMonth: { lte: month },
       OR: [{ endMonth: null }, { endMonth: { gte: month } }],
     },
+    include: { skips: { where: { month }, select: { id: true } } },
   })
 
   for (const template of expenseTemplates) {
+    if (template.skips.length > 0) continue
     const existing = await prisma.expenseEntry.findUnique({
       where: { templateId_month: { templateId: template.id, month } },
       select: { id: true },

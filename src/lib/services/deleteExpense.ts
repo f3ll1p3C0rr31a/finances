@@ -1,12 +1,14 @@
 import { Prisma } from "@/generated/prisma/client"
 import { adjustActualBalance, recalcOpeningBalanceChain } from "@/lib/actions/monthly"
-import { monthKeyFromDate } from "@/lib/calculations/month"
+import { addMonths, monthKeyFromDate } from "@/lib/calculations/month"
 import { movesOwnMoney } from "@/lib/calculations/balanceChain"
 import { prisma } from "@/lib/prisma"
+import type { RecurrenceScope } from "@/lib/validation/schemas"
 
 export type DeleteExpenseResult = {
   recurring: boolean
   installmentPlan: boolean
+  scope: RecurrenceScope
   deletedEntries: number
 }
 
@@ -58,7 +60,8 @@ async function compensatePaidEntries(
 
 export async function deleteExpenseForUser(
   userId: string,
-  id: string
+  id: string,
+  scope: RecurrenceScope
 ): Promise<DeleteExpenseResult> {
   const existing = await prisma.expenseEntry.findUniqueOrThrow({
     where: { id, userId },
@@ -67,21 +70,52 @@ export async function deleteExpenseForUser(
   let deletedEntries = 1
 
   if (existing.templateId) {
-    const recurringEntries = await prisma.expenseEntry.findMany({
-      where: { userId, templateId: existing.templateId },
-    })
-    deletedEntries = recurringEntries.length
+    const templateId = existing.templateId
 
-    await prisma.$transaction([
-      prisma.expenseEntry.deleteMany({
-        where: { userId, templateId: existing.templateId },
-      }),
-      prisma.expenseTemplate.delete({
-        where: { id: existing.templateId, userId },
-      }),
-    ])
+    if (scope === "ONLY_THIS") {
+      // O mês vira exceção do template: sem isso, a materialização recriaria a
+      // ocorrência no próximo carregamento do dashboard.
+      await prisma.$transaction([
+        prisma.expenseEntry.delete({ where: { id, userId } }),
+        prisma.expenseTemplateSkip.upsert({
+          where: { templateId_month: { templateId, month: existing.month } },
+          update: {},
+          create: { templateId, month: existing.month },
+        }),
+      ])
 
-    recalculateFrom = await compensatePaidEntries(userId, recurringEntries, recalculateFrom)
+      recalculateFrom = await compensatePaidEntries(userId, [existing], recalculateFrom)
+    } else {
+      const template = await prisma.expenseTemplate.findUniqueOrThrow({
+        where: { id: templateId, userId },
+      })
+      const doomed = await prisma.expenseEntry.findMany({
+        where: { userId, templateId, month: { gte: existing.month } },
+      })
+      deletedEntries = doomed.length
+
+      // Encerrar no mês anterior preserva o histórico já materializado. Se a
+      // exclusão alcança o próprio início da recorrência não sobra nada dela,
+      // então o template vai junto.
+      const keepsHistory = existing.month > template.startMonth
+
+      await prisma.$transaction([
+        prisma.expenseEntry.deleteMany({
+          where: { userId, templateId, month: { gte: existing.month } },
+        }),
+        prisma.expenseTemplateSkip.deleteMany({
+          where: { templateId, month: { gte: existing.month } },
+        }),
+        keepsHistory
+          ? prisma.expenseTemplate.update({
+              where: { id: templateId, userId },
+              data: { endMonth: addMonths(existing.month, -1) },
+            })
+          : prisma.expenseTemplate.delete({ where: { id: templateId, userId } }),
+      ])
+
+      recalculateFrom = await compensatePaidEntries(userId, doomed, recalculateFrom)
+    }
   } else if (existing.installmentPlanId) {
     // Um parcelamento é uma dívida só: apagar uma parcela desfaz o acordo
     // inteiro, como apagar uma despesa recorrente apaga a regra.
@@ -109,6 +143,7 @@ export async function deleteExpenseForUser(
   return {
     recurring: existing.templateId != null,
     installmentPlan: existing.installmentPlanId != null,
+    scope,
     deletedEntries,
   }
 }
